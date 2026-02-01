@@ -1,10 +1,18 @@
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '../lib/api';
-import type { Task, TaskStatus } from '../lib/api';
+import type { Assignee, Task, TaskPriority, TaskStatus } from '../lib/api';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -13,18 +21,24 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'done', title: 'Done' },
 ];
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <button
+      type="button"
+      className="w-full rounded-md border border-slate-200 bg-white p-3 text-left shadow-sm hover:border-slate-300"
+      onClick={onOpen}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="font-medium text-slate-900">{task.title}</div>
         {task.priority ? (
-          <span className={clsx('rounded px-2 py-0.5 text-xs', {
-            'bg-slate-100 text-slate-700': task.priority === 'low',
-            'bg-blue-100 text-blue-800': task.priority === 'medium',
-            'bg-amber-100 text-amber-800': task.priority === 'high',
-            'bg-red-100 text-red-800': task.priority === 'urgent',
-          })}>
+          <span
+            className={clsx('rounded px-2 py-0.5 text-xs', {
+              'bg-slate-100 text-slate-700': task.priority === 'low',
+              'bg-blue-100 text-blue-800': task.priority === 'medium',
+              'bg-amber-100 text-amber-800': task.priority === 'high',
+              'bg-red-100 text-red-800': task.priority === 'urgent',
+            })}
+          >
             {task.priority}
           </span>
         ) : null}
@@ -33,7 +47,7 @@ function TaskCard({ task }: { task: Task }) {
         #{task.id} • {task.assigned_to ?? 'unassigned'}
       </div>
       {task.description ? <div className="mt-2 text-sm text-slate-700">{task.description}</div> : null}
-    </div>
+    </button>
   );
 }
 
@@ -41,7 +55,8 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [editTask, setEditTask] = useState<Task | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -79,37 +94,143 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
       done: [],
     };
     const unknown: Task[] = [];
+
     for (const t of tasks) {
       const bucket = map[t.status as TaskStatus];
       if (bucket) bucket.push(t);
       else unknown.push(t);
     }
-    return { map, unknown: Array.from(new Set(unknown.map((t) => t.status))) };
+
+    // Ensure consistent ordering even if API returns a mixed sort
+    for (const k of Object.keys(map) as TaskStatus[]) {
+      map[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    }
+
+    return {
+      map,
+      unknown: Array.from(new Set(unknown.map((t) => t.status))),
+    };
   }, [tasks]);
+
+  function findContainerForTaskId(taskId: string, columns: Record<TaskStatus, Task[]>) {
+    for (const col of COLUMNS) {
+      if (columns[col.key].some((t) => String(t.id) === taskId)) return col.key;
+    }
+    return null;
+  }
+
+  const activeTask = useMemo(() => {
+    if (!activeTaskId) return null;
+    return tasks.find((t) => String(t.id) === activeTaskId) ?? null;
+  }, [activeTaskId, tasks]);
+
+  // Optimistic move across columns while dragging
+  function onDragOver(evt: DragOverEvent) {
+    const { active, over } = evt;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    const activeContainer = findContainerForTaskId(activeId, byStatus.map);
+    const overContainer = (COLUMNS.find((c) => c.key === overId)?.key ?? findContainerForTaskId(overId, byStatus.map)) as
+      | TaskStatus
+      | null;
+
+    if (!activeContainer || !overContainer) return;
+    if (activeContainer === overContainer) return;
+
+    setTasks((prev) => {
+      const aTask = prev.find((t) => String(t.id) === activeId);
+      if (!aTask) return prev;
+      // update status; positions will be normalized on drop
+      return prev.map((t) => (String(t.id) === activeId ? { ...t, status: overContainer } : t));
+    });
+  }
+
+  async function persistPositions(next: Task[]) {
+    // Persist positions per column (0..n) and any status changes.
+    // This is chatty (many PATCHes) but simple + reliable for a personal tool.
+    const columns: Record<TaskStatus, Task[]> = {
+      backlog: [],
+      in_progress: [],
+      review: [],
+      done: [],
+    };
+    for (const t of next) columns[t.status as TaskStatus]?.push(t);
+    for (const k of Object.keys(columns) as TaskStatus[]) {
+      columns[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      // rewrite positions based on current ordering
+      columns[k] = columns[k].map((t, idx) => ({ ...t, position: idx }));
+    }
+
+    const desired = Object.values(columns).flat();
+
+    const updates = desired
+      .map((t) => {
+        const before = tasks.find((x) => x.id === t.id);
+        const changed = !before || before.status !== t.status || (before.position ?? 0) !== (t.position ?? 0);
+        if (!changed) return null;
+        return api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position });
+      })
+      .filter(Boolean) as Promise<any>[];
+
+    await Promise.allSettled(updates);
+  }
 
   async function onDragEnd(evt: DragEndEvent) {
     const { active, over } = evt;
-    setActiveTask(null);
+    setActiveTaskId(null);
     if (!over) return;
 
-    const taskId = Number(active.id);
+    const activeId = String(active.id);
     const overId = String(over.id);
 
-    // overId is either column key or task id; we set droppables as columns only
-    const nextStatus = COLUMNS.find((c) => c.key === overId)?.key as TaskStatus | undefined;
-    if (!nextStatus) return;
+    const activeContainer = findContainerForTaskId(activeId, byStatus.map);
+    const overContainer = (COLUMNS.find((c) => c.key === overId)?.key ?? findContainerForTaskId(overId, byStatus.map)) as
+      | TaskStatus
+      | null;
 
-    const current = tasks.find((t) => t.id === taskId);
-    if (!current || current.status === nextStatus) return;
+    if (!activeContainer || !overContainer) return;
 
-    // optimistic
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)));
+    let nextLocal: Task[] | null = null;
+
+    setTasks((prev) => {
+      const next = [...prev];
+      const aIdx = next.findIndex((t) => String(t.id) === activeId);
+      if (aIdx < 0) return prev;
+
+      const activeTask = next[aIdx];
+      const updatedActive = { ...activeTask, status: overContainer };
+      next[aIdx] = updatedActive;
+
+      // If dropping on another task, reorder within the destination column
+      if (overId !== overContainer) {
+        const dest = next
+          .filter((t) => t.status === overContainer)
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        const fromIndex = dest.findIndex((t) => String(t.id) === activeId);
+        const overIndex = dest.findIndex((t) => String(t.id) === overId);
+        if (fromIndex >= 0 && overIndex >= 0 && fromIndex !== overIndex) {
+          const reordered = arrayMove(dest, fromIndex, overIndex).map((t, i) => ({ ...t, position: i }));
+          const merged = next.map((t) => {
+            const rep = reordered.find((x) => x.id === t.id);
+            return rep ? rep : t;
+          });
+          nextLocal = merged;
+          return merged;
+        }
+      }
+
+      nextLocal = next;
+      return next;
+    });
+
+    // Persist after we computed nextLocal.
     try {
-      await api.updateTask(taskId, { status: nextStatus });
-    } catch (e) {
-      // rollback
+      if (nextLocal) await persistPositions(nextLocal);
+    } finally {
       await refresh();
-      throw e;
     }
   }
 
@@ -157,83 +278,176 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
 
       <DndContext
         sensors={sensors}
-        onDragStart={(evt) => {
-          const t = tasks.find((x) => x.id === Number(evt.active.id)) ?? null;
-          setActiveTask(t);
-        }}
+        collisionDetection={closestCorners}
+        onDragStart={(evt) => setActiveTaskId(String(evt.active.id))}
+        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActiveTask(null)}
+        onDragCancel={() => setActiveTaskId(null)}
       >
         <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-4">
           {COLUMNS.map((col) => (
-            <div
+            <KanbanColumn
               key={col.key}
-              className="flex min-h-[20rem] flex-col rounded-lg border border-slate-200 bg-slate-50"
-            >
-              <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-                <div className="font-medium text-slate-900">{col.title}</div>
-                <div className="text-xs text-slate-600">{byStatus.map[col.key].length}</div>
-              </div>
-              <div id={col.key} className="p-3">
-                <SortableContext items={[]} strategy={verticalListSortingStrategy}>
-                  <div
-                    className={clsx('flex min-h-[18rem] flex-col gap-2 rounded-md p-1', 'bg-transparent')}
-                    // droppable id: use the column key
-                    // DndKit: easiest is set as droppable via useDroppable, but for MVP we can use "id" on container with <div>??
-                  />
-                </SortableContext>
-                <div
-                  className="flex min-h-[18rem] flex-col gap-2"
-                  // Over target is the column itself; DndContext uses collision detection; we set the "over" via a Droppable.
-                />
-              </div>
-
-              {/* Use a simple droppable by relying on over id = column key via a hidden element */}
-              <ColumnDropzone id={col.key}>
-                <div className="flex flex-col gap-2 p-3 pt-0">
-                  {byStatus.map[col.key].map((t) => (
-                    <DraggableTask key={t.id} task={t} />
-                  ))}
-                </div>
-              </ColumnDropzone>
-            </div>
+              id={col.key}
+              title={col.title}
+              count={byStatus.map[col.key].length}
+              tasks={byStatus.map[col.key]}
+              onOpenTask={(t) => setEditTask(t)}
+            />
           ))}
         </div>
 
-        <DragOverlay>{activeTask ? <TaskCard task={activeTask} /> : null}</DragOverlay>
+        <DragOverlay>{activeTask ? <div className="w-80"><TaskCard task={activeTask} /></div> : null}</DragOverlay>
       </DndContext>
+
+      {editTask ? (
+        <EditTaskModal
+          task={editTask}
+          onClose={() => setEditTask(null)}
+          onSave={async (patch) => {
+            await api.updateTask(editTask.id, patch);
+            setEditTask(null);
+            await refresh();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
 import { useDroppable } from '@dnd-kit/core';
-import { useDraggable } from '@dnd-kit/core';
 
-function ColumnDropzone({ id, children }: { id: string; children: ReactNode }) {
+function KanbanColumn({
+  id,
+  title,
+  count,
+  tasks,
+  onOpenTask,
+}: {
+  id: TaskStatus;
+  title: string;
+  count: number;
+  tasks: Task[];
+  onOpenTask: (t: Task) => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={clsx('flex-1', isOver && 'ring-2 ring-slate-400')}>
-      {children}
+    <div className="flex min-h-[20rem] flex-col rounded-lg border border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
+        <div className="font-medium text-slate-900">{title}</div>
+        <div className="text-xs text-slate-600">{count}</div>
+      </div>
+      <div ref={setNodeRef} className={clsx('flex-1 p-3', isOver && 'ring-2 ring-slate-400')}>
+        <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
+          <div className="flex min-h-[18rem] flex-col gap-2">
+            {tasks.map((t) => (
+              <SortableTask key={t.id} task={t} onOpen={() => onOpenTask(t)} />
+            ))}
+          </div>
+        </SortableContext>
+      </div>
     </div>
   );
 }
 
-function DraggableTask({ task }: { task: Task }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(task.id) });
+function SortableTask({ task, onOpen }: { task: Task; onOpen: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(task.id) });
 
-  const style: CSSProperties = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : {};
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={clsx(isDragging && 'opacity-50')}
-      {...listeners}
-      {...attributes}
-    >
-      <TaskCard task={task} />
+    <div ref={setNodeRef} style={style} className={clsx(isDragging && 'opacity-50')} {...attributes} {...listeners}>
+      <TaskCard task={task} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function EditTaskModal({
+  task,
+  onClose,
+  onSave,
+}: {
+  task: Task;
+  onClose: () => void;
+  onSave: (patch: { title?: string; description?: string | null; priority?: TaskPriority; assigned_to?: Assignee | null }) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? '');
+  const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
+  const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold text-slate-900">Edit task #{task.id}</div>
+            <div className="text-xs text-slate-500">Status: {task.status}</div>
+          </div>
+          <button className="rounded-md px-2 py-1 text-sm hover:bg-slate-100" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3">
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Title</div>
+            <input className="w-full rounded-md border border-slate-200 px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Description</div>
+            <textarea className="w-full rounded-md border border-slate-200 px-3 py-2" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-slate-600">Priority</div>
+              <select className="w-full rounded-md border border-slate-200 px-3 py-2" value={priority ?? ''} onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}>
+                <option value="">(none)</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="urgent">urgent</option>
+              </select>
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+              <select className="w-full rounded-md border border-slate-200 px-3 py-2" value={assigned ?? ''} onChange={(e) => setAssigned((e.target.value || null) as Assignee)}>
+                <option value="">(unassigned)</option>
+                <option value="tee">tee</option>
+                <option value="fay">fay</option>
+                <option value="armin">armin</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-2 flex justify-end gap-2">
+            <button className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50" onClick={onClose} disabled={saving}>Cancel</button>
+            <button
+              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await onSave({
+                    title: title.trim() || task.title,
+                    description: description.trim() ? description : null,
+                    priority,
+                    assigned_to: assigned,
+                  });
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
