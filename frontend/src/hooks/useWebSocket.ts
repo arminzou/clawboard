@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type WsMessage = { type: string; data?: any };
 
-const WS_BASE = (import.meta as any).env?.VITE_WS_BASE ?? 'ws://localhost:3001/ws';
+const DEFAULT_WS_BASE = (() => {
+  if (typeof window === 'undefined') return 'ws://localhost:3001/ws';
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/ws`;
+})();
+
+const WS_BASE = (import.meta as any).env?.VITE_WS_BASE ?? DEFAULT_WS_BASE;
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);

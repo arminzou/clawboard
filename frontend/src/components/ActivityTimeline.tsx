@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, Activity } from '../lib/api';
+import { api } from '../lib/api';
+import type { Activity } from '../lib/api';
 
 function when(ts: string) {
   const d = new Date(ts);
@@ -9,12 +10,17 @@ function when(ts: string) {
 export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
+    setError(null);
     try {
       const a = await api.listActivities({ limit: 50 });
       setItems(a);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -46,6 +52,11 @@ export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
       </div>
 
       {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
+      {error ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Failed to load activity feed: {error}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         {items.map((a) => (

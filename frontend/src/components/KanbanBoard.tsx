@@ -1,8 +1,10 @@
-import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { api, Task, TaskStatus } from '../lib/api';
+import { api } from '../lib/api';
+import type { Task, TaskStatus } from '../lib/api';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -38,15 +40,20 @@ function TaskCard({ task }: { task: Task }) {
 export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   async function refresh() {
     setLoading(true);
+    setError(null);
     try {
       const all = await api.listTasks();
       setTasks(all);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -71,8 +78,13 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
       review: [],
       done: [],
     };
-    for (const t of tasks) map[t.status].push(t);
-    return map;
+    const unknown: Task[] = [];
+    for (const t of tasks) {
+      const bucket = map[t.status as TaskStatus];
+      if (bucket) bucket.push(t);
+      else unknown.push(t);
+    }
+    return { map, unknown: Array.from(new Set(unknown.map((t) => t.status))) };
   }, [tasks]);
 
   async function onDragEnd(evt: DragEndEvent) {
@@ -132,6 +144,16 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
       </div>
 
       {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
+      {error ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Failed to load tasks: {error}
+        </div>
+      ) : null}
+      {byStatus.unknown.length ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Unknown task statuses from API: {byStatus.unknown.join(', ')}
+        </div>
+      ) : null}
 
       <DndContext
         sensors={sensors}
@@ -150,7 +172,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
             >
               <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
                 <div className="font-medium text-slate-900">{col.title}</div>
-                <div className="text-xs text-slate-600">{byStatus[col.key].length}</div>
+                <div className="text-xs text-slate-600">{byStatus.map[col.key].length}</div>
               </div>
               <div id={col.key} className="p-3">
                 <SortableContext items={[]} strategy={verticalListSortingStrategy}>
@@ -169,7 +191,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
               {/* Use a simple droppable by relying on over id = column key via a hidden element */}
               <ColumnDropzone id={col.key}>
                 <div className="flex flex-col gap-2 p-3 pt-0">
-                  {byStatus[col.key].map((t) => (
+                  {byStatus.map[col.key].map((t) => (
                     <DraggableTask key={t.id} task={t} />
                   ))}
                 </div>
@@ -187,7 +209,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 
-function ColumnDropzone({ id, children }: { id: string; children: React.ReactNode }) {
+function ColumnDropzone({ id, children }: { id: string; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={clsx('flex-1', isOver && 'ring-2 ring-slate-400')}>
@@ -199,7 +221,7 @@ function ColumnDropzone({ id, children }: { id: string; children: React.ReactNod
 function DraggableTask({ task }: { task: Task }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: String(task.id) });
 
-  const style: React.CSSProperties = transform
+  const style: CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : {};
 
