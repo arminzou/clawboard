@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "init": "npm --prefix backend install && npm --prefix backend run init-db && npm --prefix frontend install",
-    "sync-docs": "npm --prefix backend run sync-docs"
+    "sync-docs": "npm --prefix backend run sync-docs",
+    "ingest-sessions": "npm --prefix backend run ingest-sessions"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

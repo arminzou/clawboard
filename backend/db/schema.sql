@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS activities (
     session_key TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     related_task_id INTEGER,
+    source_id TEXT, -- unique id for ingested events (e.g., session file + line)
     FOREIGN KEY (related_task_id) REFERENCES tasks(id)
 );
 
@@ -45,4 +46,5 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_activities_agent ON activities(agent);
 CREATE INDEX IF NOT EXISTS idx_activities_timestamp ON activities(timestamp);
 CREATE INDEX IF NOT EXISTS idx_activities_task ON activities(related_task_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_activities_source_id ON activities(source_id);
 CREATE INDEX IF NOT EXISTS idx_documents_path ON documents(file_path);
