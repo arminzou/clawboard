@@ -27,20 +27,15 @@ function inferAgentFromPath(p) {
   return null;
 }
 
-function main() {
+function ingestSessions({ agents = DEFAULT_AGENTS } = {}) {
   const dbPath = path.join(__dirname, '../../data/tasks.db');
   const db = new Database(dbPath);
 
   // Ensure schema migrations applied
-  try {
-    const { migrate } = require('../db/migrate');
-    migrate(db);
-  } catch (e) {
-    console.error('Migration failed:', e);
-    process.exit(1);
-  }
+  const { migrate } = require('../db/migrate');
+  migrate(db);
 
-  const agents = (process.env.AGENTS ? process.env.AGENTS.split(',') : DEFAULT_AGENTS)
+  const agentList = (process.env.AGENTS ? process.env.AGENTS.split(',') : agents)
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -54,7 +49,7 @@ function main() {
   let inserted = 0;
   let scanned = 0;
 
-  for (const agent of agents) {
+  for (const agent of agentList) {
     const sessionsDir = path.join(base, 'agents', agent, 'sessions');
     if (!fs.existsSync(sessionsDir)) continue;
 
@@ -117,7 +112,19 @@ function main() {
   }
 
   db.close();
-  console.log(`✓ Ingest complete. scanned=${scanned} inserted=${inserted}`);
+  return { scanned, inserted, agents: agentList };
 }
+
+function main() {
+  try {
+    const r = ingestSessions();
+    console.log(`✓ Ingest complete. scanned=${r.scanned} inserted=${r.inserted}`);
+  } catch (e) {
+    console.error(e);
+    process.exit(1);
+  }
+}
+
+module.exports = { ingestSessions };
 
 if (require.main === module) main();

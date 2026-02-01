@@ -112,7 +112,18 @@ server.listen(PORT, HOST, () => {
     const wsUrl = `ws://${HOST}:${PORT}/ws`;
     console.log(`\n🚀 Project Manager Backend running on ${baseUrl}`);
     console.log(`📊 WebSocket endpoint: ${wsUrl}`);
-    console.log(`💾 Database: ${DB_PATH}\n`);
+    console.log(`💾 Database: ${DB_PATH}`);
+
+    // Optional: keep dashboard data fresh automatically
+    if (String(process.env.AUTO_SYNC || '').toLowerCase() === '1' || String(process.env.AUTO_SYNC || '').toLowerCase() === 'true') {
+        const intervalMs = Number(process.env.SYNC_INTERVAL_MS || 60_000);
+        const { createAutoSync } = require('./utils/autoSync');
+        const auto = createAutoSync({ intervalMs, log: console });
+        app.locals.autoSync = auto;
+        console.log(`🔁 Auto-sync enabled (every ${intervalMs}ms)\n`);
+    } else {
+        console.log('');
+    }
 });
 
 // Graceful shutdown

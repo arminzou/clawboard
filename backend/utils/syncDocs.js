@@ -22,11 +22,11 @@ function fileType(p) {
   return ext ? ext.slice(1).toLowerCase() : 'unknown';
 }
 
-function main() {
+function syncDocs({ workspaceRoot = WORKSPACE_ROOT } = {}) {
   const db = new Database(DB_PATH);
-  const gitStatus = getGitStatusMap(WORKSPACE_ROOT);
+  const gitStatus = getGitStatusMap(workspaceRoot);
 
-  const files = walk(WORKSPACE_ROOT);
+  const files = walk(workspaceRoot);
 
   const upsert = db.prepare(`
     INSERT INTO documents (file_path, file_type, last_modified, last_modified_by, size_bytes, git_status)
@@ -41,7 +41,7 @@ function main() {
 
   const tx = db.transaction(() => {
     for (const abs of files) {
-      const rel = path.relative(WORKSPACE_ROOT, abs);
+      const rel = path.relative(workspaceRoot, abs);
       const stat = fs.statSync(abs);
       const status = gitStatus.get(rel) || 'clean';
       upsert.run({
@@ -57,7 +57,14 @@ function main() {
 
   tx();
   db.close();
-  console.log(`✓ Synced ${files.length} documents from ${WORKSPACE_ROOT}`);
+  return { files: files.length, workspaceRoot };
 }
+
+function main() {
+  const r = syncDocs();
+  console.log(`✓ Synced ${r.files} documents from ${r.workspaceRoot}`);
+}
+
+module.exports = { syncDocs };
 
 if (require.main === module) main();
