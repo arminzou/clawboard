@@ -1,0 +1,13 @@
+{
+  "name": "project-manager",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "init": "npm --prefix backend install && npm --prefix backend run init-db && npm --prefix frontend install",
+    "sync-docs": "npm --prefix backend run sync-docs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
