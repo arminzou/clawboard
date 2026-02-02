@@ -50,17 +50,25 @@ router.get('/:id', (req, res) => {
 // Create task
 router.post('/', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status = 'backlog', priority, assigned_to, position = 0 } = req.body;
+    const { title, description, status = 'backlog', priority, assigned_to, position } = req.body;
     
     if (!title) {
         return res.status(400).json({ error: 'Title is required' });
     }
     
     try {
+        // If no explicit position, append to end of column for stable ordering.
+        const resolvedPosition =
+            position !== undefined && position !== null
+                ? position
+                : db
+                      .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ?')
+                      .get(status).next;
+
         const result = db.prepare(`
             INSERT INTO tasks (title, description, status, priority, assigned_to, position)
             VALUES (?, ?, ?, ?, ?, ?)
-        `).run(title, description, status, priority, assigned_to, position);
+        `).run(title, description, status, priority, assigned_to, resolvedPosition);
         
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
         

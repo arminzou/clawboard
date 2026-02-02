@@ -1,17 +1,30 @@
-import { Component, useMemo, useState, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useHealth } from './hooks/useHealth';
 import './index.css';
 
 type Tab = 'kanban' | 'activity' | 'docs';
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('kanban');
-  const { connected, lastMessage } = useWebSocket();
+  const [tab, setTab] = useState<Tab>(() => {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pm.tab') : null;
+    return (raw === 'kanban' || raw === 'activity' || raw === 'docs' ? raw : 'kanban') as Tab;
+  });
+  const { status: wsStatus, lastMessage } = useWebSocket();
+  const health = useHealth();
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.tab', tab);
+    } catch {
+      // ignore
+    }
+  }, [tab]);
 
   return (
     <ErrorBoundary>
@@ -20,7 +33,9 @@ export default function App() {
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
             <div>
               <div className="text-base font-semibold text-slate-900">Project Manager</div>
-              <div className="text-xs text-slate-500">API ws: {connected ? 'connected' : 'disconnected'}</div>
+              <div className="text-xs text-slate-500">
+                API: {health.checking ? 'checking' : health.ok ? 'ok' : 'down'} • WS: {wsStatus}
+              </div>
             </div>
             <div className="flex gap-2">
               <TabButton active={tab === 'kanban'} onClick={() => setTab('kanban')}>Kanban</TabButton>

@@ -21,7 +21,7 @@ project-manager/
 └── README.md
 ```
 
-## Phase 1: Data Layer (Current)
+## Phase 2: Frontend MVP (Current)
 
 ### Setup
 
@@ -33,6 +33,10 @@ npm run init
 # dev (runs backend+frontend)
 npm run dev
 ```
+
+Notes:
+- `npm run init` installs root + backend + frontend dependencies, and initializes the SQLite DB.
+- The frontend dev server proxies `/api` + `/ws` to the backend.
 
 If you already have a backend running on :3001, start only the frontend:
 

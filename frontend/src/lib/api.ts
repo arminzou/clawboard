@@ -17,13 +17,30 @@ export interface Task {
 
 export interface Activity {
   id: number;
-  agent: 'tee' | 'fay';
+  agent: 'tee' | 'fay' | 'armin';
   activity_type: string;
   description: string;
   details: string | null;
   session_key: string | null;
   timestamp: string;
   related_task_id: number | null;
+}
+
+export interface Document {
+  id: number;
+  file_path: string;
+  file_type: string | null;
+  last_modified: string | null;
+  last_modified_by: string | null;
+  size_bytes: number | null;
+  git_status: string | null;
+}
+
+export interface DocsStats {
+  total: number;
+  by_type: Array<{ file_type: string | null; count: number }>;
+  by_status: Array<{ git_status: string | null; count: number }>;
+  by_author: Array<{ last_modified_by: string; count: number }>;
 }
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? '';
@@ -79,11 +96,55 @@ export const api = {
     if (!(res.status === 204 || res.ok)) throw new Error(`${res.status} ${res.statusText}`);
   },
 
-  async listActivities(params?: { agent?: string; limit?: number }) {
+  async listActivities(params?: { agent?: string; limit?: number; offset?: number; since?: string }) {
     const usp = new URLSearchParams();
     if (params?.agent) usp.set('agent', params.agent);
+    if (params?.since) usp.set('since', params.since);
     if (params?.limit != null) usp.set('limit', String(params.limit));
+    if (params?.offset != null) usp.set('offset', String(params.offset));
     const url = `${withBase('/api/activities')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Activity[]>(await fetch(url));
+  },
+
+  async ingestSessions(body?: { agents?: string[] }) {
+    return json<{ scanned: number; inserted: number; agents: string[] }>(
+      await fetch(withBase('/api/activities/ingest-sessions'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+    );
+  },
+
+  async listDocs(params?: { git_status?: string; limit?: number }) {
+    const usp = new URLSearchParams();
+    if (params?.git_status) usp.set('git_status', params.git_status);
+    if (params?.limit != null) usp.set('limit', String(params.limit));
+    const url = `${withBase('/api/docs')}${usp.toString() ? `?${usp.toString()}` : ''}`;
+    return json<Document[]>(await fetch(url));
+  },
+
+  async docsStats() {
+    return json<DocsStats>(await fetch(withBase('/api/docs/stats')));
+  },
+
+  async resyncDocs(body?: { workspace_root?: string }) {
+    return json<{ files: number; workspaceRoot: string }>(
+      await fetch(withBase('/api/docs/resync'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+    );
+  },
+
+  async syncDoc(body: Partial<Pick<Document, 'file_type' | 'last_modified' | 'last_modified_by' | 'size_bytes' | 'git_status'>> & { file_path: string }) {
+    return json<Document>(
+      await fetch(withBase('/api/docs/sync'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
   },
 };
