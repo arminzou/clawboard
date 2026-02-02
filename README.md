@@ -69,13 +69,9 @@ npm run dev:frontend
 **Activities:** `id, agent, activity_type, description, details, session_key, related_task_id, timestamp`  
 **Documents:** `id, file_path, file_type, last_modified, last_modified_by, size_bytes, git_status`
 
-## Next Steps (Phase 2)
+## Roadmap
 
-- [ ] React frontend with Kanban board
-- [ ] Activity timeline component
-- [ ] Document tracker component
-- [ ] WebSocket integration for real-time updates
-- [ ] Drag-and-drop task management
+See [ROADMAP.md](./ROADMAP.md) for the living plan and current priorities.
 
 ## Development
 
