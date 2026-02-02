@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
@@ -14,9 +14,23 @@ export default function App() {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pm.tab') : null;
     return (raw === 'kanban' || raw === 'activity' || raw === 'docs' ? raw : 'kanban') as Tab;
   });
-  const { status: wsStatus, lastMessage } = useWebSocket();
-  const health = useHealth();
   const [toast, setToast] = useState<string | null>(null);
+  const [openTaskId, setOpenTaskId] = useState<number | null>(null);
+
+  const pushToast = useCallback((msg: string) => {
+    setToast(msg);
+  }, []);
+
+  const { status: wsStatus, lastMessage } = useWebSocket({
+    onMessage: (m) => {
+      const t = String(m.type || '');
+      if (t.startsWith('task_')) pushToast(`Tasks updated (${t})`);
+      else if (t.startsWith('activity_')) pushToast(`Activity updated (${t})`);
+      else if (t.startsWith('document_')) pushToast(`Docs updated (${t})`);
+    },
+  });
+
+  const health = useHealth();
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
 
@@ -28,14 +42,7 @@ export default function App() {
     }
   }, [tab]);
 
-  useEffect(() => {
-    if (!lastMessage?.type) return;
-    // Keep it subtle: only toast on events that feel meaningful.
-    const t = String(lastMessage.type);
-    if (t.startsWith('task_')) setToast(`Tasks updated (${t})`);
-    else if (t.startsWith('activity_')) setToast(`Activity updated (${t})`);
-    else if (t.startsWith('document_')) setToast(`Docs updated (${t})`);
-  }, [lastMessage?.type]);
+  // Toasts are pushed from the WebSocket onMessage handler.
 
   return (
     <ErrorBoundary>
@@ -59,8 +66,22 @@ export default function App() {
         </div>
 
         <div className="mx-auto h-[calc(100%-56px)] max-w-7xl px-4 py-4">
-          {tab === 'kanban' ? <KanbanBoard wsSignal={wsSignal} /> : null}
-          {tab === 'activity' ? <ActivityTimeline wsSignal={wsSignal} /> : null}
+          {tab === 'kanban' ? (
+            <KanbanBoard
+              wsSignal={wsSignal}
+              openTaskId={openTaskId}
+              onOpenTaskConsumed={() => setOpenTaskId(null)}
+            />
+          ) : null}
+          {tab === 'activity' ? (
+            <ActivityTimeline
+              wsSignal={wsSignal}
+              onOpenTask={(id) => {
+                setOpenTaskId(id);
+                setTab('kanban');
+              }}
+            />
+          ) : null}
           {tab === 'docs' ? <DocsView wsSignal={wsSignal} /> : null}
         </div>
       </div>

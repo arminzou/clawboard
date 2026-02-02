@@ -38,6 +38,15 @@ Notes:
 - `npm run init` installs root + backend + frontend dependencies, and initializes the SQLite DB.
 - The frontend dev server proxies `/api` + `/ws` to the backend.
 
+### Production-ish (single server)
+
+```bash
+npm run build
+npm run start
+```
+
+This will serve the built frontend from the backend process.
+
 If you already have a backend running on :3001, start only the frontend:
 
 ```bash

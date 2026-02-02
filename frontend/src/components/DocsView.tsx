@@ -35,11 +35,46 @@ export function DocsView({
   const [stats, setStats] = useState<DocsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('');
-  const [status, setStatus] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [dirtyOnly, setDirtyOnly] = useState<boolean>(false);
-  const [sort, setSort] = useState<SortKey>('recent');
+  const [filter, setFilter] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pm.docs.q') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [status, setStatus] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pm.docs.status') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [typeFilter, setTypeFilter] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pm.docs.type') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [dirtyOnly, setDirtyOnly] = useState<boolean>(() => {
+    try {
+      return (window.localStorage.getItem('pm.docs.dirtyOnly') ?? '') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const [sort, setSort] = useState<SortKey>(() => {
+    try {
+      const raw = window.localStorage.getItem('pm.docs.sort') ?? 'recent';
+      return (raw === 'recent' || raw === 'path' || raw === 'size' ? raw : 'recent') as SortKey;
+    } catch {
+      return 'recent';
+    }
+  });
   const [resyncing, setResyncing] = useState(false);
 
   async function refresh() {
@@ -65,6 +100,46 @@ export function DocsView({
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.docs.q', filter);
+    } catch {
+      // ignore
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.docs.status', status);
+    } catch {
+      // ignore
+    }
+  }, [status]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.docs.type', typeFilter);
+    } catch {
+      // ignore
+    }
+  }, [typeFilter]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.docs.dirtyOnly', dirtyOnly ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [dirtyOnly]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.docs.sort', sort);
+    } catch {
+      // ignore
+    }
+  }, [sort]);
 
   useEffect(() => {
     refreshStats();
@@ -243,17 +318,57 @@ export function DocsView({
             </tr>
           </thead>
           <tbody>
-            {filteredSorted.map((d) => (
-              <tr key={d.id} className="border-t border-slate-100">
-                <td className="px-3 py-2 font-mono text-xs text-slate-800">{d.file_path}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">{d.git_status ?? ''}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">{d.file_type ?? ''}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">{formatBytes(d.size_bytes)}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">
-                  {d.last_modified ? new Date(d.last_modified).toLocaleString() : ''}
-                </td>
-              </tr>
-            ))}
+            {filteredSorted.map((d) => {
+              const status = String(d.git_status ?? '');
+              const statusClass =
+                status === 'modified'
+                  ? 'bg-amber-100 text-amber-900'
+                  : status === 'added'
+                    ? 'bg-green-100 text-green-900'
+                    : status === 'deleted'
+                      ? 'bg-red-100 text-red-900'
+                      : status === 'untracked'
+                        ? 'bg-purple-100 text-purple-900'
+                        : status === 'clean'
+                          ? 'bg-slate-100 text-slate-700'
+                          : 'bg-slate-100 text-slate-700';
+
+              return (
+                <tr
+                  key={d.id}
+                  className={
+                    (d.git_status ?? 'clean') !== 'clean'
+                      ? 'border-t border-slate-100 bg-amber-50/40'
+                      : 'border-t border-slate-100'
+                  }
+                >
+                  <td className="px-3 py-2 font-mono text-xs text-slate-800">
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      title="Click to copy"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(d.file_path);
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                    >
+                      {d.file_path}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {status ? <span className={`rounded px-2 py-0.5 ${statusClass}`}>{status}</span> : null}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-slate-700">{d.file_type ?? ''}</td>
+                  <td className="px-3 py-2 text-xs text-slate-700">{formatBytes(d.size_bytes)}</td>
+                  <td className="px-3 py-2 text-xs text-slate-700">
+                    {d.last_modified ? new Date(d.last_modified).toLocaleString() : ''}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

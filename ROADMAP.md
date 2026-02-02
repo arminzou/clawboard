@@ -66,22 +66,22 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ## Phase 3 — Document tracker + activity timeline
 
-- [ ] Docs page improvements
-  - [ ] Sorting/filtering (recently modified, git dirty, type)
-  - [ ] Better metadata display
-- [ ] Activities timeline
-  - [ ] Group by day
-  - [ ] Filter by agent / type
-  - [ ] Link activity → related task when `related_task_id` exists
+- [x] Docs page improvements
+  - [x] Sorting/filtering (recently modified, git dirty, type)
+  - [x] Better metadata display
+- [x] Activities timeline
+  - [x] Group by day
+  - [x] Filter by agent / type
+  - [x] Link activity → related task when `related_task_id` exists
 
 ---
 
 ## Phase 4 — Polish / hardening
 
-- [ ] Search everywhere (tasks/docs/activities)
-- [ ] Keyboard shortcuts / quick-add task
-- [ ] Persist UI state (filters, last view)
-- [ ] Deployment packaging (single command; optional Docker)
+- [x] Search everywhere (tasks/docs/activities)
+- [x] Keyboard shortcuts / quick-add task
+- [x] Persist UI state (filters, last view)
+- [x] Deployment packaging (single command; optional Docker)
 - [ ] Auth (only if ever exposed beyond localhost)
 
 ---

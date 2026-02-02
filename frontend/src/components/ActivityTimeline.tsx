@@ -13,13 +13,32 @@ function dayKey(ts: string) {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
 }
 
-export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
+export function ActivityTimeline({
+  wsSignal,
+  onOpenTask,
+}: {
+  wsSignal?: { type?: string; data?: unknown } | null;
+  onOpenTask?: (id: number) => void;
+}) {
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [agent, setAgent] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
+  const [agent, setAgent] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pm.activity.agent') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [typeFilter, setTypeFilter] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('pm.activity.q') ?? '';
+    } catch {
+      return '';
+    }
+  });
   const [ingesting, setIngesting] = useState(false);
 
   async function refresh() {
@@ -40,6 +59,22 @@ export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agent]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.activity.agent', agent);
+    } catch {
+      // ignore
+    }
+  }, [agent]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.activity.q', typeFilter);
+    } catch {
+      // ignore
+    }
+  }, [typeFilter]);
 
   useEffect(() => {
     if (!wsSignal?.type) return;
@@ -159,7 +194,15 @@ export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
                 </div>
                 <div className="mt-1 text-sm text-slate-700">{a.description}</div>
                 <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-                  {a.related_task_id ? <span>task #{a.related_task_id}</span> : null}
+                  {a.related_task_id ? (
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 hover:bg-slate-100"
+                      onClick={() => onOpenTask?.(a.related_task_id as number)}
+                    >
+                      task #{a.related_task_id}
+                    </button>
+                  ) : null}
                   {a.session_key ? <span className="font-mono">{a.session_key}</span> : null}
                 </div>
               </div>

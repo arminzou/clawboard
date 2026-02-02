@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 
@@ -51,19 +52,35 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Root route (helpful for quick sanity checks)
-app.get('/', (req, res) => {
-    res.json({
-        name: 'Project Manager Backend',
-        status: 'ok',
-        api: {
-            health: '/api/health',
-            tasks: '/api/tasks',
-            activities: '/api/activities',
-            docs: '/api/docs',
-        },
+// Frontend (production build)
+const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
+const HAS_FRONTEND = fs.existsSync(FRONTEND_INDEX);
+
+if (HAS_FRONTEND) {
+    // Serve SPA
+    app.use(express.static(FRONTEND_DIST));
+
+    // History API fallback (avoid intercepting /api/*)
+    app.get(/^\/(?!api\/).*/, (req, res) => {
+        res.sendFile(FRONTEND_INDEX);
     });
-});
+} else {
+    // Root route (helpful for quick sanity checks)
+    app.get('/', (req, res) => {
+        res.json({
+            name: 'Project Manager Backend',
+            status: 'ok',
+            api: {
+                health: '/api/health',
+                tasks: '/api/tasks',
+                activities: '/api/activities',
+                docs: '/api/docs',
+            },
+            note: 'Frontend build not found. Run: npm --prefix frontend run build',
+        });
+    });
+}
 
 // Create HTTP server for WebSocket upgrade
 const server = http.createServer(app);

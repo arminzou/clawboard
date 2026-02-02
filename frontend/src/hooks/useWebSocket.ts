@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-export type WsMessage = { type: string; data?: any };
+export type WsMessage = { type: string; data?: unknown };
 export type WsStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 const DEFAULT_WS_BASE = (() => {
@@ -9,18 +9,23 @@ const DEFAULT_WS_BASE = (() => {
   return `${protocol}://${window.location.host}/ws`;
 })();
 
-const WS_BASE = (import.meta as any).env?.VITE_WS_BASE ?? DEFAULT_WS_BASE;
+const WS_BASE = ((import.meta as unknown as { env?: { VITE_WS_BASE?: string } }).env?.VITE_WS_BASE) ?? DEFAULT_WS_BASE;
 
-export function useWebSocket() {
+export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const [status, setStatus] = useState<WsStatus>('connecting');
   const [lastMessage, setLastMessage] = useState<WsMessage | null>(null);
   const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef<((msg: WsMessage) => void) | undefined>(opts?.onMessage);
   const reconnectTimerRef = useRef<number | null>(null);
   const attemptRef = useRef(0);
   const everConnectedRef = useRef(false);
 
   const url = useMemo(() => WS_BASE, []);
+
+  useEffect(() => {
+    onMessageRef.current = opts?.onMessage;
+  }, [opts?.onMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,9 +71,10 @@ export function useWebSocket() {
 
       ws.onmessage = (evt) => {
         try {
-          const msg = JSON.parse(evt.data);
+          const msg = JSON.parse(evt.data) as WsMessage;
           setLastMessage(msg);
           setLastReceivedAt(Date.now());
+          onMessageRef.current?.(msg);
         } catch {
           // ignore
         }
@@ -87,8 +93,7 @@ export function useWebSocket() {
       }
       wsRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
-  return { status, connected: status === 'connected', lastMessage, lastReceivedAt, ws: wsRef.current };
+  return { status, connected: status === 'connected', lastMessage, lastReceivedAt };
 }

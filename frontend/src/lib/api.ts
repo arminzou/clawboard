@@ -43,7 +43,7 @@ export interface DocsStats {
   by_author: Array<{ last_modified_by: string; count: number }>;
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? '';
+const API_BASE = ((import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE) ?? '';
 const API_BASE_CLEAN = API_BASE ? API_BASE.replace(/\/$/, '') : '';
 
 function withBase(path: string) {

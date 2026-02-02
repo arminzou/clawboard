@@ -9,7 +9,7 @@ import {
 import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '../lib/api';
 import type { Assignee, Task, TaskPriority, TaskStatus } from '../lib/api';
@@ -51,7 +51,15 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
   );
 }
 
-export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
+export function KanbanBoard({
+  wsSignal,
+  openTaskId,
+  onOpenTaskConsumed,
+}: {
+  wsSignal?: { type?: string; data?: unknown } | null;
+  openTaskId?: number | null;
+  onOpenTaskConsumed?: () => void;
+}) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +67,27 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
+
+  const [q, setQ] = useState(() => {
+    try {
+      return window.localStorage.getItem('pm.kanban.q') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const [assignee, setAssignee] = useState<AssigneeFilter>(() => {
+    try {
+      const raw = window.localStorage.getItem('pm.kanban.assignee') ?? 'all';
+      return (raw === 'all' || raw === 'tee' || raw === 'fay' || raw === 'armin' || raw === '' ? raw : 'all') as AssigneeFilter;
+    } catch {
+      return 'all';
+    }
+  });
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -77,6 +105,58 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.kanban.q', q);
+    } catch {
+      // ignore
+    }
+  }, [q]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.kanban.assignee', assignee);
+    } catch {
+      // ignore
+    }
+  }, [assignee]);
+
+  // If App requests to open a task (e.g. from Activity tab), open the edit modal.
+  useEffect(() => {
+    if (!openTaskId) return;
+    const t = tasks.find((x) => x.id === openTaskId);
+    if (!t) return;
+    setEditTask(t);
+    onOpenTaskConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTaskId, tasks]);
+
+  // Keyboard shortcuts (Kanban tab only)
+  useEffect(() => {
+    function isEditable(el: EventTarget | null): boolean {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (isEditable(e.target)) return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setCreateOpen(true);
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   // Apply websocket updates in-memory (fallback to refresh for unknown shapes)
@@ -99,10 +179,13 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
         return;
       }
 
-      if (wsSignal.type === 'task_deleted' && wsSignal.data?.id) {
-        const id = Number(wsSignal.data.id);
-        setTasks((prev) => prev.filter((x) => x.id !== id));
-        return;
+      if (wsSignal.type === 'task_deleted' && wsSignal.data) {
+        const data = wsSignal.data;
+        if (typeof data === 'object' && data !== null && 'id' in data) {
+          const id = Number((data as { id: unknown }).id);
+          setTasks((prev) => prev.filter((x) => x.id !== id));
+          return;
+        }
       }
 
       if (String(wsSignal.type).startsWith('task_')) {
@@ -115,6 +198,18 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsSignal?.type]);
 
+  const visibleTasks = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    const wantAssignee: Assignee | 'all' = assignee === 'all' ? 'all' : assignee === '' ? null : assignee;
+
+    return tasks.filter((t) => {
+      if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
+      if (!query) return true;
+      const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}`.toLowerCase();
+      return hay.includes(query);
+    });
+  }, [assignee, q, tasks]);
+
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
       backlog: [],
@@ -124,7 +219,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
     };
     const unknown: Task[] = [];
 
-    for (const t of tasks) {
+    for (const t of visibleTasks) {
       const bucket = map[t.status as TaskStatus];
       if (bucket) bucket.push(t);
       else unknown.push(t);
@@ -139,7 +234,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
       map,
       unknown: Array.from(new Set(unknown.map((t) => t.status))),
     };
-  }, [tasks]);
+  }, [visibleTasks]);
 
   function findContainerForTaskId(taskId: string, columns: Record<TaskStatus, Task[]>) {
     for (const col of COLUMNS) {
@@ -202,7 +297,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
         if (!changed) return null;
         return api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position });
       })
-      .filter(Boolean) as Promise<any>[];
+      .filter(Boolean) as Promise<unknown>[];
 
     await Promise.allSettled(updates);
   }
@@ -272,12 +367,31 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
           <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
           <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={searchRef}
+            className="w-56 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            placeholder="Search tasks… (/)"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <select
+            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            value={assignee}
+            onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
+            title="Assignee"
+          >
+            <option value="all">All</option>
+            <option value="tee">tee</option>
+            <option value="fay">fay</option>
+            <option value="armin">armin</option>
+            <option value="">(unassigned)</option>
+          </select>
           <button
             className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
             onClick={() => setCreateOpen(true)}
           >
-            + Task
+            + Task (N)
           </button>
           <button
             className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
@@ -297,6 +411,12 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
       {byStatus.unknown.length ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           Unknown task statuses from API: {byStatus.unknown.join(', ')}
+        </div>
+      ) : null}
+
+      {!loading && visibleTasks.length === 0 ? (
+        <div className="rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700">
+          No tasks match your filters.
         </div>
       ) : null}
 
