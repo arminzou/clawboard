@@ -25,16 +25,16 @@ This document is the living plan. It’s expected to change as we implement and 
 
 **Goal:** The UI loads, hits the backend, and shows real data with basic UX states.
 
-- [ ] Layout shell (nav + main content + header)
-- [ ] Connection indicators
-  - [ ] Backend reachable (`/api/health`)
-  - [ ] WS connected / reconnecting
-- [ ] Typed API client wrappers (tasks/activities/docs)
-- [ ] Pages (read-only is fine at first)
-  - [ ] Tasks list
-  - [ ] Activities feed
-  - [ ] Docs list + stats
-- [ ] Error/loading/empty states (no blank screens)
+- [x] Layout shell (nav + main content + header)
+- [x] Connection indicators
+  - [x] Backend reachable (`/api/health`)
+  - [x] WS connected / reconnecting
+- [x] Typed API client wrappers (tasks/activities/docs)
+- [x] Pages (read-only is fine at first)
+  - [x] Tasks (Kanban)
+  - [x] Activities feed (with ingest + filters)
+  - [x] Docs list + stats (with resync)
+- [x] Error/loading/empty states (no blank screens)
 
 **Done when:** I can open the app and see tasks/activities/docs populated from the API.
 
@@ -42,13 +42,13 @@ This document is the living plan. It’s expected to change as we implement and 
 
 **Goal:** Tasks can be managed visually and persisted.
 
-- [ ] Kanban columns by `status` (finalize the exact set)
-- [ ] Task card component (title, priority, assigned_to, updated)
-- [ ] Create task UI (modal or side panel) → `POST /api/tasks`
-- [ ] Edit task UI → `PATCH /api/tasks/:id`
-- [ ] Drag-and-drop between columns updates:
-  - [ ] `status`
-  - [ ] ordering (`position`)
+- [x] Kanban columns by `status` (current set: `backlog | in_progress | review | done`)
+- [x] Task card component (title, priority, assigned_to)
+- [x] Create task UI (modal) → `POST /api/tasks`
+- [x] Edit task UI → `PATCH /api/tasks/:id`
+- [x] Drag-and-drop between columns updates:
+  - [x] `status`
+  - [x] ordering (`position`)
 
 **Done when:** I can create a task and drag it across columns and it stays after refresh.
 
