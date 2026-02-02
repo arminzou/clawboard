@@ -1,27 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-
-type Doc = {
-  id: number;
-  file_path: string;
-  file_type: string | null;
-  last_modified: string | null;
-  last_modified_by: string | null;
-  size_bytes: number | null;
-  git_status: string | null;
-};
-
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? '';
-const API_BASE_CLEAN = API_BASE ? API_BASE.replace(/\/$/, '') : '';
-
-function withBase(path: string) {
-  return API_BASE_CLEAN ? `${API_BASE_CLEAN}${path}` : path;
-}
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return (await res.json()) as T;
-}
+import { api } from '../lib/api';
+import type { Document as Doc } from '../lib/api';
 
 export function DocsView({ wsSignal }: { wsSignal?: any }) {
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -32,11 +11,7 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
   async function refresh() {
     setLoading(true);
     try {
-      const usp = new URLSearchParams();
-      if (status) usp.set('git_status', status);
-      usp.set('limit', '200');
-      const url = `${withBase('/api/docs')}?${usp.toString()}`;
-      const d = await fetchJson<Doc[]>(url);
+      const d = await api.listDocs({ git_status: status || undefined, limit: 200 });
       setDocs(d);
     } finally {
       setLoading(false);
@@ -116,7 +91,9 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
                 <td className="px-3 py-2 text-xs text-slate-700">{d.git_status ?? ''}</td>
                 <td className="px-3 py-2 text-xs text-slate-700">{d.file_type ?? ''}</td>
                 <td className="px-3 py-2 text-xs text-slate-700">{d.size_bytes ?? ''}</td>
-                <td className="px-3 py-2 text-xs text-slate-700">{d.last_modified ? new Date(d.last_modified).toLocaleString() : ''}</td>
+                <td className="px-3 py-2 text-xs text-slate-700">
+                  {d.last_modified ? new Date(d.last_modified).toLocaleString() : ''}
+                </td>
               </tr>
             ))}
           </tbody>

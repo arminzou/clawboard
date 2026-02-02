@@ -57,6 +57,7 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
   const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -234,24 +235,19 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
     }
   }
 
-  async function createQuickTask() {
-    const title = prompt('Task title?');
-    if (!title) return;
-    const created = await api.createTask({ title, status: 'backlog', assigned_to: 'tee' });
-    setTasks((prev) => [created, ...prev]);
-  }
+  // Create via UI modal (see CreateTaskModal below)
 
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
-          <div className="text-sm text-slate-600">Drag tasks between columns. (Reordering coming next.)</div>
+          <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
         </div>
         <div className="flex gap-2">
           <button
             className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            onClick={createQuickTask}
+            onClick={() => setCreateOpen(true)}
           >
             + Task
           </button>
@@ -307,6 +303,17 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
           onSave={async (patch) => {
             await api.updateTask(editTask.id, patch);
             setEditTask(null);
+            await refresh();
+          }}
+        />
+      ) : null}
+
+      {createOpen ? (
+        <CreateTaskModal
+          onClose={() => setCreateOpen(false)}
+          onCreate={async (body) => {
+            await api.createTask(body);
+            setCreateOpen(false);
             await refresh();
           }}
         />
@@ -444,6 +451,147 @@ function EditTaskModal({
               }}
             >
               Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateTaskModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (body: {
+    title: string;
+    description?: string | null;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    assigned_to?: Assignee | null;
+    position?: number;
+  }) => Promise<void>;
+}) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<TaskStatus>('backlog');
+  const [priority, setPriority] = useState<TaskPriority>(null);
+  const [assigned, setAssigned] = useState<Assignee | null>('tee');
+  const [saving, setSaving] = useState(false);
+
+  const canSave = title.trim().length > 0 && !saving;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-base font-semibold text-slate-900">Create task</div>
+            <div className="text-xs text-slate-500">Fill in the basics. You can edit later.</div>
+          </div>
+          <button className="rounded-md px-2 py-1 text-sm hover:bg-slate-100" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3">
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Title</div>
+            <input
+              className="w-full rounded-md border border-slate-200 px-3 py-2"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Wire up docs sync UI"
+              autoFocus
+            />
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Description</div>
+            <textarea
+              className="w-full rounded-md border border-slate-200 px-3 py-2"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional…"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-slate-600">Status</div>
+              <select
+                className="w-full rounded-md border border-slate-200 px-3 py-2"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+              >
+                {COLUMNS.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+              <select
+                className="w-full rounded-md border border-slate-200 px-3 py-2"
+                value={assigned ?? ''}
+                onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
+              >
+                <option value="">(unassigned)</option>
+                <option value="tee">tee</option>
+                <option value="fay">fay</option>
+                <option value="armin">armin</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Priority</div>
+            <select
+              className="w-full rounded-md border border-slate-200 px-3 py-2"
+              value={priority ?? ''}
+              onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
+            >
+              <option value="">(none)</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+              <option value="urgent">urgent</option>
+            </select>
+          </label>
+
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              disabled={!canSave}
+              onClick={async () => {
+                if (!title.trim()) return;
+                setSaving(true);
+                try {
+                  await onCreate({
+                    title: title.trim(),
+                    description: description.trim() ? description.trim() : null,
+                    status,
+                    priority,
+                    assigned_to: assigned,
+                  });
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Create
             </button>
           </div>
         </div>
