@@ -79,11 +79,39 @@ export function KanbanBoard({ wsSignal }: { wsSignal?: any }) {
     refresh();
   }, []);
 
-  // re-fetch on websocket signals
+  // Apply websocket updates in-memory (fallback to refresh for unknown shapes)
   useEffect(() => {
-    if (!wsSignal) return;
-    // cheap + reliable for now
-    refresh();
+    if (!wsSignal?.type) return;
+
+    try {
+      if (wsSignal.type === 'task_created' && wsSignal.data) {
+        const t = wsSignal.data as Task;
+        setTasks((prev) => {
+          if (prev.some((x) => x.id === t.id)) return prev;
+          return [t, ...prev];
+        });
+        return;
+      }
+
+      if (wsSignal.type === 'task_updated' && wsSignal.data) {
+        const t = wsSignal.data as Task;
+        setTasks((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+        return;
+      }
+
+      if (wsSignal.type === 'task_deleted' && wsSignal.data?.id) {
+        const id = Number(wsSignal.data.id);
+        setTasks((prev) => prev.filter((x) => x.id !== id));
+        return;
+      }
+
+      if (String(wsSignal.type).startsWith('task_')) {
+        // unknown task_* event: stay correct by refetching
+        refresh();
+      }
+    } catch {
+      refresh();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsSignal?.type]);
 

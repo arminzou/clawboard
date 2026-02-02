@@ -14,6 +14,7 @@ const WS_BASE = (import.meta as any).env?.VITE_WS_BASE ?? DEFAULT_WS_BASE;
 export function useWebSocket() {
   const [status, setStatus] = useState<WsStatus>('connecting');
   const [lastMessage, setLastMessage] = useState<WsMessage | null>(null);
+  const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const attemptRef = useRef(0);
@@ -67,6 +68,7 @@ export function useWebSocket() {
         try {
           const msg = JSON.parse(evt.data);
           setLastMessage(msg);
+          setLastReceivedAt(Date.now());
         } catch {
           // ignore
         }
@@ -88,5 +90,5 @@ export function useWebSocket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
-  return { status, connected: status === 'connected', lastMessage, ws: wsRef.current };
+  return { status, connected: status === 'connected', lastMessage, lastReceivedAt, ws: wsRef.current };
 }

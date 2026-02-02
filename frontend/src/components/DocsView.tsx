@@ -48,8 +48,27 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
   }, []);
 
   useEffect(() => {
-    if (!wsSignal) return;
-    if (String(wsSignal.type || '').startsWith('document_')) {
+    if (!wsSignal?.type) return;
+
+    try {
+      if (wsSignal.type === 'document_updated' && wsSignal.data) {
+        const doc = wsSignal.data as Doc;
+        setDocs((prev) => {
+          const idx = prev.findIndex((d) => d.id === doc.id);
+          if (idx < 0) return [doc, ...prev];
+          const next = [...prev];
+          next[idx] = doc;
+          return next;
+        });
+        refreshStats();
+        return;
+      }
+
+      if (String(wsSignal.type).startsWith('document_')) {
+        refresh();
+        refreshStats();
+      }
+    } catch {
       refresh();
       refreshStats();
     }

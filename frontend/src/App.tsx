@@ -4,6 +4,7 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useHealth } from './hooks/useHealth';
+import { Toast } from './components/Toast';
 import './index.css';
 
 type Tab = 'kanban' | 'activity' | 'docs';
@@ -15,6 +16,7 @@ export default function App() {
   });
   const { status: wsStatus, lastMessage } = useWebSocket();
   const health = useHealth();
+  const [toast, setToast] = useState<string | null>(null);
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
 
@@ -26,9 +28,20 @@ export default function App() {
     }
   }, [tab]);
 
+  useEffect(() => {
+    if (!lastMessage?.type) return;
+    // Keep it subtle: only toast on events that feel meaningful.
+    const t = String(lastMessage.type);
+    if (t.startsWith('task_')) setToast(`Tasks updated (${t})`);
+    else if (t.startsWith('activity_')) setToast(`Activity updated (${t})`);
+    else if (t.startsWith('document_')) setToast(`Docs updated (${t})`);
+  }, [lastMessage?.type]);
+
   return (
     <ErrorBoundary>
       <div className="h-full bg-slate-100">
+        {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+
         <div className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
             <div>

@@ -42,8 +42,23 @@ export function ActivityTimeline({ wsSignal }: { wsSignal?: any }) {
   }, [agent]);
 
   useEffect(() => {
-    if (!wsSignal) return;
-    if (String(wsSignal.type || '').startsWith('activity_')) refresh();
+    if (!wsSignal?.type) return;
+
+    try {
+      if (wsSignal.type === 'activity_created' && wsSignal.data) {
+        const a = wsSignal.data as Activity;
+        setItems((prev) => {
+          if (prev.some((x) => x.id === a.id)) return prev;
+          return [a, ...prev].slice(0, 200);
+        });
+        return;
+      }
+
+      // ingest/resync/etc: safest to refresh
+      if (String(wsSignal.type).startsWith('activity_')) refresh();
+    } catch {
+      refresh();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsSignal?.type]);
 

@@ -56,9 +56,9 @@ This document is the living plan. It’s expected to change as we implement and 
 
 **Goal:** Updates propagate without manual refresh.
 
-- [ ] WS client subscribes to server events
-- [ ] Apply updates to in-memory state (tasks/activities/docs)
-- [ ] “Last updated” / subtle toast for incoming updates (optional)
+- [x] WS client subscribes to server events
+- [x] Apply updates to in-memory state (tasks/activities/docs)
+- [x] “Last updated” / subtle toast for incoming updates (optional)
 
 **Done when:** Creating/editing tasks in one tab updates another tab in near real-time.
 
