@@ -1,4 +1,4 @@
-import { Component, useMemo, useState, type ReactNode } from 'react';
+import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
@@ -9,11 +9,22 @@ import './index.css';
 type Tab = 'kanban' | 'activity' | 'docs';
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('kanban');
+  const [tab, setTab] = useState<Tab>(() => {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pm.tab') : null;
+    return (raw === 'kanban' || raw === 'activity' || raw === 'docs' ? raw : 'kanban') as Tab;
+  });
   const { status: wsStatus, lastMessage } = useWebSocket();
   const health = useHealth();
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('pm.tab', tab);
+    } catch {
+      // ignore
+    }
+  }, [tab]);
 
   return (
     <ErrorBoundary>
