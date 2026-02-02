@@ -10,7 +10,12 @@ type Doc = {
   git_status: string | null;
 };
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3001';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? '';
+const API_BASE_CLEAN = API_BASE ? API_BASE.replace(/\/$/, '') : '';
+
+function withBase(path: string) {
+  return API_BASE_CLEAN ? `${API_BASE_CLEAN}${path}` : path;
+}
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -30,7 +35,7 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
       const usp = new URLSearchParams();
       if (status) usp.set('git_status', status);
       usp.set('limit', '200');
-      const url = `${API_BASE}/api/docs?${usp.toString()}`;
+      const url = `${withBase('/api/docs')}?${usp.toString()}`;
       const d = await fetchJson<Doc[]>(url);
       setDocs(d);
     } finally {
