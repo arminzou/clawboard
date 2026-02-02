@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
+
+const { syncDocs } = require('../utils/syncDocs');
 
 // Get all tracked documents
 router.get('/', (req, res) => {
@@ -58,6 +58,19 @@ router.post('/sync', (req, res) => {
         req.app.locals.broadcast({ type: 'document_updated', data: doc });
         
         res.json(doc);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Rescan workspace docs (runs syncDocs utility)
+router.post('/resync', (req, res) => {
+    try {
+        const workspaceRoot = req.body?.workspace_root || process.env.WORKSPACE_ROOT || undefined;
+        const r = syncDocs({ workspaceRoot });
+
+        req.app.locals.broadcast({ type: 'document_resynced', data: r });
+        res.json(r);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

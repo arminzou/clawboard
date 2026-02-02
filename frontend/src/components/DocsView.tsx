@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
-import type { Document as Doc } from '../lib/api';
+import type { Document as Doc, DocsStats } from '../lib/api';
+
+function countByStatus(stats: DocsStats | null | undefined) {
+  const map = new Map<string, number>();
+  for (const row of stats?.by_status ?? []) {
+    map.set(String(row.git_status ?? 'unknown'), Number(row.count ?? 0));
+  }
+  return map;
+}
 
 export function DocsView({ wsSignal }: { wsSignal?: any }) {
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [stats, setStats] = useState<DocsStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [filter, setFilter] = useState<string>('');
   const [status, setStatus] = useState<string>('');
+  const [resyncing, setResyncing] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -18,14 +29,30 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
     }
   }
 
+  async function refreshStats() {
+    setStatsLoading(true);
+    try {
+      setStats(await api.docsStats());
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   useEffect(() => {
+    refreshStats();
+  }, []);
+
+  useEffect(() => {
     if (!wsSignal) return;
-    if (String(wsSignal.type || '').startsWith('document_')) refresh();
+    if (String(wsSignal.type || '').startsWith('document_')) {
+      refresh();
+      refreshStats();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsSignal?.type]);
 
@@ -35,12 +62,25 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
     return docs.filter((d) => d.file_path.toLowerCase().includes(q));
   }, [docs, filter]);
 
+  const byStatus = useMemo(() => countByStatus(stats), [stats]);
+
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Docs</h2>
-          <div className="text-sm text-slate-600">Tracked workspace files (via sync-docs).</div>
+          <div className="text-sm text-slate-600">Tracked workspace files.</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {statsLoading ? (
+              'Loading stats…'
+            ) : stats ? (
+              <span>
+                total {stats.total} • modified {byStatus.get('modified') ?? 0} • untracked {byStatus.get('untracked') ?? 0} • clean {byStatus.get('clean') ?? 0}
+              </span>
+            ) : (
+              'No stats'
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -64,9 +104,28 @@ export function DocsView({ wsSignal }: { wsSignal?: any }) {
           </select>
           <button
             className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
-            onClick={refresh}
+            onClick={() => {
+              refresh();
+              refreshStats();
+            }}
           >
             Refresh
+          </button>
+          <button
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            disabled={resyncing}
+            onClick={async () => {
+              setResyncing(true);
+              try {
+                await api.resyncDocs();
+                await refresh();
+                await refreshStats();
+              } finally {
+                setResyncing(false);
+              }
+            }}
+          >
+            {resyncing ? 'Resyncing…' : 'Resync'}
           </button>
         </div>
       </div>

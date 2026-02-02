@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
+const { ingestSessions } = require('../utils/ingestSessions');
+
 // Get all activities (with pagination and filtering)
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
@@ -73,6 +75,18 @@ router.get('/agent/:agent', (req, res) => {
         `).all(req.params.agent, parseInt(limit));
         
         res.json(activities);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Ingest OpenClaw session JSONL logs into activities
+router.post('/ingest-sessions', (req, res) => {
+    try {
+        const agents = Array.isArray(req.body?.agents) ? req.body.agents : undefined;
+        const r = ingestSessions({ agents });
+        req.app.locals.broadcast({ type: 'activity_ingested', data: r });
+        res.json(r);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

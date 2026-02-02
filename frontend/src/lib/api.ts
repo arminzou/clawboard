@@ -96,12 +96,24 @@ export const api = {
     if (!(res.status === 204 || res.ok)) throw new Error(`${res.status} ${res.statusText}`);
   },
 
-  async listActivities(params?: { agent?: string; limit?: number }) {
+  async listActivities(params?: { agent?: string; limit?: number; offset?: number; since?: string }) {
     const usp = new URLSearchParams();
     if (params?.agent) usp.set('agent', params.agent);
+    if (params?.since) usp.set('since', params.since);
     if (params?.limit != null) usp.set('limit', String(params.limit));
+    if (params?.offset != null) usp.set('offset', String(params.offset));
     const url = `${withBase('/api/activities')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Activity[]>(await fetch(url));
+  },
+
+  async ingestSessions(body?: { agents?: string[] }) {
+    return json<{ scanned: number; inserted: number; agents: string[] }>(
+      await fetch(withBase('/api/activities/ingest-sessions'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+    );
   },
 
   async listDocs(params?: { git_status?: string; limit?: number }) {
@@ -114,6 +126,16 @@ export const api = {
 
   async docsStats() {
     return json<DocsStats>(await fetch(withBase('/api/docs/stats')));
+  },
+
+  async resyncDocs(body?: { workspace_root?: string }) {
+    return json<{ files: number; workspaceRoot: string }>(
+      await fetch(withBase('/api/docs/resync'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+    );
   },
 
   async syncDoc(body: Partial<Pick<Document, 'file_type' | 'last_modified' | 'last_modified_by' | 'size_bytes' | 'git_status'>> & { file_path: string }) {
