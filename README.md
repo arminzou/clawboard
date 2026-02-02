@@ -26,10 +26,18 @@ project-manager/
 ### Setup
 
 ```bash
-cd project-manager/backend
-npm install
-npm run init-db   # Initialize database with sample data
-npm run dev       # Start server with auto-reload
+# one-time
+cd project-manager
+npm run init
+
+# dev (runs backend+frontend)
+npm run dev
+```
+
+If you already have a backend running on :3001, start only the frontend:
+
+```bash
+npm run dev:frontend
 ```
 
 ### API Endpoints

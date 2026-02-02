@@ -26,7 +26,7 @@ export interface Activity {
   related_task_id: number | null;
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? '';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3001';
 const API_BASE_CLEAN = API_BASE.replace(/\/$/, '');
 
 async function json<T>(res: Response): Promise<T> {
