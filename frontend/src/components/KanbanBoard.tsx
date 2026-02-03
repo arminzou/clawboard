@@ -61,6 +61,7 @@ export function KanbanBoard({
   onOpenTaskConsumed?: () => void;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const tasksRef = useRef<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -106,6 +107,10 @@ export function KanbanBoard({
   useEffect(() => {
     refresh();
   }, []);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   useEffect(() => {
     try {
@@ -315,42 +320,38 @@ export function KanbanBoard({
 
     if (!activeContainer || !overContainer) return;
 
-    let nextLocal: Task[] | null = null;
+    // Compute next state from the latest tasks snapshot.
+    // Avoid relying on setState functional updaters to run synchronously.
+    const prev = tasksRef.current;
+    const next = [...prev];
+    const aIdx = next.findIndex((t) => String(t.id) === activeId);
+    if (aIdx < 0) return;
 
-    setTasks((prev) => {
-      const next = [...prev];
-      const aIdx = next.findIndex((t) => String(t.id) === activeId);
-      if (aIdx < 0) return prev;
+    const aTask = next[aIdx];
+    next[aIdx] = { ...aTask, status: overContainer };
 
-      const activeTask = next[aIdx];
-      const updatedActive = { ...activeTask, status: overContainer };
-      next[aIdx] = updatedActive;
-
-      // If dropping on another task, reorder within the destination column
-      if (overId !== overContainer) {
-        const dest = next
-          .filter((t) => t.status === overContainer)
-          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-        const fromIndex = dest.findIndex((t) => String(t.id) === activeId);
-        const overIndex = dest.findIndex((t) => String(t.id) === overId);
-        if (fromIndex >= 0 && overIndex >= 0 && fromIndex !== overIndex) {
-          const reordered = arrayMove(dest, fromIndex, overIndex).map((t, i) => ({ ...t, position: i }));
-          const merged = next.map((t) => {
-            const rep = reordered.find((x) => x.id === t.id);
-            return rep ? rep : t;
-          });
-          nextLocal = merged;
-          return merged;
-        }
+    // If dropping on another task, reorder within the destination column.
+    let nextLocal: Task[] = next;
+    if (overId !== overContainer) {
+      const dest = next
+        .filter((t) => t.status === overContainer)
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      const fromIndex = dest.findIndex((t) => String(t.id) === activeId);
+      const overIndex = dest.findIndex((t) => String(t.id) === overId);
+      if (fromIndex >= 0 && overIndex >= 0 && fromIndex !== overIndex) {
+        const reordered = arrayMove(dest, fromIndex, overIndex).map((t, i) => ({ ...t, position: i }));
+        nextLocal = next.map((t) => {
+          const rep = reordered.find((x) => x.id === t.id);
+          return rep ? rep : t;
+        });
       }
+    }
 
-      nextLocal = next;
-      return next;
-    });
+    setTasks(nextLocal);
 
-    // Persist after we computed nextLocal.
+    // Persist then refresh from server.
     try {
-      if (nextLocal) await persistPositions(nextLocal);
+      await persistPositions(nextLocal);
     } finally {
       await refresh();
     }
@@ -451,6 +452,11 @@ export function KanbanBoard({
             setEditTask(null);
             await refresh();
           }}
+          onDelete={async () => {
+            await api.deleteTask(editTask.id);
+            setEditTask(null);
+            await refresh();
+          }}
         />
       ) : null}
 
@@ -522,6 +528,7 @@ function EditTaskModal({
   task,
   onClose,
   onSave,
+  onDelete,
 }: {
   task: Task;
   onClose: () => void;
@@ -532,6 +539,7 @@ function EditTaskModal({
     priority?: TaskPriority;
     assigned_to?: Assignee | null;
   }) => Promise<void>;
+  onDelete: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
@@ -539,6 +547,7 @@ function EditTaskModal({
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -599,28 +608,49 @@ function EditTaskModal({
             </label>
           </div>
 
-          <div className="mt-2 flex justify-end gap-2">
-            <button className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50" onClick={onClose} disabled={saving}>Cancel</button>
+          <div className="mt-2 flex justify-between gap-2">
             <button
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-              disabled={saving}
+              className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              disabled={saving || deleting}
               onClick={async () => {
-                setSaving(true);
+                const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
+                if (!ok) return;
+                setDeleting(true);
                 try {
-                  await onSave({
-                    title: title.trim() || task.title,
-                    description: description.trim() ? description : null,
-                    status,
-                    priority,
-                    assigned_to: assigned,
-                  });
+                  await onDelete();
                 } finally {
-                  setSaving(false);
+                  setDeleting(false);
                 }
               }}
             >
-              Save
+              {deleting ? 'Deleting…' : 'Delete'}
             </button>
+
+            <div className="flex justify-end gap-2">
+              <button className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50" onClick={onClose} disabled={saving || deleting}>
+                Cancel
+              </button>
+              <button
+                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                disabled={saving || deleting}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await onSave({
+                      title: title.trim() || task.title,
+                      description: description.trim() ? description : null,
+                      status,
+                      priority,
+                      assigned_to: assigned,
+                    });
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       </div>
