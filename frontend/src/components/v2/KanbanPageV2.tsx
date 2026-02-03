@@ -67,6 +67,22 @@ export function KanbanPageV2({
 
   const searchRef = useRef<HTMLInputElement | null>(null);
 
+  const [viewsOpen, setViewsOpen] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.sidebar.viewsOpen') !== '0';
+    } catch {
+      return true;
+    }
+  });
+
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.sidebar.filtersOpen') !== '0';
+    } catch {
+      return true;
+    }
+  });
+
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
@@ -92,6 +108,33 @@ export function KanbanPageV2({
   useEffect(() => {
     tasksRef.current = tasks;
   }, [tasks]);
+
+  // Keyboard shortcuts (Kanban only)
+  useEffect(() => {
+    function isEditable(el: EventTarget | null): boolean {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (isEditable(e.target)) return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setCreatePrefill(null);
+        setCreateOpen(true);
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   useEffect(() => {
     try {
@@ -124,6 +167,22 @@ export function KanbanPageV2({
       // ignore
     }
   }, [q]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.sidebar.viewsOpen', viewsOpen ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [viewsOpen]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.sidebar.filtersOpen', filtersOpen ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [filtersOpen]);
 
   // Open task requested from elsewhere (e.g. Activity tab)
   useEffect(() => {
@@ -229,56 +288,93 @@ export function KanbanPageV2({
           </div>
 
           <div className="mt-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Views</div>
-            <div className="mt-2 flex flex-col gap-1">
-              <ViewButton active={view === 'all'} label="All" count={baseFiltered.length} onClick={() => setView('all')} />
-              {COLUMNS.map((c) => (
-                <ViewButton
-                  key={c.key}
-                  active={view === c.key}
-                  label={c.title}
-                  count={viewCounts[c.key]}
-                  onClick={() => setView(c.key)}
-                />
-              ))}
-            </div>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
+              onClick={() => setViewsOpen((v) => !v)}
+            >
+              <span>Views</span>
+              <span className="text-slate-400">
+                <IconChevron open={viewsOpen} />
+              </span>
+            </button>
+            {viewsOpen ? (
+              <div className="mt-1 flex flex-col gap-1">
+                <ViewButton active={view === 'all'} label="All" count={baseFiltered.length} onClick={() => setView('all')} />
+                {COLUMNS.map((c) => (
+                  <ViewButton
+                    key={c.key}
+                    active={view === c.key}
+                    label={c.title}
+                    count={viewCounts[c.key]}
+                    onClick={() => setView(c.key)}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 border-t border-slate-100 pt-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filters</div>
-
-            <label className="mt-2 text-sm">
-              <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
-              <select
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
-              >
-                <option value="all">All</option>
-                <option value="tee">tee</option>
-                <option value="fay">fay</option>
-                <option value="armin">armin</option>
-                <option value="">(unassigned)</option>
-              </select>
-            </label>
-
-            <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
-              <span>Hide done</span>
-              <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
-            </label>
-
             <button
               type="button"
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
-              onClick={() => {
-                setQ('');
-                setAssignee('all');
-                setView('all');
-                setHideDone(false);
-              }}
+              className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
+              onClick={() => setFiltersOpen((v) => !v)}
             >
-              Reset
+              <span>Filters</span>
+              <span className="text-slate-400">
+                <IconChevron open={filtersOpen} />
+              </span>
             </button>
+
+            {filtersOpen ? (
+              <>
+                <label className="mt-2 text-sm">
+                  <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+                  <select
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
+                  >
+                    <option value="all">All</option>
+                    <option value="tee">tee</option>
+                    <option value="fay">fay</option>
+                    <option value="armin">armin</option>
+                    <option value="">(unassigned)</option>
+                  </select>
+                </label>
+
+                <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                  <span>Hide done</span>
+                  <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
+                </label>
+
+                <button
+                  type="button"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                  onClick={() => {
+                    setQ('');
+                    setAssignee('all');
+                    setView('all');
+                    setHideDone(false);
+                  }}
+                >
+                  Reset
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                onClick={() => {
+                  setQ('');
+                  setAssignee('all');
+                  setView('all');
+                  setHideDone(false);
+                }}
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -420,6 +516,21 @@ export function KanbanPageV2({
         ) : null}
       </main>
     </div>
+  );
+}
+
+function IconChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={open ? 'rotate-90 transition' : 'transition'}
+    >
+      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
