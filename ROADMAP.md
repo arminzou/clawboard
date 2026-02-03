@@ -68,11 +68,11 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ### Milestone E — App shell v2 (matches reference layout)
 
-- [ ] Introduce **v2 layout components** (no external lib required):
-  - [ ] `AppShellV2` (layout grid)
-  - [ ] `IconRail` (pinnable)
-  - [ ] `SidebarV2` (secondary sidebar)
-  - [ ] `TopbarV2` (toolbar)
+- [x] Introduce **v2 layout components** (no external lib required):
+  - [x] `AppShellV2` (layout grid)
+  - [x] `IconRail` (pinnable)
+  - [x] `SidebarV2` (secondary sidebar)
+  - [x] `TopbarV2` (toolbar)
 - [x] Left icon rail (refined to match reference vibe)
 - [x] Secondary sidebar (Kanban-only):
   - [x] Project/board selector header (static for now)
