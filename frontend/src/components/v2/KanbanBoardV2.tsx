@@ -252,7 +252,7 @@ function KanbanColumnV2({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))]"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
             onClick={() => onQuickAdd(id)}
             title={`Add to ${title}`}
             aria-label={`Add to ${title}`}
@@ -261,7 +261,7 @@ function KanbanColumnV2({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))] disabled:opacity-60"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] disabled:opacity-60"
             title="Menu (coming soon)"
             aria-label="Menu"
             disabled
@@ -360,7 +360,7 @@ function TaskCardV2({ task, onOpen }: { task: Task; onOpen?: () => void }) {
         'group w-full rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm transition will-change-transform',
         'hover:-translate-y-px hover:border-[rgb(var(--cb-accent)/0.18)] hover:shadow-md',
         'active:translate-y-0 active:shadow-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]',
       )}
       onClick={onOpen}
     >
