@@ -1,4 +1,4 @@
-# Project Manager Dashboard
+# Clawboard
 
 A live web application for managing agent tasks, tracking activities, and monitoring workspace documents.
 
@@ -10,7 +10,7 @@ A live web application for managing agent tasks, tracking activities, and monito
 ## Project Structure
 
 ```
-project-manager/
+clawboard/
 ├── backend/           # API server
 │   ├── server.js     # Main Express server
 │   ├── db/           # Database schema & initialization
@@ -27,7 +27,7 @@ project-manager/
 
 ```bash
 # one-time
-cd project-manager
+cd clawboard
 npm run init
 
 # dev (runs backend+frontend)

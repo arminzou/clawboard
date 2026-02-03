@@ -69,7 +69,7 @@ if (HAS_FRONTEND) {
     // Root route (helpful for quick sanity checks)
     app.get('/', (req, res) => {
         res.json({
-            name: 'Project Manager Backend',
+            name: 'Clawboard Backend',
             status: 'ok',
             api: {
                 health: '/api/health',
@@ -127,7 +127,7 @@ server.on('error', (err) => {
 server.listen(PORT, HOST, () => {
     const baseUrl = `http://${HOST}:${PORT}`;
     const wsUrl = `ws://${HOST}:${PORT}/ws`;
-    console.log(`\n🚀 Project Manager Backend running on ${baseUrl}`);
+    console.log(`\n🚀 Clawboard Backend running on ${baseUrl}`);
     console.log(`📊 WebSocket endpoint: ${wsUrl}`);
     console.log(`💾 Database: ${DB_PATH}`);
 

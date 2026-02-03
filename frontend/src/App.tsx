@@ -52,7 +52,7 @@ export default function App() {
         <div className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
             <div>
-              <div className="text-base font-semibold text-slate-900">Project Manager</div>
+              <div className="text-base font-semibold text-slate-900">Clawboard</div>
               <div className="text-xs text-slate-500">
                 API: {health.checking ? 'checking' : health.ok ? 'ok' : 'down'} • WS: {wsStatus}
               </div>

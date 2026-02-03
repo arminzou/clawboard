@@ -1,4 +1,4 @@
--- Project Manager Database Schema
+-- Clawboard Database Schema
 
 -- Tasks table (for Kanban board)
 CREATE TABLE IF NOT EXISTS tasks (
