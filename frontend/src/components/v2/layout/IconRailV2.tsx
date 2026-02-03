@@ -17,10 +17,10 @@ export function IconRailV2({
   ];
 
   return (
-    <aside className="flex w-14 shrink-0 flex-col items-center gap-3 bg-slate-950 py-3">
+    <aside className="flex w-14 shrink-0 flex-col items-center gap-3 bg-[rgb(var(--cb-accent))] py-3">
       <button
         type="button"
-        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white"
+        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--cb-surface)/0.12)] text-[rgb(var(--cb-surface))] transition hover:bg-[rgb(var(--cb-surface)/0.18)]"
         title="Clawboard"
         aria-label="Clawboard"
         onClick={() => onTab('kanban')}
