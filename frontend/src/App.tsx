@@ -51,10 +51,16 @@ export default function App() {
 
         <div className="flex h-full">
           {/* Slim left rail */}
-          <aside className="flex w-14 shrink-0 flex-col justify-between border-r border-slate-200 bg-white">
+          <aside className="group/rail flex w-14 shrink-0 flex-col justify-between border-r border-slate-200 bg-white transition-[width] duration-200 ease-out hover:w-44">
             <div className="flex flex-col gap-1 p-2">
-              <div className="mb-1 flex h-10 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white" title="Clawboard">
-                C
+              <div
+                className="mb-1 flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-2 text-sm font-semibold text-white"
+                title="Clawboard"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">C</span>
+                <span className="w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/rail:w-auto group-hover/rail:opacity-100">
+                  Clawboard
+                </span>
               </div>
 
               <RailButton active={tab === 'kanban'} label="Kanban" onClick={() => setTab('kanban')}>
@@ -69,13 +75,19 @@ export default function App() {
             </div>
 
             <div className="p-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-center">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">API</div>
-                <div className="mt-0.5 text-[11px] font-medium text-slate-800">
-                  {health.checking ? '…' : health.ok ? 'ok' : 'down'}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span>API</span>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-800">
+                    {health.checking ? '…' : health.ok ? 'ok' : 'down'}
+                  </span>
                 </div>
-                <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">WS</div>
-                <div className="mt-0.5 text-[11px] font-medium text-slate-800">{wsStatus}</div>
+                <div className="mt-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span>WS</span>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-slate-800">
+                    {wsStatus}
+                  </span>
+                </div>
               </div>
             </div>
           </aside>
@@ -135,14 +147,17 @@ function RailButton({
       type="button"
       className={
         active
-          ? 'flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white'
-          : 'flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-50'
+          ? 'flex h-10 w-full items-center gap-2 rounded-xl bg-slate-900 px-2 text-white'
+          : 'flex h-10 w-full items-center gap-2 rounded-xl px-2 text-slate-700 hover:bg-slate-50'
       }
       onClick={onClick}
       title={label}
       aria-label={label}
     >
-      {children}
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg">{children}</span>
+      <span className="w-0 overflow-hidden whitespace-nowrap text-sm opacity-0 transition-all duration-200 group-hover/rail:w-auto group-hover/rail:opacity-100">
+        {label}
+      </span>
     </button>
   );
 }
