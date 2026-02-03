@@ -100,10 +100,10 @@ This document is the living plan. It’s expected to change as we implement and 
     - [x] Created date
     - [x] Priority badge
   - [x] Description hidden on card (modal only)
-- [ ] Interaction polish:
+- [x] Interaction polish:
   - [x] Drop indicator/placeholder (show insertion point)
-  - [ ] Hover/focus states consistent with v2 design system
-  - [ ] Reduce layout shift while dragging
+  - [x] Hover/focus states consistent with v2 design system
+  - [x] Reduce layout shift while dragging
 
 **Done when:** The board matches the reference vibe, is skimmable, and drag/drop feels obvious.
 
