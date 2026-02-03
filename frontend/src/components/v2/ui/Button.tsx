@@ -18,7 +18,7 @@ export function Button({
   right?: ReactNode;
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50';
+    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 
   const sizes: Record<Size, string> = {
     sm: 'px-2.5 py-1.5 text-sm',
@@ -63,7 +63,7 @@ export function IconButton({
       title={label}
       aria-label={label}
       className={clsx(
-        'inline-flex h-10 w-10 items-center justify-center rounded-2xl transition disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex h-10 w-10 items-center justify-center rounded-2xl transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
         active ? 'bg-white text-slate-950' : 'text-white/80 hover:bg-white/10 hover:text-white',
         className,
       )}
