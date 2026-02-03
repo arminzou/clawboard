@@ -299,9 +299,10 @@ function KanbanColumnV2({
 }
 
 function InsertLine() {
+  // Render an insertion marker without increasing layout height (reduces "jump" while dragging).
   return (
-    <div className="relative my-1 h-3">
-      <div className="absolute left-1 right-1 top-1/2 h-0.5 -translate-y-1/2 rounded bg-slate-400/70" />
+    <div className="relative h-0">
+      <div className="pointer-events-none absolute -top-1 left-1 right-1 h-0.5 rounded bg-slate-400/70" />
     </div>
   );
 }
