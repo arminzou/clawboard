@@ -243,16 +243,16 @@ function KanbanColumnV2({
     (overId === id || tasks.some((t) => String(t.id) === overId));
 
   return (
-    <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+    <div className="flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm">
+      <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="text-sm font-semibold text-slate-900">{title}</div>
-          <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
+          <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
+          <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))]"
             onClick={() => onQuickAdd(id)}
             title={`Add to ${title}`}
             aria-label={`Add to ${title}`}
@@ -261,7 +261,7 @@ function KanbanColumnV2({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:opacity-60"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))] disabled:opacity-60"
             title="Menu (coming soon)"
             aria-label="Menu"
             disabled
@@ -275,11 +275,11 @@ function KanbanColumnV2({
         ref={setNodeRef}
         className={clsx(
           'relative flex-1 p-3 transition',
-          showDropHint && 'ring-2 ring-slate-300',
+          showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.20)]',
         )}
       >
         {showDropHint ? (
-          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-slate-200 bg-white/20" />
+          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-[rgb(var(--cb-border))] bg-white/20" />
         ) : null}
 
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
@@ -302,7 +302,7 @@ function InsertLine() {
   // Render an insertion marker without increasing layout height (reduces "jump" while dragging).
   return (
     <div className="relative h-0">
-      <div className="pointer-events-none absolute -top-1 left-1 right-1 h-0.5 rounded bg-slate-400/70" />
+      <div className="pointer-events-none absolute -top-1 left-1 right-1 h-0.5 rounded bg-[rgb(var(--cb-accent)/0.35)]" />
     </div>
   );
 }
@@ -357,10 +357,10 @@ function TaskCardV2({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     <button
       type="button"
       className={clsx(
-        'group w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition will-change-transform',
-        'hover:-translate-y-px hover:border-slate-300 hover:shadow-md',
+        'group w-full rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm transition will-change-transform',
+        'hover:-translate-y-px hover:border-[rgb(var(--cb-accent)/0.18)] hover:shadow-md',
         'active:translate-y-0 active:shadow-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface-muted))]',
       )}
       onClick={onOpen}
     >
