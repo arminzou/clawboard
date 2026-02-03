@@ -252,7 +252,7 @@ function KanbanColumnV2({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
             onClick={() => onQuickAdd(id)}
             title={`Add to ${title}`}
             aria-label={`Add to ${title}`}
@@ -261,7 +261,7 @@ function KanbanColumnV2({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:opacity-60"
             title="Menu (coming soon)"
             aria-label="Menu"
             disabled
@@ -357,9 +357,10 @@ function TaskCardV2({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     <button
       type="button"
       className={clsx(
-        'group w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition',
+        'group w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition will-change-transform',
         'hover:-translate-y-px hover:border-slate-300 hover:shadow-md',
         'active:translate-y-0 active:shadow-sm',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50',
       )}
       onClick={onOpen}
     >
@@ -423,13 +424,23 @@ function IconCalendar() {
 function SortableTaskV2({ task, onOpen }: { task: Task; onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(task.id) });
 
+  // Avoid animated layout jitter while dragging by disabling transitions on the active item.
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={clsx(isDragging && 'opacity-50')} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={clsx(
+        'select-none',
+        isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab',
+      )}
+      {...attributes}
+      {...listeners}
+    >
       <TaskCardV2 task={task} onOpen={onOpen} />
     </div>
   );
