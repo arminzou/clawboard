@@ -45,7 +45,7 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ## Phase 3 — UI Redesign (Reference v2: Asana-ish board)
 
-> **Working branch:** `v2/board-redesign` (commits local; push only after review)
+> **Working branch:** `v2/board-redesign` (**commits local; do NOT push** until review)
 
 **Motivation:** The current look-and-feel doesn’t naturally converge toward the preferred reference UI.
 
@@ -53,11 +53,11 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ### Milestone D — Design system + UI foundations (1–2 sessions)
 
-- [ ] Decision: **stay on React + Tailwind** for v2 (fastest iteration)
+- [x] Decision: **stay on React + Tailwind** for v2 (fastest iteration)
   - [ ] Optional: add shadcn/ui + lucide-react later if needed
 - [ ] Establish design tokens (CSS vars + Tailwind-friendly classes):
   - [ ] surfaces, borders, shadows, radius, typography scale
-  - [ ] consistent chip styles (status/priority)
+  - [x] consistent chip styles (status/priority)
 - [ ] Build a tiny internal “UI kit” (local components):
   - [ ] `Button` / `IconButton`
   - [ ] `Input`
@@ -73,35 +73,35 @@ This document is the living plan. It’s expected to change as we implement and 
   - [ ] `IconRail` (pinnable)
   - [ ] `SidebarV2` (secondary sidebar)
   - [ ] `TopbarV2` (toolbar)
-- [ ] Left icon rail (keep; refine styling to match reference)
-- [ ] Secondary sidebar (Kanban-only):
-  - [ ] Project/board selector header (static for now)
-  - [ ] Views list (All / Backlog / In Progress / Review / Done)
-  - [ ] Filters section (Hide done, assignee)
-  - [ ] Collapsible sections + persisted expanded state
-- [ ] Top toolbar:
-  - [ ] Board title + workspace/project label
-  - [ ] Primary “Add” button
-  - [ ] Search input (global within Kanban)
-  - [ ] Board/Table toggle (Table stubbed)
+- [x] Left icon rail (refined to match reference vibe)
+- [x] Secondary sidebar (Kanban-only):
+  - [x] Project/board selector header (static for now)
+  - [x] Views list (All / Backlog / In Progress / Review / Done)
+  - [x] Filters section (Hide done, assignee)
+  - [x] Collapsible sections + persisted expanded state
+- [x] Top toolbar:
+  - [x] Board title + workspace/project label
+  - [x] Primary “Add” button
+  - [x] Search input (global within Kanban)
+  - [x] Board/Table toggle (Table stubbed)
 
 **Done when:** The layout reads like the reference UI and the board has maximum usable width.
 
 ### Milestone F — Kanban board v2 (card + column polish)
 
-- [ ] Replace current Kanban UI with **`KanbanBoardV2`**:
-  - [ ] Columns: calmer spacing, soft containers, consistent headers
-  - [ ] Column header actions: + add, … menu (stub)
-- [ ] Card redesign (reference-inspired, low noise):
-  - [ ] Title (multi-line) as the primary element
-  - [ ] Metadata rows (simple text + tiny icons; no avatars):
-    - [ ] Task ID
-    - [ ] Assignee
-    - [ ] Created date
-    - [ ] Priority badge
-  - [ ] Description hidden on card (modal only)
+- [x] Replace current Kanban UI with **`KanbanBoardV2`**
+  - [x] Columns: calmer spacing, soft containers, consistent headers
+  - [x] Column header actions: + add, … menu (stub)
+- [x] Card redesign (reference-inspired, low noise):
+  - [x] Title (multi-line) as the primary element
+  - [x] Metadata rows (simple text + tiny icons; no avatars):
+    - [x] Task ID
+    - [x] Assignee
+    - [x] Created date
+    - [x] Priority badge
+  - [x] Description hidden on card (modal only)
 - [ ] Interaction polish:
-  - [ ] Drop indicator/placeholder (show insertion point)
+  - [x] Drop indicator/placeholder (show insertion point)
   - [ ] Hover/focus states consistent with v2 design system
   - [ ] Reduce layout shift while dragging
 
@@ -112,7 +112,7 @@ This document is the living plan. It’s expected to change as we implement and 
 - [ ] Saved views (persisted filters)
 - [ ] Hide/archive done tasks (board stays clean)
 - [ ] Quick-add improvements (enter-to-create, focus management)
-- [ ] Keyboard shortcuts for power use (optional)
+- [x] Keyboard shortcuts for power use (N = new task, / = search)
 
 ---
 
