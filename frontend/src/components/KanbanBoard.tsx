@@ -22,31 +22,42 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
 ];
 
 function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
+  const priorityClasses = clsx(
+    'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset',
+    {
+      'bg-slate-50 text-slate-700 ring-slate-200': task.priority === 'low',
+      'bg-blue-50 text-blue-800 ring-blue-200': task.priority === 'medium',
+      'bg-amber-50 text-amber-900 ring-amber-200': task.priority === 'high',
+      'bg-red-50 text-red-800 ring-red-200': task.priority === 'urgent',
+    },
+  );
+
   return (
     <button
       type="button"
-      className="w-full rounded-md border border-slate-200 bg-white p-3 text-left shadow-sm hover:border-slate-300"
+      className={clsx(
+        'group w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition',
+        'hover:-translate-y-px hover:border-slate-300 hover:shadow-md',
+        'active:translate-y-0 active:shadow-sm',
+      )}
       onClick={onOpen}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="font-medium text-slate-900">{task.title}</div>
-        {task.priority ? (
-          <span
-            className={clsx('rounded px-2 py-0.5 text-xs', {
-              'bg-slate-100 text-slate-700': task.priority === 'low',
-              'bg-blue-100 text-blue-800': task.priority === 'medium',
-              'bg-amber-100 text-amber-800': task.priority === 'high',
-              'bg-red-100 text-red-800': task.priority === 'urgent',
-            })}
-          >
-            {task.priority}
-          </span>
-        ) : null}
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-slate-900">{task.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="font-mono">#{task.id}</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            <span className="truncate">{task.assigned_to ?? 'unassigned'}</span>
+          </div>
+        </div>
+
+        {task.priority ? <span className={priorityClasses}>{task.priority}</span> : null}
       </div>
-      <div className="mt-1 text-xs text-slate-600">
-        #{task.id} • {task.assigned_to ?? 'unassigned'}
-      </div>
-      {task.description ? <div className="mt-2 text-sm text-slate-700">{task.description}</div> : null}
+
+      {task.description ? (
+        <div className="mt-2 line-clamp-2 text-sm text-slate-700">{task.description}</div>
+      ) : null}
     </button>
   );
 }
@@ -360,22 +371,36 @@ export function KanbanBoard({
   // Create via UI modal (see CreateTaskModal below)
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
           <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={searchRef}
-            className="w-56 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-            placeholder="Search tasks… (/)"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <input
+              ref={searchRef}
+              className="w-56 bg-transparent text-sm outline-none placeholder:text-slate-400"
+              placeholder="Search… (/)"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            {q ? (
+              <button
+                type="button"
+                className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setQ('')}
+                title="Clear"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
           <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
             value={assignee}
             onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
             title="Assignee"
@@ -386,14 +411,15 @@ export function KanbanBoard({
             <option value="armin">armin</option>
             <option value="">(unassigned)</option>
           </select>
+
           <button
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
             onClick={() => setCreateOpen(true)}
           >
             + Task (N)
           </button>
           <button
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
             onClick={refresh}
           >
             Refresh
@@ -491,12 +517,12 @@ function KanbanColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex min-h-[20rem] flex-col rounded-lg border border-slate-200 bg-slate-50">
-      <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-        <div className="font-medium text-slate-900">{title}</div>
-        <div className="text-xs text-slate-600">{count}</div>
+    <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
       </div>
-      <div ref={setNodeRef} className={clsx('flex-1 p-3', isOver && 'ring-2 ring-slate-400')}>
+      <div ref={setNodeRef} className={clsx('flex-1 bg-slate-50/50 p-3', isOver && 'ring-2 ring-slate-400')}>
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
           <div className="flex min-h-[18rem] flex-col gap-2">
             {tasks.map((t) => (
