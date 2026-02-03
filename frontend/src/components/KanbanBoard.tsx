@@ -44,7 +44,7 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-slate-900">{task.title}</div>
+          <div className="whitespace-normal text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="font-mono">#{task.id}</span>
             <span className="h-1 w-1 rounded-full bg-slate-300" />
@@ -56,7 +56,7 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
       </div>
 
       {task.description ? (
-        <div className="mt-2 line-clamp-2 text-sm text-slate-700">{task.description}</div>
+        <div className="mt-2 whitespace-normal text-sm leading-snug text-slate-700">{task.description}</div>
       ) : null}
     </button>
   );
