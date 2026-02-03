@@ -290,14 +290,12 @@ export function KanbanBoard({
 
     const desired = Object.values(columns).flat();
 
-    const updates = desired
-      .map((t) => {
-        const before = tasks.find((x) => x.id === t.id);
-        const changed = !before || before.status !== t.status || (before.position ?? 0) !== (t.position ?? 0);
-        if (!changed) return null;
-        return api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position });
-      })
-      .filter(Boolean) as Promise<unknown>[];
+    // NOTE: we optimistically update status during onDragOver. That means our in-memory
+    // state may already reflect the new column before drop, so diffing against current
+    // state can incorrectly think “no change” and skip persistence.
+    //
+    // For this personal tool, prefer correctness over minimizing PATCH calls.
+    const updates = desired.map((t) => api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position }));
 
     await Promise.allSettled(updates);
   }
@@ -527,10 +525,17 @@ function EditTaskModal({
 }: {
   task: Task;
   onClose: () => void;
-  onSave: (patch: { title?: string; description?: string | null; priority?: TaskPriority; assigned_to?: Assignee | null }) => Promise<void>;
+  onSave: (patch: {
+    title?: string;
+    description?: string | null;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    assigned_to?: Assignee | null;
+  }) => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
+  const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [saving, setSaving] = useState(false);
@@ -541,7 +546,7 @@ function EditTaskModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-slate-900">Edit task #{task.id}</div>
-            <div className="text-xs text-slate-500">Status: {task.status}</div>
+            <div className="text-xs text-slate-500">Status: {status}</div>
           </div>
           <button className="rounded-md px-2 py-1 text-sm hover:bg-slate-100" onClick={onClose}>✕</button>
         </div>
@@ -555,6 +560,21 @@ function EditTaskModal({
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-slate-600">Description</div>
             <textarea className="w-full rounded-md border border-slate-200 px-3 py-2" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Status</div>
+            <select
+              className="w-full rounded-md border border-slate-200 px-3 py-2"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskStatus)}
+            >
+              {COLUMNS.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="grid grid-cols-2 gap-3">
@@ -590,6 +610,7 @@ function EditTaskModal({
                   await onSave({
                     title: title.trim() || task.title,
                     description: description.trim() ? description : null,
+                    status,
                     priority,
                     assigned_to: assigned,
                   });

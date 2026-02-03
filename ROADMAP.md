@@ -49,6 +49,7 @@ This document is the living plan. It’s expected to change as we implement and 
 - [x] Drag-and-drop between columns updates:
   - [x] `status`
   - [x] ordering (`position`)
+  - [x] persistence fix: don’t skip PATCH due to optimistic drag-over state
 
 **Done when:** I can create a task and drag it across columns and it stays after refresh.
 
