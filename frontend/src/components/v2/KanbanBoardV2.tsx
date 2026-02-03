@@ -247,12 +247,12 @@ function KanbanColumnV2({
       <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
-          <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
+          <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--cb-text))]">{count}</div>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
             onClick={() => onQuickAdd(id)}
             title={`Add to ${title}`}
             aria-label={`Add to ${title}`}
@@ -261,7 +261,7 @@ function KanbanColumnV2({
           </button>
           <button
             type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-slate-700 transition hover:bg-[rgb(var(--cb-surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] disabled:opacity-60"
+            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] disabled:opacity-60"
             title="Menu (coming soon)"
             aria-label="Menu"
             disabled
@@ -339,12 +339,12 @@ function MetaRow({
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-xs text-slate-600" title={title}>
+    <div className="flex items-center justify-between gap-3 text-xs text-[rgb(var(--cb-text-muted))]" title={title}>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="text-slate-400">{icon}</span>
-        <span className="truncate">{label}</span>
+        <span className="text-[rgb(var(--cb-text-muted))] group-hover:text-[rgb(var(--cb-text))]">{icon}</span>
+        <span className="truncate group-hover:text-[rgb(var(--cb-text))]">{label}</span>
       </div>
-      <span className={clsx('shrink-0 font-medium text-slate-800', mono && 'font-mono')}>{value}</span>
+      <span className={clsx('shrink-0 font-medium text-[rgb(var(--cb-text))]', mono && 'font-mono')}>{value}</span>
     </div>
   );
 }
