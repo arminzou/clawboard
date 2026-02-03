@@ -109,6 +109,7 @@ export function KanbanBoard({
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
 
   type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
   type ViewFilter = 'all' | TaskStatus;
@@ -227,6 +228,7 @@ export function KanbanBoard({
 
       if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
+        setCreatePrefill(null);
         setCreateOpen(true);
       }
 
@@ -279,20 +281,37 @@ export function KanbanBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsSignal?.type]);
 
-  const visibleTasks = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     const query = q.trim().toLowerCase();
     const wantAssignee: Assignee | 'all' = assignee === 'all' ? 'all' : assignee === '' ? null : assignee;
 
     return tasks.filter((t) => {
       if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
       if (hideDone && t.status === 'done') return false;
-      if (view !== 'all' && t.status !== view) return false;
 
       if (!query) return true;
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, hideDone, q, tasks, view]);
+  }, [assignee, hideDone, q, tasks]);
+
+  const visibleTasks = useMemo(() => {
+    if (view === 'all') return baseFiltered;
+    return baseFiltered.filter((t) => t.status === view);
+  }, [baseFiltered, view]);
+
+  const viewCounts = useMemo(() => {
+    const counts: Record<TaskStatus, number> = {
+      backlog: 0,
+      in_progress: 0,
+      review: 0,
+      done: 0,
+    };
+    for (const t of baseFiltered) {
+      if (counts[t.status as TaskStatus] != null) counts[t.status as TaskStatus] += 1;
+    }
+    return counts;
+  }, [baseFiltered]);
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
@@ -441,14 +460,14 @@ export function KanbanBoard({
   return (
     <div className="flex h-full gap-4">
       {/* Kanban-only secondary sidebar (views/filters) */}
-      <aside className="hidden w-56 shrink-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Views</div>
           <div className="mt-2 flex flex-col gap-1">
             <ViewButton
               active={view === 'all'}
               label="All"
-              count={visibleTasks.length}
+              count={baseFiltered.length}
               onClick={() => setView('all')}
             />
             {COLUMNS.map((c) => (
@@ -456,7 +475,7 @@ export function KanbanBoard({
                 key={c.key}
                 active={view === c.key}
                 label={c.title}
-                count={byStatus.map[c.key].length}
+                count={viewCounts[c.key]}
                 onClick={() => setView(c.key)}
               />
             ))}
@@ -465,6 +484,22 @@ export function KanbanBoard({
 
         <div className="border-t border-slate-100 pt-3">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filters</div>
+
+          <label className="mt-2 text-sm">
+            <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+            <select
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
+              title="Assignee"
+            >
+              <option value="all">All</option>
+              <option value="tee">tee</option>
+              <option value="fay">fay</option>
+              <option value="armin">armin</option>
+              <option value="">(unassigned)</option>
+            </select>
+          </label>
 
           <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
             <span>Hide done</span>
@@ -487,17 +522,38 @@ export function KanbanBoard({
       </aside>
 
       <div className="min-w-0 flex flex-1 flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
-            <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
+        {/* Top toolbar (Asana-ish) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Board</div>
+              <div className="text-xs text-slate-500">Tasks</div>
+            </div>
+
+            <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-900 shadow-sm"
+                title="Board"
+              >
+                Board
+              </button>
+              <button
+                type="button"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-white"
+                title="Table (coming soon)"
+                disabled
+              >
+                Table
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <input
                 ref={searchRef}
-                className="w-56 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                className="w-64 bg-transparent text-sm outline-none placeholder:text-slate-400"
                 placeholder="Search… (/)"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -514,30 +570,22 @@ export function KanbanBoard({
               ) : null}
             </div>
 
-            <select
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
-              title="Assignee"
-            >
-              <option value="all">All</option>
-              <option value="tee">tee</option>
-              <option value="fay">fay</option>
-              <option value="armin">armin</option>
-              <option value="">(unassigned)</option>
-            </select>
-
             <button
               className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
-              onClick={() => setCreateOpen(true)}
+              onClick={() => {
+                setCreatePrefill(null);
+                setCreateOpen(true);
+              }}
             >
-              + Task (N)
+              + Add
             </button>
+
             <button
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
               onClick={refresh}
+              title="Refresh"
             >
-              Refresh
+              ⟳
             </button>
           </div>
         </div>
@@ -578,6 +626,10 @@ export function KanbanBoard({
               tasks={byStatus.map[col.key]}
               onOpenTask={(t) => setEditTask(t)}
               activeTaskId={activeTaskId}
+              onQuickAdd={(status) => {
+                setCreatePrefill({ status });
+                setCreateOpen(true);
+              }}
             />
           ))}
         </div>
@@ -604,10 +656,15 @@ export function KanbanBoard({
 
       {createOpen ? (
         <CreateTaskModal
-          onClose={() => setCreateOpen(false)}
+          initialStatus={createPrefill?.status}
+          onClose={() => {
+            setCreateOpen(false);
+            setCreatePrefill(null);
+          }}
           onCreate={async (body) => {
             await api.createTask(body);
             setCreateOpen(false);
+            setCreatePrefill(null);
             await refresh();
           }}
         />
@@ -655,6 +712,7 @@ function KanbanColumn({
   tasks,
   onOpenTask,
   activeTaskId,
+  onQuickAdd,
 }: {
   id: TaskStatus;
   title: string;
@@ -662,6 +720,7 @@ function KanbanColumn({
   tasks: Task[];
   onOpenTask: (t: Task) => void;
   activeTaskId: string | null;
+  onQuickAdd: (status: TaskStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const showDropHint = isOver && !!activeTaskId;
@@ -669,8 +728,30 @@ function KanbanColumn({
   return (
     <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
-        <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-semibold text-slate-900">{title}</div>
+          <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+            onClick={() => onQuickAdd(id)}
+            title={`Add to ${title}`}
+            aria-label={`Add to ${title}`}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+            title="Menu (coming soon)"
+            aria-label="Menu"
+            disabled
+          >
+            …
+          </button>
+        </div>
       </div>
       <div
         ref={setNodeRef}
@@ -851,9 +932,11 @@ function EditTaskModal({
 }
 
 function CreateTaskModal({
+  initialStatus,
   onClose,
   onCreate,
 }: {
+  initialStatus?: TaskStatus;
   onClose: () => void;
   onCreate: (body: {
     title: string;
@@ -866,7 +949,7 @@ function CreateTaskModal({
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TaskStatus>('backlog');
+  const [status, setStatus] = useState<TaskStatus>(initialStatus ?? 'backlog');
   const [priority, setPriority] = useState<TaskPriority>(null);
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
