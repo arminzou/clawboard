@@ -212,7 +212,7 @@ export function KanbanBoardV2({
           ))}
         </div>
 
-        <DragOverlay>{activeTask ? <div className="w-80"><TaskCardV2 task={activeTask} /></div> : null}</DragOverlay>
+        <DragOverlay>{activeTask ? <div className="w-80"><TaskCardV2 task={activeTask} dragging /></div> : null}</DragOverlay>
       </DndContext>
     </div>
   );
@@ -274,7 +274,7 @@ function KanbanColumnV2({
       <div
         ref={setNodeRef}
         className={clsx(
-          'relative flex-1 p-3 transition',
+          'relative flex-1 p-3',
           showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.20)]',
         )}
       >
@@ -287,7 +287,7 @@ function KanbanColumnV2({
             {tasks.map((t) => (
               <div key={t.id}>
                 {showDropHint && overId === String(t.id) && activeTaskId !== String(t.id) ? <InsertLine /> : null}
-                <SortableTaskV2 task={t} onOpen={() => onOpenTask(t)} />
+                <SortableTaskV2 task={t} onOpen={() => onOpenTask(t)} boardDragging={!!activeTaskId} />
               </div>
             ))}
             {showDropHint && overId === id ? <InsertLine /> : null}
@@ -349,7 +349,7 @@ function MetaRow({
   );
 }
 
-function TaskCardV2({ task, onOpen }: { task: Task; onOpen?: () => void }) {
+function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => void; dragging?: boolean }) {
   const created = parseSqliteTimestamp(task.created_at);
   const createdLabel = Number.isFinite(created.getTime()) ? created.toLocaleDateString() : '';
 
@@ -357,14 +357,15 @@ function TaskCardV2({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     <button
       type="button"
       className={clsx(
-        'group w-full rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm transition will-change-transform',
-        'hover:-translate-y-px hover:border-[rgb(var(--cb-accent)/0.18)] hover:shadow-md',
+        'group w-full rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
+        dragging ? 'transition-none' : 'transition',
+        !dragging && 'hover:-translate-y-px hover:border-[rgb(var(--cb-accent)/0.18)] hover:shadow-md',
         'active:translate-y-0 active:shadow-sm',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]',
       )}
       onClick={onOpen}
     >
-      <div className="whitespace-normal text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
+      <div className="whitespace-normal text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
@@ -421,7 +422,15 @@ function IconCalendar() {
   );
 }
 
-function SortableTaskV2({ task, onOpen }: { task: Task; onOpen: () => void }) {
+function SortableTaskV2({
+  task,
+  onOpen,
+  boardDragging,
+}: {
+  task: Task;
+  onOpen: () => void;
+  boardDragging?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(task.id) });
 
   // Avoid animated layout jitter while dragging by disabling transitions on the active item.
@@ -441,7 +450,7 @@ function SortableTaskV2({ task, onOpen }: { task: Task; onOpen: () => void }) {
       {...attributes}
       {...listeners}
     >
-      <TaskCardV2 task={task} onOpen={onOpen} />
+      <TaskCardV2 task={task} onOpen={onOpen} dragging={boardDragging} />
     </div>
   );
 }
