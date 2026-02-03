@@ -111,6 +111,7 @@ export function KanbanBoard({
   const [createOpen, setCreateOpen] = useState(false);
 
   type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
+  type ViewFilter = 'all' | TaskStatus;
 
   const [q, setQ] = useState(() => {
     try {
@@ -126,6 +127,23 @@ export function KanbanBoard({
       return (raw === 'all' || raw === 'tee' || raw === 'fay' || raw === 'armin' || raw === '' ? raw : 'all') as AssigneeFilter;
     } catch {
       return 'all';
+    }
+  });
+
+  const [view, setView] = useState<ViewFilter>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.kanban.view') ?? 'all';
+      return (raw === 'all' || raw === 'backlog' || raw === 'in_progress' || raw === 'review' || raw === 'done' ? raw : 'all') as ViewFilter;
+    } catch {
+      return 'all';
+    }
+  });
+
+  const [hideDone, setHideDone] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.kanban.hideDone') === '1';
+    } catch {
+      return false;
     }
   });
 
@@ -169,6 +187,22 @@ export function KanbanBoard({
       // ignore
     }
   }, [assignee]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.kanban.view', view);
+    } catch {
+      // ignore
+    }
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.kanban.hideDone', hideDone ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [hideDone]);
 
   // If App requests to open a task (e.g. from Activity tab), open the edit modal.
   useEffect(() => {
@@ -251,11 +285,14 @@ export function KanbanBoard({
 
     return tasks.filter((t) => {
       if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
+      if (hideDone && t.status === 'done') return false;
+      if (view !== 'all' && t.status !== view) return false;
+
       if (!query) return true;
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, q, tasks]);
+  }, [assignee, hideDone, q, tasks, view]);
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
@@ -402,61 +439,108 @@ export function KanbanBoard({
   // Create via UI modal (see CreateTaskModal below)
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex h-full gap-4">
+      {/* Kanban-only secondary sidebar (views/filters) */}
+      <aside className="hidden w-56 shrink-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
-          <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Views</div>
+          <div className="mt-2 flex flex-col gap-1">
+            <ViewButton
+              active={view === 'all'}
+              label="All"
+              count={visibleTasks.length}
+              onClick={() => setView('all')}
+            />
+            {COLUMNS.map((c) => (
+              <ViewButton
+                key={c.key}
+                active={view === c.key}
+                label={c.title}
+                count={byStatus.map[c.key].length}
+                onClick={() => setView(c.key)}
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <input
-              ref={searchRef}
-              className="w-56 bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder="Search… (/)"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            {q ? (
-              <button
-                type="button"
-                className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                onClick={() => setQ('')}
-                title="Clear"
-              >
-                Clear
-              </button>
-            ) : null}
+        <div className="border-t border-slate-100 pt-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filters</div>
+
+          <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+            <span>Hide done</span>
+            <input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} />
+          </label>
+
+          <button
+            type="button"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            onClick={() => {
+              setQ('');
+              setAssignee('all');
+              setView('all');
+              setHideDone(false);
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex flex-1 flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Kanban</h2>
+            <div className="text-sm text-slate-600">Drag tasks between columns. Drag within a column to reorder.</div>
           </div>
 
-          <select
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
-            title="Assignee"
-          >
-            <option value="all">All</option>
-            <option value="tee">tee</option>
-            <option value="fay">fay</option>
-            <option value="armin">armin</option>
-            <option value="">(unassigned)</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <input
+                ref={searchRef}
+                className="w-56 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                placeholder="Search… (/)"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              {q ? (
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                  onClick={() => setQ('')}
+                  title="Clear"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
 
-          <button
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
-            onClick={() => setCreateOpen(true)}
-          >
-            + Task (N)
-          </button>
-          <button
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
-            onClick={refresh}
-          >
-            Refresh
-          </button>
+            <select
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value as AssigneeFilter)}
+              title="Assignee"
+            >
+              <option value="all">All</option>
+              <option value="tee">tee</option>
+              <option value="fay">fay</option>
+              <option value="armin">armin</option>
+              <option value="">(unassigned)</option>
+            </select>
+
+            <button
+              className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+              onClick={() => setCreateOpen(true)}
+            >
+              + Task (N)
+            </button>
+            <button
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
+              onClick={refresh}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
 
       {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
       {error ? (
@@ -528,11 +612,41 @@ export function KanbanBoard({
           }}
         />
       ) : null}
+      </div>
     </div>
   );
 }
 
 import { useDroppable } from '@dnd-kit/core';
+
+function ViewButton({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        active
+          ? 'flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white'
+          : 'flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
+      }
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <span className={active ? 'rounded-full bg-white/15 px-2 py-0.5 text-xs' : 'rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700'}>
+        {count}
+      </span>
+    </button>
+  );
+}
 
 function KanbanColumn({
   id,
