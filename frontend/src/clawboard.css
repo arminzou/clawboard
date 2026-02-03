@@ -1,0 +1,18 @@
+.cb-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184) transparent; /* slate-400 */
+}
+
+.cb-scrollbar::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.cb-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184 / 0.7);
+  border-radius: 999px;
+}
+
+.cb-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}

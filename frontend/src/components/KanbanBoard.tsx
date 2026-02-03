@@ -453,16 +453,18 @@ export function KanbanBoard({
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveTaskId(null)}
       >
-        <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="cb-scrollbar -mx-1 flex flex-1 gap-3 overflow-x-auto px-1 pb-2">
           {COLUMNS.map((col) => (
-            <KanbanColumn
-              key={col.key}
-              id={col.key}
-              title={col.title}
-              count={byStatus.map[col.key].length}
-              tasks={byStatus.map[col.key]}
-              onOpenTask={(t) => setEditTask(t)}
-            />
+            <div key={col.key} className="w-[22rem] shrink-0">
+              <KanbanColumn
+                id={col.key}
+                title={col.title}
+                count={byStatus.map[col.key].length}
+                tasks={byStatus.map[col.key]}
+                onOpenTask={(t) => setEditTask(t)}
+                activeTaskId={activeTaskId}
+              />
+            </div>
           ))}
         </div>
 
@@ -508,21 +510,35 @@ function KanbanColumn({
   count,
   tasks,
   onOpenTask,
+  activeTaskId,
 }: {
   id: TaskStatus;
   title: string;
   count: number;
   tasks: Task[];
   onOpenTask: (t: Task) => void;
+  activeTaskId: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const showDropHint = isOver && !!activeTaskId;
+
   return (
     <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <div className="text-sm font-semibold text-slate-900">{title}</div>
         <div className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{count}</div>
       </div>
-      <div ref={setNodeRef} className={clsx('flex-1 bg-slate-50/50 p-3', isOver && 'ring-2 ring-slate-400')}>
+      <div
+        ref={setNodeRef}
+        className={clsx(
+          'relative flex-1 bg-slate-50/50 p-3 transition',
+          showDropHint && 'ring-2 ring-slate-400',
+        )}
+      >
+        {showDropHint ? (
+          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-slate-300 bg-white/30" />
+        ) : null}
+
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
           <div className="flex min-h-[18rem] flex-col gap-2">
             {tasks.map((t) => (
@@ -544,7 +560,13 @@ function SortableTask({ task, onOpen }: { task: Task; onOpen: () => void }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={clsx(isDragging && 'opacity-50')} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={clsx(isDragging && 'opacity-50')}
+      {...attributes}
+      {...listeners}
+    >
       <TaskCard task={task} onOpen={onOpen} />
     </div>
   );
