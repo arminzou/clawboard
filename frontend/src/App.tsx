@@ -1,5 +1,6 @@
 import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KanbanPageV2 } from './components/v2/KanbanPageV2';
+import { IconButton } from './components/v2/ui/Button';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -100,33 +101,21 @@ function IconRailV2({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
 
       <div className="flex flex-1 flex-col items-center gap-2">
         {items.map((it) => (
-          <button
+          <IconButton
             key={it.key}
-            type="button"
+            label={it.label}
+            active={tab === it.key}
             onClick={() => onTab(it.key)}
-            title={it.label}
-            aria-label={it.label}
-            className={
-              tab === it.key
-                ? 'flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-950'
-                : 'flex h-10 w-10 items-center justify-center rounded-2xl text-white/80 hover:bg-white/10 hover:text-white'
-            }
           >
             {it.icon}
-          </button>
+          </IconButton>
         ))}
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-2xl text-white/80 hover:bg-white/10 hover:text-white"
-          title="Settings"
-          aria-label="Settings"
-          disabled
-        >
+        <IconButton label="Settings" disabled>
           <IconSettings />
-        </button>
+        </IconButton>
       </div>
     </aside>
   );
