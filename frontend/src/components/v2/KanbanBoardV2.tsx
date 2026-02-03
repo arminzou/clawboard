@@ -3,6 +3,7 @@ import {
   DragOverlay,
   PointerSensor,
   closestCorners,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
@@ -221,7 +222,8 @@ function KanbanColumnV2({
   onOpenTask: (t: Task) => void;
   onQuickAdd: (status: TaskStatus) => void;
 }) {
-  const showDropHint = !!activeTaskId;
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const showDropHint = isOver && !!activeTaskId;
 
   return (
     <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -252,9 +254,15 @@ function KanbanColumnV2({
         </div>
       </div>
 
-      <div className={clsx('relative flex-1 bg-slate-50/50 p-3', showDropHint && 'transition')}>
+      <div
+        ref={setNodeRef}
+        className={clsx(
+          'relative flex-1 bg-slate-50/50 p-3 transition',
+          showDropHint && 'ring-2 ring-slate-300',
+        )}
+      >
         {showDropHint ? (
-          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-slate-200" />
+          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-slate-200 bg-white/20" />
         ) : null}
 
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
