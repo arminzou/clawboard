@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Panel } from './ui/Panel';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -7,6 +10,10 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'review', title: 'Review' },
   { key: 'done', title: 'Done' },
 ];
+
+function ModalOverlay({ children }: { children: React.ReactNode }) {
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">{children}</div>;
+}
 
 export function EditTaskModal({
   task,
@@ -33,33 +40,78 @@ export function EditTaskModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const save = useCallback(async () => {
+    if (saving || deleting) return;
+    setSaving(true);
+    try {
+      await onSave({
+        title: title.trim() || task.title,
+        description: description.trim() ? description : null,
+        status,
+        priority,
+        assigned_to: assigned,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [assigned, deleting, description, onSave, priority, saving, status, task.title, title]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      // Ctrl/Cmd+Enter to save from anywhere.
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        save();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose, save]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+    <ModalOverlay>
+      <Panel
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Edit task ${task.id}`}
+        className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-base font-semibold text-slate-900">Edit task #{task.id}</div>
-            <div className="text-xs text-slate-500">Status: {status}</div>
+            <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Edit task #{task.id}</div>
+            <div className="text-xs text-[rgb(var(--cb-text-muted))]">Status: {status}</div>
           </div>
-          <button className="rounded-xl px-2 py-1 text-sm hover:bg-slate-100" onClick={onClose}>
+          <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Title</div>
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Title</div>
+            <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  save();
+                }
+              }}
             />
           </label>
 
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Description</div>
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Description</div>
             <textarea
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="cb-input w-full"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -67,9 +119,9 @@ export function EditTaskModal({
           </label>
 
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Status</div>
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
             <select
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="cb-input w-full"
               value={status}
               onChange={(e) => setStatus(e.target.value as TaskStatus)}
             >
@@ -83,9 +135,9 @@ export function EditTaskModal({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-slate-600">Priority</div>
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
               <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="cb-input w-full"
                 value={priority ?? ''}
                 onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
               >
@@ -96,10 +148,11 @@ export function EditTaskModal({
                 <option value="urgent">urgent</option>
               </select>
             </label>
+
             <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
               <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="cb-input w-full"
                 value={assigned ?? ''}
                 onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
               >
@@ -112,8 +165,8 @@ export function EditTaskModal({
           </div>
 
           <div className="mt-2 flex justify-between gap-2">
-            <button
-              className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            <Button
+              variant="danger"
               disabled={saving || deleting}
               onClick={async () => {
                 const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
@@ -127,41 +180,25 @@ export function EditTaskModal({
               }}
             >
               {deleting ? 'Deleting…' : 'Delete'}
-            </button>
+            </Button>
 
             <div className="flex justify-end gap-2">
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
-                onClick={onClose}
-                disabled={saving || deleting}
-              >
+              <Button variant="secondary" disabled={saving || deleting} onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-                disabled={saving || deleting}
-                onClick={async () => {
-                  setSaving(true);
-                  try {
-                    await onSave({
-                      title: title.trim() || task.title,
-                      description: description.trim() ? description : null,
-                      status,
-                      priority,
-                      assigned_to: assigned,
-                    });
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-              >
+              </Button>
+              <Button variant="primary" disabled={saving || deleting} onClick={save}>
                 Save
-              </button>
+              </Button>
             </div>
           </div>
+
+          <div className="text-[11px] text-[rgb(var(--cb-text-muted))]">
+            Tip: <span className="font-medium">Ctrl/Cmd + Enter</span> saves. <span className="font-medium">Esc</span>{' '}
+            closes.
+          </div>
         </div>
-      </div>
-    </div>
+      </Panel>
+    </ModalOverlay>
   );
 }
 
@@ -188,37 +225,77 @@ export function CreateTaskModal({
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
 
-  const canSave = title.trim().length > 0 && !saving;
+  const canCreate = title.trim().length > 0 && !saving;
+
+  const create = useCallback(async () => {
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onCreate({
+        title: title.trim(),
+        description: description.trim() ? description.trim() : null,
+        status,
+        priority,
+        assigned_to: assigned,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [assigned, description, onCreate, priority, saving, status, title]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      // Ctrl/Cmd+Enter to create from anywhere.
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        create();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [create, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+    <ModalOverlay>
+      <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-base font-semibold text-slate-900">Create task</div>
-            <div className="text-xs text-slate-500">Fill in the basics. You can edit later.</div>
+            <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
+            <div className="text-xs text-[rgb(var(--cb-text-muted))]">Fill in the basics. You can edit later.</div>
           </div>
-          <button className="rounded-xl px-2 py-1 text-sm hover:bg-slate-100" onClick={onClose}>
+          <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Title</div>
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Title</div>
+            <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  create();
+                }
+              }}
               placeholder="e.g. Refactor Kanban column headers"
               autoFocus
             />
           </label>
 
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Description</div>
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Description</div>
             <textarea
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="cb-input w-full"
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -228,9 +305,9 @@ export function CreateTaskModal({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-slate-600">Status</div>
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
               <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="cb-input w-full"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
               >
@@ -243,9 +320,9 @@ export function CreateTaskModal({
             </label>
 
             <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
               <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                className="cb-input w-full"
                 value={assigned ?? ''}
                 onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
               >
@@ -258,9 +335,9 @@ export function CreateTaskModal({
           </div>
 
           <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-slate-600">Priority</div>
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
             <select
-              className="w-full rounded-xl border border-slate-200 px-3 py-2"
+              className="cb-input w-full"
               value={priority ?? ''}
               onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
             >
@@ -273,37 +350,20 @@ export function CreateTaskModal({
           </label>
 
           <div className="mt-2 flex justify-end gap-2">
-            <button
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
-              onClick={onClose}
-              disabled={saving}
-            >
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
               Cancel
-            </button>
-            <button
-              className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-              disabled={!canSave}
-              onClick={async () => {
-                if (!title.trim()) return;
-                setSaving(true);
-                try {
-                  await onCreate({
-                    title: title.trim(),
-                    description: description.trim() ? description.trim() : null,
-                    status,
-                    priority,
-                    assigned_to: assigned,
-                  });
-                } finally {
-                  setSaving(false);
-                }
-              }}
-            >
-              Create
-            </button>
+            </Button>
+            <Button variant="primary" onClick={create} disabled={!canCreate}>
+              {saving ? 'Creating…' : 'Create'}
+            </Button>
+          </div>
+
+          <div className="text-[11px] text-[rgb(var(--cb-text-muted))]">
+            Tip: <span className="font-medium">Ctrl/Cmd + Enter</span> creates. <span className="font-medium">Esc</span>{' '}
+            closes.
           </div>
         </div>
-      </div>
-    </div>
+      </Panel>
+    </ModalOverlay>
   );
 }
