@@ -10,9 +10,10 @@ export function Chip({
   ...props
 }: HTMLAttributes<HTMLSpanElement> & { variant?: Variant; children?: ReactNode }) {
   const variants: Record<Variant, string> = {
-    soft: 'bg-slate-100 text-slate-700',
-    neutral: 'border border-slate-200 bg-white text-slate-700',
-    strong: 'bg-slate-900 text-white',
+    soft: 'bg-[rgb(var(--cb-accent-soft))] text-[rgb(var(--cb-text))]',
+    neutral:
+      'border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] text-[rgb(var(--cb-text))]',
+    strong: 'bg-[rgb(var(--cb-accent))] text-[rgb(var(--cb-surface))]',
   };
 
   return (

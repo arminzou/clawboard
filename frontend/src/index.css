@@ -25,12 +25,18 @@
   --cb-text: 15 23 42; /* slate-900 */
   --cb-text-muted: 100 116 139; /* slate-500 */
 
+  /* Typography scale */
+  --cb-text-xs: 12px;
+  --cb-text-sm: 14px;
+  --cb-text-md: 16px;
+
   /* Radius + shadows */
   --cb-radius: 12px;
   --cb-radius-lg: 16px;
   --cb-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
   --cb-shadow-md: 0 8px 20px rgb(15 23 42 / 0.10);
 }
+
 
 @layer base {
   html,
@@ -41,7 +47,9 @@
 
   body {
     margin: 0;
-    @apply bg-slate-100 text-slate-900 antialiased;
+    background: rgb(var(--cb-bg));
+    color: rgb(var(--cb-text));
+    @apply antialiased;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
       "Apple Color Emoji", "Segoe UI Emoji";
   }

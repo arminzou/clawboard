@@ -55,14 +55,14 @@ This document is the living plan. It’s expected to change as we implement and 
 
 - [x] Decision: **stay on React + Tailwind** for v2 (fastest iteration)
   - [ ] Optional: add shadcn/ui + lucide-react later if needed
-- [ ] Establish design tokens (CSS vars + Tailwind-friendly classes):
-  - [ ] surfaces, borders, shadows, radius, typography scale
+- [x] Establish design tokens (CSS vars + Tailwind-friendly classes):
+  - [x] surfaces, borders, shadows, radius, typography scale
   - [x] consistent chip styles (status/priority)
-- [ ] Build a tiny internal “UI kit” (local components):
-  - [ ] `Button` / `IconButton`
-  - [ ] `Input`
-  - [ ] `Chip`
-  - [ ] `Panel`
+- [x] Build a tiny internal “UI kit” (local components):
+  - [x] `Button` / `IconButton`
+  - [x] `Input`
+  - [x] `Chip`
+  - [x] `Panel`
 
 **Done when:** Screens look cohesive and the reference style can be expressed quickly.
 
