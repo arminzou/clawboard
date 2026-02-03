@@ -8,14 +8,28 @@
 :root {
   color-scheme: light;
 
-  /* Accent palette (used sparingly) */
+  /* Design tokens (v2)
+     Keep these as simple RGB triplets so Tailwind can reference them with rgb(var(--token) / <alpha>). */
+
+  /* Brand / focus */
   --cb-accent: 15 23 42; /* slate-900 */
   --cb-accent-soft: 241 245 249; /* slate-100 */
 
-  /* Surface */
+  /* Surfaces */
   --cb-bg: 241 245 249; /* slate-100 */
-  --cb-surface: 255 255 255;
+  --cb-surface: 255 255 255; /* white */
+  --cb-surface-muted: 248 250 252; /* slate-50 */
   --cb-border: 226 232 240; /* slate-200 */
+
+  /* Typography */
+  --cb-text: 15 23 42; /* slate-900 */
+  --cb-text-muted: 100 116 139; /* slate-500 */
+
+  /* Radius + shadows */
+  --cb-radius: 12px;
+  --cb-radius-lg: 16px;
+  --cb-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --cb-shadow-md: 0 8px 20px rgb(15 23 42 / 0.10);
 }
 
 @layer base {
@@ -36,5 +50,31 @@
   :focus-visible {
     outline: 2px solid rgb(var(--cb-accent) / 0.9);
     outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Tailwind-friendly component primitives (v2 UI kit) */
+  .cb-panel {
+    border-radius: var(--cb-radius-lg);
+    border: 1px solid rgb(var(--cb-border));
+    background: rgb(var(--cb-surface));
+    box-shadow: var(--cb-shadow-sm);
+  }
+
+  .cb-input {
+    border-radius: var(--cb-radius);
+    border: 1px solid rgb(var(--cb-border));
+    background: rgb(var(--cb-surface));
+    color: rgb(var(--cb-text));
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    box-shadow: var(--cb-shadow-sm);
+  }
+
+  .cb-input::placeholder {
+    color: rgb(var(--cb-text-muted));
+    opacity: 0.75;
   }
 }

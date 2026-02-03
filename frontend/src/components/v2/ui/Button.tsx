@@ -18,7 +18,7 @@ export function Button({
   right?: ReactNode;
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.70)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]';
 
   const sizes: Record<Size, string> = {
     sm: 'px-2.5 py-1.5 text-sm',
@@ -27,7 +27,8 @@ export function Button({
 
   const variants: Record<Variant, string> = {
     primary: 'bg-slate-900 text-white shadow-sm hover:bg-slate-800',
-    secondary: 'border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50',
+    secondary:
+      'border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] text-[rgb(var(--cb-text))] shadow-sm hover:bg-slate-50',
     ghost: 'text-slate-800 hover:bg-slate-100',
     danger: 'border border-red-200 bg-white text-red-700 shadow-sm hover:bg-red-50',
   };

@@ -4,6 +4,9 @@ import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
 import { KanbanBoardV2 } from './KanbanBoardV2';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Chip } from './ui/Chip';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -410,10 +413,10 @@ export function KanbanPageV2({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                <input
+              <div className="flex items-center gap-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-2 shadow-sm">
+                <Input
                   ref={searchRef}
-                  className="w-64 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                  className="w-64 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   placeholder="Search… (/)"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -430,23 +433,19 @@ export function KanbanPageV2({
                 ) : null}
               </div>
 
-              <button
-                className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+              <Button
+                variant="primary"
                 onClick={() => {
                   setCreatePrefill(null);
                   setCreateOpen(true);
                 }}
               >
                 + Add
-              </button>
+              </Button>
 
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
-                onClick={refresh}
-                title="Refresh"
-              >
+              <Button variant="secondary" onClick={refresh} title="Refresh">
                 ⟳
-              </button>
+              </Button>
             </div>
           </div>
         </header>
@@ -556,9 +555,9 @@ function ViewButton({
       onClick={onClick}
     >
       <span>{label}</span>
-      <span className={active ? 'rounded-full bg-white/15 px-2 py-0.5 text-xs' : 'rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700'}>
+      <Chip variant={active ? 'strong' : 'soft'} className={active ? 'bg-white/15 text-white' : undefined}>
         {count}
-      </span>
+      </Chip>
     </button>
   );
 }

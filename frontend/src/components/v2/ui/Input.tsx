@@ -1,15 +1,16 @@
 import clsx from 'clsx';
+import { forwardRef } from 'react';
 import type { InputHTMLAttributes } from 'react';
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
+  { className, ...props },
+  ref,
+) {
   return (
     <input
       {...props}
-      className={clsx(
-        'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400',
-        'focus:border-slate-300 focus-visible:ring-2 focus-visible:ring-slate-900/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
-        className,
-      )}
+      ref={ref}
+      className={clsx('cb-input', 'w-full min-w-0', className)}
     />
   );
-}
+});
