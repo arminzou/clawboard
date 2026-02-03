@@ -21,6 +21,18 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'done', title: 'Done' },
 ];
 
+function parseSqliteTimestamp(ts: string) {
+  // Accept both ISO and sqlite "YYYY-MM-DD HH:MM:SS".
+  if (!ts) return new Date(0);
+  if (ts.includes('T')) return new Date(ts);
+  // Treat sqlite timestamps as local-ish; append 'Z' for stable parsing as UTC.
+  return new Date(ts.replace(' ', 'T') + 'Z');
+}
+
+function statusLabel(s: TaskStatus) {
+  return COLUMNS.find((c) => c.key === s)?.title ?? s;
+}
+
 function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
   const priorityClasses = clsx(
     'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset',
@@ -31,6 +43,20 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
       'bg-red-50 text-red-800 ring-red-200': task.priority === 'urgent',
     },
   );
+
+  const statusClasses = clsx(
+    'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset',
+    {
+      'bg-slate-50 text-slate-700 ring-slate-200': task.status === 'backlog',
+      'bg-indigo-50 text-indigo-800 ring-indigo-200': task.status === 'in_progress',
+      'bg-purple-50 text-purple-800 ring-purple-200': task.status === 'review',
+      'bg-emerald-50 text-emerald-800 ring-emerald-200': task.status === 'done',
+    },
+  );
+
+  const created = parseSqliteTimestamp(task.created_at);
+  const createdLabel = Number.isFinite(created.getTime()) ? created.toLocaleDateString() : '';
+  const statusText = statusLabel(task.status);
 
   return (
     <button
@@ -49,15 +75,20 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
             <span className="font-mono">#{task.id}</span>
             <span className="h-1 w-1 rounded-full bg-slate-300" />
             <span className="truncate">{task.assigned_to ?? 'unassigned'}</span>
+            {createdLabel ? (
+              <>
+                <span className="h-1 w-1 rounded-full bg-slate-300" />
+                <span title={task.created_at}>{createdLabel}</span>
+              </>
+            ) : null}
           </div>
         </div>
 
-        {task.priority ? <span className={priorityClasses}>{task.priority}</span> : null}
+        <div className="flex flex-col items-end gap-1">
+          <span className={statusClasses}>{statusText}</span>
+          {task.priority ? <span className={priorityClasses}>{task.priority}</span> : null}
+        </div>
       </div>
-
-      {task.description ? (
-        <div className="mt-2 whitespace-normal text-sm leading-snug text-slate-700">{task.description}</div>
-      ) : null}
     </button>
   );
 }
@@ -453,18 +484,17 @@ export function KanbanBoard({
         onDragEnd={onDragEnd}
         onDragCancel={() => setActiveTaskId(null)}
       >
-        <div className="cb-scrollbar -mx-1 flex flex-1 gap-3 overflow-x-auto px-1 pb-2">
+        <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-4">
           {COLUMNS.map((col) => (
-            <div key={col.key} className="w-[22rem] shrink-0">
-              <KanbanColumn
-                id={col.key}
-                title={col.title}
-                count={byStatus.map[col.key].length}
-                tasks={byStatus.map[col.key]}
-                onOpenTask={(t) => setEditTask(t)}
-                activeTaskId={activeTaskId}
-              />
-            </div>
+            <KanbanColumn
+              key={col.key}
+              id={col.key}
+              title={col.title}
+              count={byStatus.map[col.key].length}
+              tasks={byStatus.map[col.key]}
+              onOpenTask={(t) => setEditTask(t)}
+              activeTaskId={activeTaskId}
+            />
           ))}
         </div>
 

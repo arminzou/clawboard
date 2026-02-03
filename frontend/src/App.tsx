@@ -50,7 +50,7 @@ export default function App() {
         {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
 
         <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+          <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-4 py-3">
             <div>
               <div className="text-base font-semibold text-slate-900">Clawboard</div>
               <div className="text-xs text-slate-500">
@@ -65,7 +65,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mx-auto h-[calc(100%-56px)] max-w-7xl px-4 py-4">
+        <div className="mx-auto h-[calc(100%-56px)] max-w-screen-2xl px-4 py-4">
           {tab === 'kanban' ? (
             <KanbanBoard
               wsSignal={wsSignal}
