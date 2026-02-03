@@ -45,60 +45,67 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ## Phase 3 — UI Redesign (Reference v2: Asana-ish board)
 
+> **Working branch:** `v2/board-redesign` (commits local; push only after review)
+
 **Motivation:** The current look-and-feel doesn’t naturally converge toward the preferred reference UI.
 
 **Strategy:** Build a *new* UI shell + Kanban board presentation inspired by the reference, then migrate features onto it.
 
 ### Milestone D — Design system + UI foundations (1–2 sessions)
 
-- [ ] Decide component strategy:
-  - Option A (recommended): keep React+Tailwind, add **shadcn/ui (Radix primitives)** + **lucide-react** icons
-  - Option B: adopt a full component library (Mantine/Chakra/MUI) if we can’t reach the desired polish quickly
-- [ ] Establish design tokens (CSS vars + Tailwind config):
+- [ ] Decision: **stay on React + Tailwind** for v2 (fastest iteration)
+  - [ ] Optional: add shadcn/ui + lucide-react later if needed
+- [ ] Establish design tokens (CSS vars + Tailwind-friendly classes):
   - [ ] surfaces, borders, shadows, radius, typography scale
-  - [ ] consistent chip styles (status/priority/tags)
-- [ ] Build “UI kit” primitives used everywhere:
-  - [ ] Button / IconButton
-  - [ ] Input / Select
-  - [ ] Badge/Chip
-  - [ ] Card container
+  - [ ] consistent chip styles (status/priority)
+- [ ] Build a tiny internal “UI kit” (local components):
+  - [ ] `Button` / `IconButton`
+  - [ ] `Input`
+  - [ ] `Chip`
+  - [ ] `Panel`
 
-**Done when:** We can build screens that look cohesive without bespoke styling each time.
+**Done when:** Screens look cohesive and the reference style can be expressed quickly.
 
 ### Milestone E — App shell v2 (matches reference layout)
 
-- [ ] Left icon rail (already close) — keep
-- [ ] Add **secondary sidebar** (Kanban-only for now):
+- [ ] Introduce **v2 layout components** (no external lib required):
+  - [ ] `AppShellV2` (layout grid)
+  - [ ] `IconRail` (pinnable)
+  - [ ] `SidebarV2` (secondary sidebar)
+  - [ ] `TopbarV2` (toolbar)
+- [ ] Left icon rail (keep; refine styling to match reference)
+- [ ] Secondary sidebar (Kanban-only):
+  - [ ] Project/board selector header (static for now)
   - [ ] Views list (All / Backlog / In Progress / Review / Done)
-  - [ ] Filters (Hide done, assignee)
-  - [ ] Collapsible sections
+  - [ ] Filters section (Hide done, assignee)
+  - [ ] Collapsible sections + persisted expanded state
 - [ ] Top toolbar:
   - [ ] Board title + workspace/project label
-  - [ ] Search (global within Kanban)
-  - [ ] “Add” primary action
-  - [ ] Optional: Board/Table toggle (Table can be stubbed)
+  - [ ] Primary “Add” button
+  - [ ] Search input (global within Kanban)
+  - [ ] Board/Table toggle (Table stubbed)
 
-**Done when:** The layout reads like a modern project tool even before card polish.
+**Done when:** The layout reads like the reference UI and the board has maximum usable width.
 
 ### Milestone F — Kanban board v2 (card + column polish)
 
-- [ ] Column header design:
-  - [ ] title + count bubble
-  - [ ] per-column quick-add button
-  - [ ] column menu placeholder (…)
-- [ ] Card redesign to match reference *without noise*:
-  - [ ] Full title (multi-line)
-  - [ ] Small structured metadata rows (no avatars required):
-    - [ ] task id
-    - [ ] status chip (optional if redundant)
-    - [ ] created date
-    - [ ] priority chip
-  - [ ] Remove description from card (modal-only)
-- [ ] Drag/drop affordances:
-  - [ ] insertion indicator/placeholder (so user knows where it will land)
-  - [ ] smoother transitions (but keep fast)
+- [ ] Replace current Kanban UI with **`KanbanBoardV2`**:
+  - [ ] Columns: calmer spacing, soft containers, consistent headers
+  - [ ] Column header actions: + add, … menu (stub)
+- [ ] Card redesign (reference-inspired, low noise):
+  - [ ] Title (multi-line) as the primary element
+  - [ ] Metadata rows (simple text + tiny icons; no avatars):
+    - [ ] Task ID
+    - [ ] Assignee
+    - [ ] Created date
+    - [ ] Priority badge
+  - [ ] Description hidden on card (modal only)
+- [ ] Interaction polish:
+  - [ ] Drop indicator/placeholder (show insertion point)
+  - [ ] Hover/focus states consistent with v2 design system
+  - [ ] Reduce layout shift while dragging
 
-**Done when:** The board is pleasant to skim and feels “premium”.
+**Done when:** The board matches the reference vibe, is skimmable, and drag/drop feels obvious.
 
 ### Milestone G — Kanban UX power features (still Kanban-only)
 
