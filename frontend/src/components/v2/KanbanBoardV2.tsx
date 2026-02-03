@@ -50,6 +50,7 @@ export function KanbanBoardV2({
   onQuickAdd: (status: TaskStatus) => void;
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -87,13 +88,17 @@ export function KanbanBoardV2({
 
   function onDragOver(evt: DragOverEvent) {
     const { active, over } = evt;
-    if (!over) return;
+    if (!over) {
+      setOverId(null);
+      return;
+    }
 
     const activeId = String(active.id);
-    const overId = String(over.id);
+    const overKey = String(over.id);
+    setOverId(overKey);
 
     const activeContainer = findContainerForTaskId(activeId, byStatus);
-    const overContainer = (COLUMNS.find((c) => c.key === overId)?.key ?? findContainerForTaskId(overId, byStatus)) as
+    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerForTaskId(overKey, byStatus)) as
       | TaskStatus
       | null;
 
@@ -128,13 +133,14 @@ export function KanbanBoardV2({
   async function onDragEnd(evt: DragEndEvent) {
     const { active, over } = evt;
     setActiveTaskId(null);
+    setOverId(null);
     if (!over) return;
 
     const activeId = String(active.id);
-    const overId = String(over.id);
+    const overKey = String(over.id);
 
     const activeContainer = findContainerForTaskId(activeId, byStatus);
-    const overContainer = (COLUMNS.find((c) => c.key === overId)?.key ?? findContainerForTaskId(overId, byStatus)) as
+    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerForTaskId(overKey, byStatus)) as
       | TaskStatus
       | null;
 
@@ -150,12 +156,12 @@ export function KanbanBoardV2({
     nextAll[aIdx] = { ...aTask, status: overContainer };
 
     // Reorder within destination column if dropping on another task.
-    if (overId !== overContainer) {
+    if (overKey !== overContainer) {
       const dest = nextAll
         .filter((t) => t.status === overContainer)
         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
       const fromIndex = dest.findIndex((t) => String(t.id) === activeId);
-      const overIndex = dest.findIndex((t) => String(t.id) === overId);
+      const overIndex = dest.findIndex((t) => String(t.id) === overKey);
       if (fromIndex >= 0 && overIndex >= 0 && fromIndex !== overIndex) {
         const reordered = arrayMove(dest, fromIndex, overIndex).map((t, i) => ({ ...t, position: i }));
         for (const t of reordered) {
@@ -179,10 +185,16 @@ export function KanbanBoardV2({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
-        onDragStart={(evt) => setActiveTaskId(String(evt.active.id))}
+        onDragStart={(evt) => {
+          setActiveTaskId(String(evt.active.id));
+          setOverId(null);
+        }}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActiveTaskId(null)}
+        onDragCancel={() => {
+          setActiveTaskId(null);
+          setOverId(null);
+        }}
       >
         <div className="grid h-full grid-cols-1 gap-3 lg:grid-cols-4">
           {COLUMNS.map((col) => (
@@ -193,6 +205,7 @@ export function KanbanBoardV2({
               count={byStatus[col.key].length}
               tasks={byStatus[col.key]}
               activeTaskId={activeTaskId}
+              overId={overId}
               onOpenTask={onEditTask}
               onQuickAdd={onQuickAdd}
             />
@@ -211,6 +224,7 @@ function KanbanColumnV2({
   count,
   tasks,
   activeTaskId,
+  overId,
   onOpenTask,
   onQuickAdd,
 }: {
@@ -219,11 +233,14 @@ function KanbanColumnV2({
   count: number;
   tasks: Task[];
   activeTaskId: string | null;
+  overId: string | null;
   onOpenTask: (t: Task) => void;
   onQuickAdd: (status: TaskStatus) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  const showDropHint = isOver && !!activeTaskId;
+  const { setNodeRef } = useDroppable({ id });
+  const showDropHint =
+    !!activeTaskId &&
+    (overId === id || tasks.some((t) => String(t.id) === overId));
 
   return (
     <div className="flex min-h-[20rem] flex-col rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
@@ -268,11 +285,23 @@ function KanbanColumnV2({
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
           <div className="flex min-h-[18rem] flex-col gap-2">
             {tasks.map((t) => (
-              <SortableTaskV2 key={t.id} task={t} onOpen={() => onOpenTask(t)} />
+              <div key={t.id}>
+                {showDropHint && overId === String(t.id) && activeTaskId !== String(t.id) ? <InsertLine /> : null}
+                <SortableTaskV2 task={t} onOpen={() => onOpenTask(t)} />
+              </div>
             ))}
+            {showDropHint && overId === id ? <InsertLine /> : null}
           </div>
         </SortableContext>
       </div>
+    </div>
+  );
+}
+
+function InsertLine() {
+  return (
+    <div className="relative my-1 h-3">
+      <div className="absolute left-1 right-1 top-1/2 h-0.5 -translate-y-1/2 rounded bg-slate-400/70" />
     </div>
   );
 }
