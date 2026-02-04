@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL CHECK(status IN ('backlog', 'in_progress', 'review', 'done')),
     priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
     due_date TEXT, -- ISO date (YYYY-MM-DD) or ISO datetime; nullable
+    tags TEXT, -- JSON array of strings; nullable
     assigned_to TEXT, -- 'tee', 'fay', 'armin', or null
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

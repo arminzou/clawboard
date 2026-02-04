@@ -14,6 +14,7 @@ import clsx from 'clsx';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
+import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
@@ -428,6 +429,13 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
         {task.priority ? <span className={priorityChipClasses(task.priority)}>{task.priority}</span> : null}
+        {Array.isArray(task.tags) && task.tags.length
+          ? task.tags.slice(0, 3).map((t) => (
+              <Chip key={t} variant="neutral" className="text-[11px] py-0.5">
+                {t}
+              </Chip>
+            ))
+          : null}
       </div>
 
       <div className="mt-3 flex flex-col gap-1.5">

@@ -47,6 +47,20 @@ function migrate(db) {
     db.pragma('user_version = 3');
   }
 
+
+  // 3 -> 4: add tasks.tags (JSON array string)
+  if (v < 4) {
+    const hasTags = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='tags'")
+      .get();
+
+    if (!hasTags) {
+      db.exec('ALTER TABLE tasks ADD COLUMN tags TEXT');
+    }
+
+    db.pragma('user_version = 4');
+  }
+
   // Keep schema.sql aligned for fresh init
 }
 

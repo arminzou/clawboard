@@ -10,6 +10,7 @@ export interface Task {
   priority: TaskPriority;
   assigned_to: Assignee;
   due_date?: string | null;
+  tags?: string[];
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -84,7 +85,9 @@ export const api = {
     );
   },
 
-  async createTask(body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'assigned_to' | 'position'>> & { title: string }) {
+  async createTask(
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'assigned_to' | 'position'>> & { title: string },
+  ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
         method: 'POST',
@@ -94,7 +97,10 @@ export const api = {
     );
   },
 
-  async updateTask(id: number, body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'assigned_to' | 'position' | 'archived_at'>>) {
+  async updateTask(
+    id: number,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'assigned_to' | 'position' | 'archived_at'>>,
+  ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
         method: 'PATCH',

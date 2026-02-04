@@ -428,7 +428,7 @@ export function KanbanPageV2({
       }
 
       if (!query) return true;
-      const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}`.toLowerCase();
+      const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
       return hay.includes(query);
     });
   }, [assignee, hideDone, q, tasks, due]);
@@ -574,7 +574,15 @@ export function KanbanPageV2({
           task={editTask}
           onClose={() => setEditTask(null)}
           onSave={async (patch) => {
-            await api.updateTask(editTask.id, patch);
+            const normalizedTags =
+              typeof patch.tags === 'string'
+                ? patch.tags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean)
+                : patch.tags;
+
+            await api.updateTask(editTask.id, { ...patch, tags: normalizedTags });
             setEditTask(null);
             await refresh();
           }}
@@ -594,7 +602,15 @@ export function KanbanPageV2({
             setCreatePrefill(null);
           }}
           onCreate={async (body) => {
-            await api.createTask(body);
+            const normalizedTags =
+              typeof body.tags === 'string'
+                ? body.tags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter(Boolean)
+                : body.tags;
+
+            await api.createTask({ ...body, tags: normalizedTags });
             setCreateOpen(false);
             setCreatePrefill(null);
             await refresh();
