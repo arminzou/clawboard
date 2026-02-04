@@ -121,7 +121,8 @@ This document is the living plan. It’s expected to change as we implement and 
 Add fields only when the UI has a clear place for them.
 
 - [x] `due_date` (nullable) + show on card + filter
-- [ ] `tags` + filter chips
+- [x] `tags` (JSON array) stored + editable + shown on cards
+- [ ] Tag filtering UI (filter chips / sidebar)
 - [ ] `blocked_reason` (or a `blocked` status)
 
 ---
