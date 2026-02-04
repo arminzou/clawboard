@@ -54,7 +54,8 @@ This document is the living plan. It’s expected to change as we implement and 
 ### Milestone D — Design system + UI foundations (1–2 sessions)
 
 - [x] Decision: **stay on React + Tailwind** for v2 (fastest iteration)
-  - [ ] Optional: add shadcn/ui + lucide-react later if needed
+  - [ ] Optional: add shadcn/ui later if needed
+  - [x] Add lucide-react (icons)
 - [x] Establish design tokens (CSS vars + Tailwind-friendly classes):
   - [x] surfaces, borders, shadows, radius, typography scale
   - [x] consistent chip styles (status/priority)
