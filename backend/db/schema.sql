@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
     due_date TEXT, -- ISO date (YYYY-MM-DD) or ISO datetime; nullable
     tags TEXT, -- JSON array of strings; nullable
+    blocked_reason TEXT, -- nullable freeform text (why this task is blocked)
     assigned_to TEXT, -- 'tee', 'fay', 'armin', or null
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

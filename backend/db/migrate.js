@@ -61,6 +61,32 @@ function migrate(db) {
     db.pragma('user_version = 4');
   }
 
+  // 4 -> 5: add tasks.blocked_reason
+  if (v < 5) {
+    const hasBlockedReason = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='blocked_reason'")
+      .get();
+
+    if (!hasBlockedReason) {
+      db.exec('ALTER TABLE tasks ADD COLUMN blocked_reason TEXT');
+    }
+
+    db.pragma('user_version = 5');
+  }
+
+  // 4 -> 5: add tasks.blocked_reason
+  if (v < 5) {
+    const hasBlockedReason = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='blocked_reason'")
+      .get();
+
+    if (!hasBlockedReason) {
+      db.exec('ALTER TABLE tasks ADD COLUMN blocked_reason TEXT');
+    }
+
+    db.pragma('user_version = 5');
+  }
+
   // Keep schema.sql aligned for fresh init
 }
 

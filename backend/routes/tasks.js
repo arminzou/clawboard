@@ -109,7 +109,7 @@ router.get('/:id', (req, res) => {
 // Create task
 router.post('/', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status = 'backlog', priority, due_date, assigned_to, position, tags } = req.body;
+    const { title, description, status = 'backlog', priority, due_date, assigned_to, position, tags, blocked_reason } = req.body;
 
     if (!title) {
         return res.status(400).json({ error: 'Title is required' });
@@ -129,15 +129,16 @@ router.post('/', (req, res) => {
         const normalizedDueDate = typeof due_date === 'string' && due_date.trim() ? due_date.trim() : null;
         const normalizedTags = normalizeTags(tags);
         const tagsJson = normalizedTags === undefined ? null : JSON.stringify(normalizedTags);
+        const normalizedBlockedReason = typeof blocked_reason === 'string' && blocked_reason.trim() ? blocked_reason.trim() : null;
 
         const result = db
             .prepare(
                 `
-            INSERT INTO tasks (title, description, status, priority, due_date, tags, assigned_to, position)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (title, description, status, priority, due_date, tags, blocked_reason, assigned_to, position)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
             )
-            .run(title, description, status, priority, normalizedDueDate, tagsJson, assigned_to, resolvedPosition);
+            .run(title, description, status, priority, normalizedDueDate, tagsJson, normalizedBlockedReason, assigned_to, resolvedPosition);
 
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
 
@@ -153,7 +154,7 @@ router.post('/', (req, res) => {
 // Update task
 router.patch('/:id', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status, priority, due_date, assigned_to, position, archived_at, tags } = req.body;
+    const { title, description, status, priority, due_date, assigned_to, position, archived_at, tags, blocked_reason } = req.body;
 
     const updates = [];
     const params = [];
@@ -186,6 +187,10 @@ router.patch('/:id', (req, res) => {
         const normalizedTags = normalizeTags(tags);
         updates.push('tags = ?');
         params.push(JSON.stringify(normalizedTags ?? []));
+    }
+    if (blocked_reason !== undefined) {
+        updates.push('blocked_reason = ?');
+        params.push(typeof blocked_reason === 'string' && blocked_reason.trim() ? blocked_reason.trim() : null);
     }
     if (assigned_to !== undefined) {
         updates.push('assigned_to = ?');

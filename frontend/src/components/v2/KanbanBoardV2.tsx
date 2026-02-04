@@ -429,6 +429,11 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
         {task.priority ? <span className={priorityChipClasses(task.priority)}>{task.priority}</span> : null}
+        {task.blocked_reason ? (
+          <Chip variant="neutral" className="text-[11px] py-0.5" title={task.blocked_reason}>
+            blocked
+          </Chip>
+        ) : null}
         {Array.isArray(task.tags) && task.tags.length
           ? task.tags.slice(0, 3).map((t) => (
               <Chip key={t} variant="neutral" className="text-[11px] py-0.5">
@@ -441,6 +446,7 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       <div className="mt-3 flex flex-col gap-1.5">
         <MetaRow icon={<IconHash />} label="Task ID" value={`#${task.id}`} mono />
         <MetaRow icon={<IconUser />} label="Assignee" value={task.assigned_to ?? '—'} />
+        {task.blocked_reason ? <MetaRow icon={<IconAlert />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
         {task.due_date ? <MetaRow icon={<IconFlag />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
         <MetaRow icon={<IconCalendar />} label="Created" value={createdLabel || '—'} title={task.created_at} />
       </div>
@@ -470,6 +476,31 @@ function IconUser() {
         d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
         stroke="currentColor"
         strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function IconAlert() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 9v4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 17h.01"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
     </svg>
   );

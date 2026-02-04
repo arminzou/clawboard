@@ -31,6 +31,7 @@ export function EditTaskModal({
     due_date?: string | null;
     tags?: string[] | string;
     assigned_to?: Assignee | null;
+    blocked_reason?: string | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
@@ -41,6 +42,7 @@ export function EditTaskModal({
   const [dueDate, setDueDate] = useState(task.due_date ?? '');
   const [tags, setTags] = useState(Array.isArray(task.tags) ? task.tags.join(', ') : '');
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
+  const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,11 +58,12 @@ export function EditTaskModal({
         due_date: dueDate.trim() ? dueDate.trim() : null,
         tags,
         assigned_to: assigned,
+        blocked_reason: blockedReason.trim() ? blockedReason : null,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, deleting, description, dueDate, tags, onSave, priority, saving, status, task.title, title]);
+  }, [assigned, blockedReason, deleting, description, dueDate, tags, onSave, priority, saving, status, task.title, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -127,6 +130,17 @@ export function EditTaskModal({
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Tags</div>
             <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="comma-separated (e.g. ui, backend)" />
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+            <textarea
+              className="cb-input w-full"
+              rows={2}
+              value={blockedReason}
+              onChange={(e) => setBlockedReason(e.target.value)}
+              placeholder="Optional…"
+            />
           </label>
 
           <label className="text-sm">
@@ -232,6 +246,7 @@ export function CreateTaskModal({
     priority?: TaskPriority;
     due_date?: string | null;
     tags?: string[] | string;
+    blocked_reason?: string | null;
     assigned_to?: Assignee | null;
     position?: number;
   }) => Promise<void>;
@@ -242,6 +257,7 @@ export function CreateTaskModal({
   const [priority, setPriority] = useState<TaskPriority>(null);
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState('');
+  const [blockedReason, setBlockedReason] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
 
@@ -258,12 +274,13 @@ export function CreateTaskModal({
         priority,
         due_date: dueDate.trim() ? dueDate.trim() : null,
         tags,
+        blocked_reason: blockedReason.trim() ? blockedReason : null,
         assigned_to: assigned,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, description, dueDate, tags, onCreate, priority, saving, status, title]);
+  }, [assigned, blockedReason, description, dueDate, tags, onCreate, priority, saving, status, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -328,6 +345,17 @@ export function CreateTaskModal({
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Tags</div>
             <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="comma-separated (e.g. ui, backend)" />
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+            <textarea
+              className="cb-input w-full"
+              rows={2}
+              value={blockedReason}
+              onChange={(e) => setBlockedReason(e.target.value)}
+              placeholder="Optional…"
+            />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
