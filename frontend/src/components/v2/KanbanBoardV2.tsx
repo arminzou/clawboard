@@ -11,6 +11,7 @@ import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
+import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
@@ -444,93 +445,13 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       </div>
 
       <div className="mt-3 flex flex-col gap-1.5">
-        <MetaRow icon={<IconHash />} label="Task ID" value={`#${task.id}`} mono />
-        <MetaRow icon={<IconUser />} label="Assignee" value={task.assigned_to ?? '—'} />
-        {task.blocked_reason ? <MetaRow icon={<IconAlert />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
-        {task.due_date ? <MetaRow icon={<IconFlag />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
-        <MetaRow icon={<IconCalendar />} label="Created" value={createdLabel || '—'} title={task.created_at} />
+        <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
+        <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
+        {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
+        {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
+        <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
       </div>
     </button>
-  );
-}
-
-function IconHash() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 9h14M4 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M10 4l-2 16M16 4l-2 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconUser() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M20 21a8 8 0 1 0-16 0"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
-function IconAlert() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 9v4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 17h.01"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconFlag() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 3v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path
-        d="M6 4h10l-2 3 2 3H6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconCalendar() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M7 3v3M17 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path
-        d="M4 7h16v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path d="M4 11h16" stroke="currentColor" strokeWidth="2" />
-    </svg>
   );
 }
 
