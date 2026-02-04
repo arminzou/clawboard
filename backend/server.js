@@ -37,6 +37,10 @@ app.locals.db = db;
 app.use(cors());
 app.use(express.json());
 
+// Optional auth (only enforced when CLAWBOARD_API_KEY is set)
+const { requireApiKey, isRequestAuthorized } = require('./utils/auth');
+app.use('/api', requireApiKey({ allowPaths: ['/health'] }));
+
 // Request logging
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
@@ -90,13 +94,22 @@ const server = http.createServer(app);
 // WebSocket setup for real-time updates
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+    if (!isRequestAuthorized(req)) {
+        try {
+            ws.close(1008, 'Unauthorized');
+        } catch {
+            // ignore
+        }
+        return;
+    }
+
     console.log('WebSocket client connected');
-    
+
     ws.on('message', (message) => {
         console.log('Received:', message.toString());
     });
-    
+
     ws.on('close', () => {
         console.log('WebSocket client disconnected');
     });

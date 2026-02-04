@@ -136,7 +136,7 @@ Add fields only when the UI has a clear place for them.
 
 ## Phase 6 — Hardening
 
-- [ ] Auth (only if ever exposed beyond localhost)
+- [x] Auth (optional API key; only enforce when `CLAWBOARD_API_KEY` is set)
 
 ---
 

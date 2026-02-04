@@ -34,6 +34,26 @@ npm run init
 npm run dev
 ```
 
+### Optional auth (API key)
+
+If you ever expose Clawboard beyond localhost, you can enable a simple API key.
+
+Backend:
+
+```bash
+export CLAWBOARD_API_KEY="your-long-random-key"
+```
+
+Frontend (Vite):
+
+```bash
+export VITE_CLAWBOARD_API_KEY="your-long-random-key"
+```
+
+Notes:
+- HTTP requests use `Authorization: Bearer <key>`.
+- WebSocket connects with `?apiKey=<key>`.
+
 Notes:
 - `npm run init` installs root + backend + frontend dependencies, and initializes the SQLite DB.
 - The frontend dev server proxies `/api` + `/ws` to the backend.

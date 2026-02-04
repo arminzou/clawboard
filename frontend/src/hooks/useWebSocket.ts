@@ -10,6 +10,19 @@ const DEFAULT_WS_BASE = (() => {
 })();
 
 const WS_BASE = ((import.meta as unknown as { env?: { VITE_WS_BASE?: string } }).env?.VITE_WS_BASE) ?? DEFAULT_WS_BASE;
+const API_KEY = ((import.meta as unknown as { env?: { VITE_CLAWBOARD_API_KEY?: string } }).env?.VITE_CLAWBOARD_API_KEY) ?? '';
+
+function withApiKey(url: string) {
+  if (!API_KEY) return url;
+  try {
+    const u = new URL(url, typeof window === 'undefined' ? 'ws://localhost' : window.location.href);
+    u.searchParams.set('apiKey', API_KEY);
+    return u.toString();
+  } catch {
+    // fallback: naive append
+    return url.includes('?') ? `${url}&apiKey=${encodeURIComponent(API_KEY)}` : `${url}?apiKey=${encodeURIComponent(API_KEY)}`;
+  }
+}
 
 export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const [status, setStatus] = useState<WsStatus>('connecting');
@@ -21,7 +34,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const attemptRef = useRef(0);
   const everConnectedRef = useRef(false);
 
-  const url = useMemo(() => WS_BASE, []);
+  const url = useMemo(() => withApiKey(WS_BASE), []);
 
   useEffect(() => {
     onMessageRef.current = opts?.onMessage;

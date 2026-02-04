@@ -50,6 +50,14 @@ export interface DocsStats {
 const API_BASE = ((import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE) ?? '';
 const API_BASE_CLEAN = API_BASE ? API_BASE.replace(/\/$/, '') : '';
 
+const API_KEY = ((import.meta as unknown as { env?: { VITE_CLAWBOARD_API_KEY?: string } }).env?.VITE_CLAWBOARD_API_KEY) ?? '';
+
+function authHeaders(extra?: Record<string, string>) {
+  const h: Record<string, string> = { ...(extra ?? {}) };
+  if (API_KEY) h.Authorization = `Bearer ${API_KEY}`;
+  return h;
+}
+
 function withBase(path: string) {
   return API_BASE_CLEAN ? `${API_BASE_CLEAN}${path}` : path;
 }
@@ -64,7 +72,7 @@ async function json<T>(res: Response): Promise<T> {
 
 export const api = {
   async health() {
-    return json<{ status: string; timestamp: string }>(await fetch(withBase('/api/health')));
+    return json<{ status: string; timestamp: string }>(await fetch(withBase('/api/health'), { headers: authHeaders() }));
   },
 
   async listTasks(params?: { status?: TaskStatus; assigned_to?: string; include_archived?: boolean }) {
@@ -73,14 +81,14 @@ export const api = {
     if (params?.assigned_to) usp.set('assigned_to', params.assigned_to);
     if (params?.include_archived) usp.set('include_archived', '1');
     const url = `${withBase('/api/tasks')}${usp.toString() ? `?${usp.toString()}` : ''}`;
-    return json<Task[]>(await fetch(url));
+    return json<Task[]>(await fetch(url, { headers: authHeaders() }));
   },
 
   async archiveDone(body?: { assigned_to?: string | null }) {
     return json<{ archived: number }>(
       await fetch(withBase('/api/tasks/archive_done'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body ?? {}),
       }),
     );
@@ -92,7 +100,7 @@ export const api = {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       }),
     );
@@ -105,14 +113,14 @@ export const api = {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       }),
     );
   },
 
   async deleteTask(id: number) {
-    const res = await fetch(withBase(`/api/tasks/${id}`), { method: 'DELETE' });
+    const res = await fetch(withBase(`/api/tasks/${id}`), { method: 'DELETE', headers: authHeaders() });
     if (!(res.status === 204 || res.ok)) throw new Error(`${res.status} ${res.statusText}`);
   },
 
@@ -123,14 +131,14 @@ export const api = {
     if (params?.limit != null) usp.set('limit', String(params.limit));
     if (params?.offset != null) usp.set('offset', String(params.offset));
     const url = `${withBase('/api/activities')}${usp.toString() ? `?${usp.toString()}` : ''}`;
-    return json<Activity[]>(await fetch(url));
+    return json<Activity[]>(await fetch(url, { headers: authHeaders() }));
   },
 
   async ingestSessions(body?: { agents?: string[] }) {
     return json<{ scanned: number; inserted: number; agents: string[] }>(
       await fetch(withBase('/api/activities/ingest-sessions'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body ?? {}),
       }),
     );
@@ -141,18 +149,18 @@ export const api = {
     if (params?.git_status) usp.set('git_status', params.git_status);
     if (params?.limit != null) usp.set('limit', String(params.limit));
     const url = `${withBase('/api/docs')}${usp.toString() ? `?${usp.toString()}` : ''}`;
-    return json<Document[]>(await fetch(url));
+    return json<Document[]>(await fetch(url, { headers: authHeaders() }));
   },
 
   async docsStats() {
-    return json<DocsStats>(await fetch(withBase('/api/docs/stats')));
+    return json<DocsStats>(await fetch(withBase('/api/docs/stats'), { headers: authHeaders() }));
   },
 
   async resyncDocs(body?: { workspace_root?: string }) {
     return json<{ files: number; workspaceRoot: string }>(
       await fetch(withBase('/api/docs/resync'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body ?? {}),
       }),
     );
@@ -162,7 +170,7 @@ export const api = {
     return json<Document>(
       await fetch(withBase('/api/docs/sync'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       }),
     );
