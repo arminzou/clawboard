@@ -111,7 +111,7 @@ This document is the living plan. It’s expected to change as we implement and 
 
 - [ ] Saved views (persisted filters)
 - [ ] Hide/archive done tasks (board stays clean)
-- [ ] Quick-add improvements (enter-to-create, focus management)
+- [x] Quick-add improvements (enter-to-create, focus management)
 - [x] Keyboard shortcuts for power use (N = new task, / = search)
 
 ---

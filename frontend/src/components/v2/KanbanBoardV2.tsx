@@ -11,9 +11,10 @@ import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
+import { Input } from './ui/Input';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -39,7 +40,7 @@ export function KanbanBoardV2({
   onSetTasks,
   onRefresh,
   onEditTask,
-  onQuickAdd,
+  onQuickCreate,
 }: {
   tasks: Task[];
   tasksAll: Task[];
@@ -47,7 +48,7 @@ export function KanbanBoardV2({
   onSetTasks: Dispatch<SetStateAction<Task[]>>;
   onRefresh: () => Promise<void>;
   onEditTask: (t: Task) => void;
-  onQuickAdd: (status: TaskStatus) => void;
+  onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -207,7 +208,7 @@ export function KanbanBoardV2({
               activeTaskId={activeTaskId}
               overId={overId}
               onOpenTask={onEditTask}
-              onQuickAdd={onQuickAdd}
+              onQuickCreate={onQuickCreate}
             />
           ))}
         </div>
@@ -226,7 +227,7 @@ function KanbanColumnV2({
   activeTaskId,
   overId,
   onOpenTask,
-  onQuickAdd,
+  onQuickCreate,
 }: {
   id: TaskStatus;
   title: string;
@@ -235,12 +236,36 @@ function KanbanColumnV2({
   activeTaskId: string | null;
   overId: string | null;
   onOpenTask: (t: Task) => void;
-  onQuickAdd: (status: TaskStatus) => void;
+  onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
 }) {
   const { setNodeRef } = useDroppable({ id });
   const showDropHint =
     !!activeTaskId &&
     (overId === id || tasks.some((t) => String(t.id) === overId));
+
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickSaving, setQuickSaving] = useState(false);
+  const quickRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!quickOpen) return;
+    requestAnimationFrame(() => quickRef.current?.focus());
+  }, [quickOpen]);
+
+  async function submitQuick() {
+    const trimmed = quickTitle.trim();
+    if (!trimmed || quickSaving) return;
+
+    setQuickSaving(true);
+    try {
+      await onQuickCreate(id, trimmed);
+      setQuickTitle('');
+      requestAnimationFrame(() => quickRef.current?.focus());
+    } finally {
+      setQuickSaving(false);
+    }
+  }
 
   return (
     <div className="flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm">
@@ -253,11 +278,14 @@ function KanbanColumnV2({
           <button
             type="button"
             className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
-            onClick={() => onQuickAdd(id)}
-            title={`Add to ${title}`}
-            aria-label={`Add to ${title}`}
+            onClick={() => {
+              setQuickOpen((v) => !v);
+              setQuickTitle('');
+            }}
+            title={quickOpen ? `Close quick add` : `Quick add to ${title}`}
+            aria-label={quickOpen ? `Close quick add` : `Quick add to ${title}`}
           >
-            +
+            {quickOpen ? '×' : '+'}
           </button>
           <button
             type="button"
@@ -280,6 +308,31 @@ function KanbanColumnV2({
       >
         {showDropHint ? (
           <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-[rgb(var(--cb-border))] bg-white/20" />
+        ) : null}
+
+        {quickOpen ? (
+          <div className="mb-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 shadow-sm">
+            <Input
+              ref={quickRef}
+              value={quickTitle}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              placeholder={`Add to ${title}…`}
+              disabled={quickSaving}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setQuickOpen(false);
+                  setQuickTitle('');
+                  return;
+                }
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void submitQuick();
+                }
+              }}
+            />
+            <div className="mt-1 text-[11px] text-[rgb(var(--cb-text-muted))]">Enter to create · Esc to cancel</div>
+          </div>
         ) : null}
 
         <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>

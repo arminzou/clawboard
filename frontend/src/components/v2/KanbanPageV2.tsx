@@ -339,9 +339,27 @@ export function KanbanPageV2({
             onSetTasks={setTasks}
             onRefresh={refresh}
             onEditTask={(t) => setEditTask(t)}
-            onQuickAdd={(status) => {
-              setCreatePrefill({ status });
-              setCreateOpen(true);
+            onQuickCreate={async (status, title) => {
+              const trimmed = title.trim();
+              if (!trimmed) return;
+
+              const assignedTo: Assignee | null =
+                assignee === 'all' ? 'tee' : assignee === '' ? null : (assignee as Assignee);
+
+              const maxPos = Math.max(
+                -1,
+                ...tasksRef.current
+                  .filter((t) => t.status === status)
+                  .map((t) => (t.position ?? 0) as number),
+              );
+
+              await api.createTask({
+                title: trimmed,
+                status,
+                assigned_to: assignedTo,
+                position: maxPos + 1,
+              });
+              await refresh();
             }}
           />
         </div>
