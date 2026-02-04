@@ -92,7 +92,7 @@ This document is the living plan. It’s expected to change as we implement and 
 
 - [x] Replace current Kanban UI with **`KanbanBoardV2`**
   - [x] Columns: calmer spacing, soft containers, consistent headers
-  - [x] Column header actions: + add, … menu (stub)
+  - [x] Column header actions: + add, … menu
 - [x] Card redesign (reference-inspired, low noise):
   - [x] Title (multi-line) as the primary element
   - [x] Metadata rows (simple text + tiny icons; no avatars):
