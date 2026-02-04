@@ -122,7 +122,7 @@ Add fields only when the UI has a clear place for them.
 
 - [x] `due_date` (nullable) + show on card + filter
 - [x] `tags` (JSON array) stored + editable + shown on cards
-- [ ] Tag filtering UI (filter chips / sidebar)
+- [x] Tag filtering UI (sidebar select)
 - [ ] `blocked_reason` (or a `blocked` status)
 
 ---
