@@ -6,7 +6,8 @@ import { KanbanBoardV2 } from './KanbanBoardV2';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
 import { AppShellV2 } from './layout/AppShellV2';
 import { SidebarV2 } from './layout/SidebarV2';
-import { TopbarV2 } from './layout/TopbarV2';
+import { TopbarV2, type TopbarMode } from './layout/TopbarV2';
+// import { TaskTableV2 } from './TaskTableV2'; // (unused)
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -121,6 +122,15 @@ export function KanbanPageV2({
 
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
   const lastAppliedFiltersRef = useRef<SavedView['filters'] | null>(null);
+
+  const [mode, setMode] = useState<TopbarMode>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.mode') ?? 'board';
+      return raw === 'table' ? 'table' : 'board';
+    } catch {
+      return 'board';
+    }
+  });
 
   const [q, setQ] = useState(() => {
     try {
@@ -249,6 +259,14 @@ export function KanbanPageV2({
       // ignore
     }
   }, [assignee]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.kanban.mode', mode);
+    } catch {
+      // ignore
+    }
+  }, [mode]);
 
   useEffect(() => {
     try {
@@ -552,6 +570,8 @@ export function KanbanPageV2({
   const topbar = (
     <TopbarV2
       boardName={boardName}
+      mode={mode}
+      onMode={setMode}
       q={q}
       onQ={setQ}
       searchRef={searchRef}
