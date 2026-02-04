@@ -17,6 +17,7 @@ import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
 import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
+import { Menu } from './ui/Menu';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -289,15 +290,40 @@ function KanbanColumnV2({
           >
             {quickOpen ? '×' : '+'}
           </button>
-          <button
-            type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] disabled:opacity-60"
-            title="Menu (coming soon)"
-            aria-label="Menu"
-            disabled
-          >
-            …
-          </button>
+          <Menu
+            align="right"
+            items={[
+              {
+                key: 'add',
+                label: quickOpen ? 'Focus quick add' : 'Quick add task',
+                onSelect: () => {
+                  if (!quickOpen) setQuickOpen(true);
+                  requestAnimationFrame(() => quickRef.current?.focus());
+                },
+              },
+              {
+                key: 'close',
+                label: 'Close quick add',
+                disabled: !quickOpen,
+                onSelect: () => {
+                  setQuickOpen(false);
+                  setQuickTitle('');
+                },
+              },
+            ]}
+            trigger={({ toggle, ref }) => (
+              <button
+                ref={ref}
+                type="button"
+                className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
+                title="Menu"
+                aria-label="Menu"
+                onClick={toggle}
+              >
+                …
+              </button>
+            )}
+          />
         </div>
       </div>
 
