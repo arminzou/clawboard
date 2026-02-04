@@ -11,8 +11,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
-    position INTEGER DEFAULT 0 -- for ordering within columns
+    position INTEGER DEFAULT 0, -- for ordering within columns
+    archived_at DATETIME
 );
+
+CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at);
 
 -- Agent activities table (timeline tracking)
 CREATE TABLE IF NOT EXISTS activities (

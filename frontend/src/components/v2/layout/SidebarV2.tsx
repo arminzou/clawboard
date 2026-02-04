@@ -16,6 +16,9 @@ export function SidebarV2({
   onAssignee,
   hideDone,
   onHideDone,
+  showArchived,
+  onShowArchived,
+  onArchiveDone,
   onReset,
 }: {
   projectName: string;
@@ -35,6 +38,11 @@ export function SidebarV2({
 
   hideDone: boolean;
   onHideDone: (v: boolean) => void;
+
+  showArchived: boolean;
+  onShowArchived: (v: boolean) => void;
+
+  onArchiveDone: () => void | Promise<void>;
 
   onReset: () => void;
 }) {
@@ -116,6 +124,19 @@ export function SidebarV2({
                 <span>Hide done</span>
                 <input type="checkbox" checked={hideDone} onChange={(e) => onHideDone(e.target.checked)} />
               </label>
+
+              <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                <span>Show archived</span>
+                <input type="checkbox" checked={showArchived} onChange={(e) => onShowArchived(e.target.checked)} />
+              </label>
+
+              <button
+                type="button"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                onClick={() => void onArchiveDone()}
+              >
+                Archive done
+              </button>
 
               <button
                 type="button"

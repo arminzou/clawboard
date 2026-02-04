@@ -13,6 +13,7 @@ export interface Task {
   updated_at: string;
   completed_at: string | null;
   position: number;
+  archived_at?: string | null;
 }
 
 export interface Activity {
@@ -63,12 +64,23 @@ export const api = {
     return json<{ status: string; timestamp: string }>(await fetch(withBase('/api/health')));
   },
 
-  async listTasks(params?: { status?: TaskStatus; assigned_to?: string }) {
+  async listTasks(params?: { status?: TaskStatus; assigned_to?: string; include_archived?: boolean }) {
     const usp = new URLSearchParams();
     if (params?.status) usp.set('status', params.status);
     if (params?.assigned_to) usp.set('assigned_to', params.assigned_to);
+    if (params?.include_archived) usp.set('include_archived', '1');
     const url = `${withBase('/api/tasks')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Task[]>(await fetch(url));
+  },
+
+  async archiveDone(body?: { assigned_to?: string | null }) {
+    return json<{ archived: number }>(
+      await fetch(withBase('/api/tasks/archive_done'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body ?? {}),
+      }),
+    );
   },
 
   async createTask(body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assigned_to' | 'position'>> & { title: string }) {
@@ -81,7 +93,7 @@ export const api = {
     );
   },
 
-  async updateTask(id: number, body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assigned_to' | 'position'>>) {
+  async updateTask(id: number, body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'assigned_to' | 'position' | 'archived_at'>>) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
         method: 'PATCH',

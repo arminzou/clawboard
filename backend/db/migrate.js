@@ -19,6 +19,21 @@ function migrate(db) {
     db.pragma('user_version = 1');
   }
 
+  // 1 -> 2: add tasks.archived_at + index
+  if (v < 2) {
+    const hasArchivedAt = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='archived_at'")
+      .get();
+
+    if (!hasArchivedAt) {
+      db.exec('ALTER TABLE tasks ADD COLUMN archived_at DATETIME');
+    }
+
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at)');
+
+    db.pragma('user_version = 2');
+  }
+
   // Keep schema.sql aligned for fresh init
 }
 

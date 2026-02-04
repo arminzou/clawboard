@@ -51,6 +51,14 @@ export function KanbanPageV2({
     }
   });
 
+  const [showArchived, setShowArchived] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.kanban.showArchived') === '1';
+    } catch {
+      return false;
+    }
+  });
+
   const [assignee, setAssignee] = useState<AssigneeFilter>(() => {
     try {
       const raw = window.localStorage.getItem('cb.v2.kanban.assignee') ?? 'all';
@@ -94,7 +102,7 @@ export function KanbanPageV2({
     setLoading(true);
     setError(null);
     try {
-      const all = await api.listTasks();
+      const all = await api.listTasks({ include_archived: showArchived });
       setTasks(all);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -106,7 +114,8 @@ export function KanbanPageV2({
 
   useEffect(() => {
     refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showArchived]);
 
   useEffect(() => {
     tasksRef.current = tasks;
@@ -154,6 +163,14 @@ export function KanbanPageV2({
       // ignore
     }
   }, [hideDone]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.kanban.showArchived', showArchived ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [showArchived]);
 
   useEffect(() => {
     try {
@@ -226,7 +243,8 @@ export function KanbanPageV2({
         }
       }
 
-      if (String(wsSignal.type).startsWith('task_')) {
+      const t = String(wsSignal.type);
+      if (t.startsWith('task_') || t.startsWith('tasks_')) {
         refresh();
       }
     } catch {
@@ -292,11 +310,23 @@ export function KanbanPageV2({
       onAssignee={setAssignee}
       hideDone={hideDone}
       onHideDone={setHideDone}
+      showArchived={showArchived}
+      onShowArchived={setShowArchived}
+      onArchiveDone={async () => {
+        const scopeLabel = assignee === 'all' ? 'all assignees' : assignee === '' ? 'unassigned only' : assignee;
+        const ok = window.confirm(`Archive all done tasks (${scopeLabel})?`);
+        if (!ok) return;
+
+        const body = assignee === 'all' ? undefined : { assigned_to: assignee === '' ? null : (assignee as Assignee) };
+        await api.archiveDone(body);
+        await refresh();
+      }}
       onReset={() => {
         setQ('');
         setAssignee('all');
         setView('all');
         setHideDone(false);
+        setShowArchived(false);
       }}
     />
   );

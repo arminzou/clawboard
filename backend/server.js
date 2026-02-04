@@ -8,6 +8,7 @@ const http = require('http');
 
 // Import routes
 const tasksRouter = require('./routes/tasks');
+const tasksArchiveRouter = require('./routes/tasks.archive');
 const activitiesRouter = require('./routes/activities');
 const docsRouter = require('./routes/docs');
 
@@ -44,6 +45,7 @@ app.use((req, res, next) => {
 
 // API Routes
 app.use('/api/tasks', tasksRouter);
+app.use('/api/tasks', tasksArchiveRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/docs', docsRouter);
 

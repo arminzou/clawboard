@@ -4,12 +4,18 @@ const router = express.Router();
 // Get all tasks
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { status, assigned_to } = req.query;
-    
+    const { status, assigned_to, include_archived } = req.query;
+
     let query = 'SELECT * FROM tasks';
     const conditions = [];
     const params = [];
-    
+
+    // Default: hide archived tasks.
+    const includeArchived = include_archived === '1' || include_archived === 'true';
+    if (!includeArchived) {
+        conditions.push('archived_at IS NULL');
+    }
+
     if (status) {
         conditions.push('status = ?');
         params.push(status);
@@ -18,11 +24,11 @@ router.get('/', (req, res) => {
         conditions.push('assigned_to = ?');
         params.push(assigned_to);
     }
-    
+
     if (conditions.length > 0) {
         query += ' WHERE ' + conditions.join(' AND ');
     }
-    
+
     query += ' ORDER BY position ASC, created_at DESC';
     
     try {
@@ -62,7 +68,7 @@ router.post('/', (req, res) => {
             position !== undefined && position !== null
                 ? position
                 : db
-                      .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ?')
+                      .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ? AND archived_at IS NULL')
                       .get(status).next;
 
         const result = db.prepare(`
@@ -84,7 +90,7 @@ router.post('/', (req, res) => {
 // Update task
 router.patch('/:id', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status, priority, assigned_to, position } = req.body;
+    const { title, description, status, priority, assigned_to, position, archived_at } = req.body;
     
     const updates = [];
     const params = [];
@@ -102,6 +108,7 @@ router.patch('/:id', (req, res) => {
     if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
     if (assigned_to !== undefined) { updates.push('assigned_to = ?'); params.push(assigned_to); }
     if (position !== undefined) { updates.push('position = ?'); params.push(position); }
+    if (archived_at !== undefined) { updates.push('archived_at = ?'); params.push(archived_at); }
     
     if (updates.length === 0) {
         return res.status(400).json({ error: 'No fields to update' });
