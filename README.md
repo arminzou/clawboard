@@ -78,7 +78,7 @@ npm run dev:frontend
 
 ### Database Schema
 
-**Tasks:** `id, title, description, status, priority, assigned_to, timestamps, position`  
+**Tasks:** `id, title, description, status, priority, due_date, tags, blocked_reason, assigned_to, timestamps, position`  
 **Activities:** `id, agent, activity_type, description, details, session_key, related_task_id, timestamp`  
 **Documents:** `id, file_path, file_type, last_modified, last_modified_by, size_bytes, git_status`
 
