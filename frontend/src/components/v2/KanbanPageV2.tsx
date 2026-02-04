@@ -19,6 +19,18 @@ type ViewFilter = 'all' | TaskStatus;
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
+type SavedView = {
+  id: string;
+  name: string;
+  filters: {
+    view: ViewFilter;
+    assignee: AssigneeFilter;
+    hideDone: boolean;
+    showArchived: boolean;
+    q: string;
+  };
+};
+
 export function KanbanPageV2({
   wsSignal,
   openTaskId,
@@ -67,6 +79,24 @@ export function KanbanPageV2({
       return 'all';
     }
   });
+
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.savedViews');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((x) => typeof x === 'object' && x !== null)
+        .map((x) => x as SavedView)
+        .filter((x) => typeof x.id === 'string' && typeof x.name === 'string' && typeof x.filters === 'object' && x.filters);
+    } catch {
+      return [];
+    }
+  });
+
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+  const lastAppliedFiltersRef = useRef<SavedView['filters'] | null>(null);
 
   const [q, setQ] = useState(() => {
     try {
@@ -190,6 +220,74 @@ export function KanbanPageV2({
 
   useEffect(() => {
     try {
+      window.localStorage.setItem('cb.v2.kanban.savedViews', JSON.stringify(savedViews));
+    } catch {
+      // ignore
+    }
+  }, [savedViews]);
+
+  // If user tweaks filters after applying a saved view, clear the active marker.
+  useEffect(() => {
+    if (!activeSavedViewId) return;
+    const applied = lastAppliedFiltersRef.current;
+    if (!applied) return;
+
+    const now = { view, assignee, hideDone, showArchived, q };
+    const same =
+      now.view === applied.view &&
+      now.assignee === applied.assignee &&
+      now.hideDone === applied.hideDone &&
+      now.showArchived === applied.showArchived &&
+      now.q === applied.q;
+
+    if (!same) setActiveSavedViewId(null);
+  }, [assignee, hideDone, q, showArchived, view, activeSavedViewId]);
+
+  function applySavedView(id: string) {
+    const sv = savedViews.find((x) => x.id === id);
+    if (!sv) return;
+
+    lastAppliedFiltersRef.current = sv.filters;
+    setActiveSavedViewId(sv.id);
+
+    setView(sv.filters.view);
+    setAssignee(sv.filters.assignee);
+    setHideDone(sv.filters.hideDone);
+    setShowArchived(sv.filters.showArchived);
+    setQ(sv.filters.q);
+  }
+
+  function saveCurrentView() {
+    const name = window.prompt('Save current view as…');
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+
+    const filters: SavedView['filters'] = { view, assignee, hideDone, showArchived, q };
+    const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const next: SavedView = { id, name: trimmed, filters };
+    setSavedViews((prev) => [...prev, next]);
+
+    lastAppliedFiltersRef.current = filters;
+    setActiveSavedViewId(id);
+  }
+
+  function deleteSavedView(id: string) {
+    const sv = savedViews.find((x) => x.id === id);
+    if (!sv) return;
+
+    const ok = window.confirm(`Delete saved view "${sv.name}"?`);
+    if (!ok) return;
+
+    setSavedViews((prev) => prev.filter((x) => x.id !== id));
+    if (activeSavedViewId === id) {
+      setActiveSavedViewId(null);
+      lastAppliedFiltersRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem('cb.v2.sidebar.viewsOpen', viewsOpen ? '1' : '0');
     } catch {
       // ignore
@@ -306,6 +404,11 @@ export function KanbanPageV2({
       view={view}
       onView={setView}
       viewItems={viewItems}
+      savedViews={savedViews.map((sv) => ({ id: sv.id, name: sv.name }))}
+      activeSavedViewId={activeSavedViewId}
+      onApplySavedView={applySavedView}
+      onSaveCurrentView={saveCurrentView}
+      onDeleteSavedView={deleteSavedView}
       assignee={assignee}
       onAssignee={setAssignee}
       hideDone={hideDone}

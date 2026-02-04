@@ -3,6 +3,11 @@ import { Chip } from '../ui/Chip';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
+type SavedView = {
+  id: string;
+  name: string;
+};
+
 export function SidebarV2({
   projectName,
   viewsOpen,
@@ -12,6 +17,11 @@ export function SidebarV2({
   view,
   onView,
   viewItems,
+  savedViews,
+  activeSavedViewId,
+  onApplySavedView,
+  onSaveCurrentView,
+  onDeleteSavedView,
   assignee,
   onAssignee,
   hideDone,
@@ -32,6 +42,12 @@ export function SidebarV2({
   view: 'all' | TaskStatus;
   onView: (v: 'all' | TaskStatus) => void;
   viewItems: Array<{ key: 'all' | TaskStatus; label: string; count: number }>;
+
+  savedViews: SavedView[];
+  activeSavedViewId: string | null;
+  onApplySavedView: (id: string) => void;
+  onSaveCurrentView: () => void;
+  onDeleteSavedView: (id: string) => void;
 
   assignee: AssigneeFilter;
   onAssignee: (v: AssigneeFilter) => void;
@@ -78,6 +94,40 @@ export function SidebarV2({
 
           {viewsOpen ? (
             <div className="mt-1 flex flex-col gap-1">
+              {savedViews.length ? (
+                <>
+                  <div className="mt-1 flex items-center justify-between px-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved</div>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      onClick={onSaveCurrentView}
+                      title="Save current filters"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {savedViews.map((sv) => (
+                    <SavedViewButton
+                      key={sv.id}
+                      active={activeSavedViewId === sv.id}
+                      label={sv.name}
+                      onClick={() => onApplySavedView(sv.id)}
+                      onDelete={() => onDeleteSavedView(sv.id)}
+                    />
+                  ))}
+                  <div className="mt-2 border-t border-slate-100" />
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="mb-1 mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                  onClick={onSaveCurrentView}
+                >
+                  Save current view
+                </button>
+              )}
+
               {viewItems.map((it) => (
                 <ViewButton
                   key={String(it.key)}
@@ -202,5 +252,43 @@ function ViewButton({
         {count}
       </Chip>
     </button>
+  );
+}
+
+function SavedViewButton({
+  active,
+  label,
+  onClick,
+  onDelete,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      className={
+        active
+          ? 'flex w-full items-center justify-between gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white'
+          : 'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
+      }
+    >
+      <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={onClick} title={label}>
+        {label}
+      </button>
+      <button
+        type="button"
+        className={
+          active
+            ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15'
+            : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50'
+        }
+        onClick={onDelete}
+        title="Delete saved view"
+      >
+        ×
+      </button>
+    </div>
   );
 }

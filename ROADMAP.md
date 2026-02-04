@@ -109,7 +109,7 @@ This document is the living plan. It’s expected to change as we implement and 
 
 ### Milestone G — Kanban UX power features (still Kanban-only)
 
-- [ ] Saved views (persisted filters)
+- [x] Saved views (persisted filters)
 - [x] Hide/archive done tasks (board stays clean)
 - [x] Quick-add improvements (enter-to-create, focus management)
 - [x] Keyboard shortcuts for power use (N = new task, / = search)
