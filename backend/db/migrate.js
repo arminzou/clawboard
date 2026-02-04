@@ -34,6 +34,19 @@ function migrate(db) {
     db.pragma('user_version = 2');
   }
 
+  // 2 -> 3: add tasks.due_date
+  if (v < 3) {
+    const hasDueDate = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='due_date'")
+      .get();
+
+    if (!hasDueDate) {
+      db.exec('ALTER TABLE tasks ADD COLUMN due_date TEXT');
+    }
+
+    db.pragma('user_version = 3');
+  }
+
   // Keep schema.sql aligned for fresh init
 }
 

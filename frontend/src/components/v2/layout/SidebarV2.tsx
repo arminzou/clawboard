@@ -3,6 +3,8 @@ import { Chip } from '../ui/Chip';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
+type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
+
 type SavedView = {
   id: string;
   name: string;
@@ -26,6 +28,8 @@ export function SidebarV2({
   onAssignee,
   hideDone,
   onHideDone,
+  due,
+  onDue,
   showArchived,
   onShowArchived,
   onArchiveDone,
@@ -54,6 +58,9 @@ export function SidebarV2({
 
   hideDone: boolean;
   onHideDone: (v: boolean) => void;
+
+  due: DueFilter;
+  onDue: (v: DueFilter) => void;
 
   showArchived: boolean;
   onShowArchived: (v: boolean) => void;
@@ -167,6 +174,21 @@ export function SidebarV2({
                   <option value="fay">fay</option>
                   <option value="armin">armin</option>
                   <option value="">(unassigned)</option>
+                </select>
+              </label>
+
+              <label className="mt-2 text-sm">
+                <div className="mb-1 text-xs font-medium text-slate-600">Due</div>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                  value={due}
+                  onChange={(e) => onDue(e.target.value as DueFilter)}
+                >
+                  <option value="any">Any</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="soon">Due soon (7d)</option>
+                  <option value="has">Has due date</option>
+                  <option value="none">No due date</option>
                 </select>
               </label>
 

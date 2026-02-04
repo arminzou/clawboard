@@ -120,7 +120,7 @@ This document is the living plan. It’s expected to change as we implement and 
 
 Add fields only when the UI has a clear place for them.
 
-- [ ] `due_date` (nullable) + show on card + filter
+- [x] `due_date` (nullable) + show on card + filter
 - [ ] `tags` + filter chips
 - [ ] `blocked_reason` (or a `blocked` status)
 

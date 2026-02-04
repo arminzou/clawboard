@@ -406,6 +406,11 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
   const created = parseSqliteTimestamp(task.created_at);
   const createdLabel = Number.isFinite(created.getTime()) ? created.toLocaleDateString() : '';
 
+  const due = task.due_date
+    ? new Date(task.due_date.includes('T') ? task.due_date : `${task.due_date}T00:00:00`)
+    : null;
+  const dueLabel = due && Number.isFinite(due.getTime()) ? due.toLocaleDateString() : '';
+
   return (
     <button
       type="button"
@@ -428,6 +433,7 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       <div className="mt-3 flex flex-col gap-1.5">
         <MetaRow icon={<IconHash />} label="Task ID" value={`#${task.id}`} mono />
         <MetaRow icon={<IconUser />} label="Assignee" value={task.assigned_to ?? '—'} />
+        {task.due_date ? <MetaRow icon={<IconFlag />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
         <MetaRow icon={<IconCalendar />} label="Created" value={createdLabel || '—'} title={task.created_at} />
       </div>
     </button>
@@ -456,6 +462,20 @@ function IconUser() {
         d="M12 13a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
         stroke="currentColor"
         strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function IconFlag() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 3v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M6 4h10l-2 3 2 3H6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
       />
     </svg>
   );

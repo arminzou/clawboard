@@ -56,7 +56,7 @@ router.get('/:id', (req, res) => {
 // Create task
 router.post('/', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status = 'backlog', priority, assigned_to, position } = req.body;
+    const { title, description, status = 'backlog', priority, due_date, assigned_to, position } = req.body;
     
     if (!title) {
         return res.status(400).json({ error: 'Title is required' });
@@ -71,10 +71,12 @@ router.post('/', (req, res) => {
                       .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ? AND archived_at IS NULL')
                       .get(status).next;
 
+        const normalizedDueDate = typeof due_date === 'string' && due_date.trim() ? due_date.trim() : null;
+
         const result = db.prepare(`
-            INSERT INTO tasks (title, description, status, priority, assigned_to, position)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(title, description, status, priority, assigned_to, resolvedPosition);
+            INSERT INTO tasks (title, description, status, priority, due_date, assigned_to, position)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(title, description, status, priority, normalizedDueDate, assigned_to, resolvedPosition);
         
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
         
@@ -90,7 +92,7 @@ router.post('/', (req, res) => {
 // Update task
 router.patch('/:id', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status, priority, assigned_to, position, archived_at } = req.body;
+    const { title, description, status, priority, due_date, assigned_to, position, archived_at } = req.body;
     
     const updates = [];
     const params = [];
@@ -106,6 +108,10 @@ router.patch('/:id', (req, res) => {
         }
     }
     if (priority !== undefined) { updates.push('priority = ?'); params.push(priority); }
+    if (due_date !== undefined) {
+        updates.push('due_date = ?');
+        params.push(typeof due_date === 'string' && due_date.trim() ? due_date.trim() : null);
+    }
     if (assigned_to !== undefined) { updates.push('assigned_to = ?'); params.push(assigned_to); }
     if (position !== undefined) { updates.push('position = ?'); params.push(position); }
     if (archived_at !== undefined) { updates.push('archived_at = ?'); params.push(archived_at); }

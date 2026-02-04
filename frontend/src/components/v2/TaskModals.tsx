@@ -28,6 +28,7 @@ export function EditTaskModal({
     description?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
+    due_date?: string | null;
     assigned_to?: Assignee | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -36,6 +37,7 @@ export function EditTaskModal({
   const [description, setDescription] = useState(task.description ?? '');
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
+  const [dueDate, setDueDate] = useState(task.due_date ?? '');
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,12 +51,13 @@ export function EditTaskModal({
         description: description.trim() ? description : null,
         status,
         priority,
+        due_date: dueDate.trim() ? dueDate.trim() : null,
         assigned_to: assigned,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, deleting, description, onSave, priority, saving, status, task.title, title]);
+  }, [assigned, deleting, description, dueDate, onSave, priority, saving, status, task.title, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -150,6 +153,11 @@ export function EditTaskModal({
             </label>
 
             <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </label>
+
+            <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
               <select
                 className="cb-input w-full"
@@ -214,6 +222,7 @@ export function CreateTaskModal({
     description?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
+    due_date?: string | null;
     assigned_to?: Assignee | null;
     position?: number;
   }) => Promise<void>;
@@ -222,6 +231,7 @@ export function CreateTaskModal({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(initialStatus ?? 'backlog');
   const [priority, setPriority] = useState<TaskPriority>(null);
+  const [dueDate, setDueDate] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
 
@@ -236,12 +246,13 @@ export function CreateTaskModal({
         description: description.trim() ? description.trim() : null,
         status,
         priority,
+        due_date: dueDate.trim() ? dueDate.trim() : null,
         assigned_to: assigned,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, description, onCreate, priority, saving, status, title]);
+  }, [assigned, description, dueDate, onCreate, priority, saving, status, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -334,20 +345,27 @@ export function CreateTaskModal({
             </label>
           </div>
 
-          <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-            <select
-              className="cb-input w-full"
-              value={priority ?? ''}
-              onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
-            >
-              <option value="">(none)</option>
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-              <option value="urgent">urgent</option>
-            </select>
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
+              <select
+                className="cb-input w-full"
+                value={priority ?? ''}
+                onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
+              >
+                <option value="">(none)</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="urgent">urgent</option>
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </label>
+          </div>
 
           <div className="mt-2 flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose} disabled={saving}>

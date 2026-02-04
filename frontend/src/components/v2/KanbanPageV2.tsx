@@ -19,6 +19,8 @@ type ViewFilter = 'all' | TaskStatus;
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
+type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
+
 type SavedView = {
   id: string;
   name: string;
@@ -27,6 +29,7 @@ type SavedView = {
     assignee: AssigneeFilter;
     hideDone: boolean;
     showArchived: boolean;
+    due: DueFilter;
     q: string;
   };
 };
@@ -68,6 +71,15 @@ export function KanbanPageV2({
       return window.localStorage.getItem('cb.v2.kanban.showArchived') === '1';
     } catch {
       return false;
+    }
+  });
+
+  const [due, setDue] = useState<DueFilter>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.due') ?? 'any';
+      return (raw === 'any' || raw === 'overdue' || raw === 'soon' || raw === 'has' || raw === 'none' ? raw : 'any') as DueFilter;
+    } catch {
+      return 'any';
     }
   });
 
@@ -204,6 +216,14 @@ export function KanbanPageV2({
 
   useEffect(() => {
     try {
+      window.localStorage.setItem('cb.v2.kanban.due', due);
+    } catch {
+      // ignore
+    }
+  }, [due]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem('cb.v2.kanban.assignee', assignee);
     } catch {
       // ignore
@@ -232,29 +252,46 @@ export function KanbanPageV2({
     const applied = lastAppliedFiltersRef.current;
     if (!applied) return;
 
-    const now = { view, assignee, hideDone, showArchived, q };
+    const now = { view, assignee, hideDone, showArchived, due, q };
     const same =
       now.view === applied.view &&
       now.assignee === applied.assignee &&
       now.hideDone === applied.hideDone &&
       now.showArchived === applied.showArchived &&
+      now.due === applied.due &&
       now.q === applied.q;
 
     if (!same) setActiveSavedViewId(null);
-  }, [assignee, hideDone, q, showArchived, view, activeSavedViewId]);
+  }, [assignee, hideDone, q, showArchived, due, view, activeSavedViewId]);
 
   function applySavedView(id: string) {
     const sv = savedViews.find((x) => x.id === id);
     if (!sv) return;
 
-    lastAppliedFiltersRef.current = sv.filters;
+    const rawDue = (sv.filters as Partial<SavedView['filters']> | undefined)?.due;
+    const normalizedDue: DueFilter =
+      rawDue === 'any' || rawDue === 'overdue' || rawDue === 'soon' || rawDue === 'has' || rawDue === 'none'
+        ? rawDue
+        : 'any';
+
+    const filters: SavedView['filters'] = {
+      view: (sv.filters?.view ?? 'all') as ViewFilter,
+      assignee: (sv.filters?.assignee ?? 'all') as AssigneeFilter,
+      hideDone: Boolean(sv.filters?.hideDone),
+      showArchived: Boolean(sv.filters?.showArchived),
+      due: normalizedDue,
+      q: (sv.filters?.q ?? '') as string,
+    };
+
+    lastAppliedFiltersRef.current = filters;
     setActiveSavedViewId(sv.id);
 
-    setView(sv.filters.view);
-    setAssignee(sv.filters.assignee);
-    setHideDone(sv.filters.hideDone);
-    setShowArchived(sv.filters.showArchived);
-    setQ(sv.filters.q);
+    setView(filters.view);
+    setAssignee(filters.assignee);
+    setHideDone(filters.hideDone);
+    setShowArchived(filters.showArchived);
+    setDue(filters.due);
+    setQ(filters.q);
   }
 
   function saveCurrentView() {
@@ -262,7 +299,7 @@ export function KanbanPageV2({
     const trimmed = name?.trim();
     if (!trimmed) return;
 
-    const filters: SavedView['filters'] = { view, assignee, hideDone, showArchived, q };
+    const filters: SavedView['filters'] = { view, assignee, hideDone, showArchived, due, q };
     const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
     const next: SavedView = { id, name: trimmed, filters };
@@ -355,15 +392,46 @@ export function KanbanPageV2({
     const query = q.trim().toLowerCase();
     const wantAssignee: Assignee | 'all' = assignee === 'all' ? 'all' : assignee === '' ? null : assignee;
 
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const soonEnd = new Date(startOfToday);
+    soonEnd.setDate(soonEnd.getDate() + 7);
+
+    function parseDueDate(raw: string): Date | null {
+      if (!raw) return null;
+      const d = new Date(raw.includes('T') ? raw : `${raw}T00:00:00`);
+      if (!Number.isFinite(d.getTime())) return null;
+      return d;
+    }
+
     return tasks.filter((t) => {
       if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
       if (hideDone && t.status === 'done') return false;
+
+      if (due !== 'any') {
+        const dueAt = parseDueDate(String(t.due_date ?? '').trim());
+        const hasDue = !!dueAt;
+
+        if (due === 'has' && !hasDue) return false;
+        if (due === 'none' && hasDue) return false;
+
+        if (due === 'overdue') {
+          if (!hasDue) return false;
+          if ((dueAt as Date) >= startOfToday) return false;
+        }
+
+        if (due === 'soon') {
+          if (!hasDue) return false;
+          if ((dueAt as Date) < startOfToday) return false;
+          if ((dueAt as Date) > soonEnd) return false;
+        }
+      }
 
       if (!query) return true;
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, hideDone, q, tasks]);
+  }, [assignee, hideDone, q, tasks, due]);
 
   const viewCounts = useMemo(() => {
     const counts: Record<TaskStatus, number> = {
@@ -413,6 +481,8 @@ export function KanbanPageV2({
       onAssignee={setAssignee}
       hideDone={hideDone}
       onHideDone={setHideDone}
+      due={due}
+      onDue={setDue}
       showArchived={showArchived}
       onShowArchived={setShowArchived}
       onArchiveDone={async () => {
@@ -430,6 +500,7 @@ export function KanbanPageV2({
         setView('all');
         setHideDone(false);
         setShowArchived(false);
+        setDue('any');
       }}
     />
   );
