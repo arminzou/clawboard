@@ -2,8 +2,12 @@ import type { RefObject } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 
+export type TopbarMode = 'board' | 'table';
+
 export function TopbarV2({
   boardName,
+  mode,
+  onMode,
   q,
   onQ,
   searchRef,
@@ -11,6 +15,8 @@ export function TopbarV2({
   onRefresh,
 }: {
   boardName: string;
+  mode: TopbarMode;
+  onMode: (m: TopbarMode) => void;
   q: string;
   onQ: (v: string) => void;
   searchRef: RefObject<HTMLInputElement | null>;
@@ -29,16 +35,25 @@ export function TopbarV2({
           <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
             <button
               type="button"
-              className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-900 shadow-sm"
+              className={
+                mode === 'board'
+                  ? 'rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-900 shadow-sm'
+                  : 'rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-white'
+              }
               title="Board"
+              onClick={() => onMode('board')}
             >
               Board
             </button>
             <button
               type="button"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-white"
-              title="Table (coming soon)"
-              disabled
+              className={
+                mode === 'table'
+                  ? 'rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-slate-900 shadow-sm'
+                  : 'rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-white'
+              }
+              title="Table"
+              onClick={() => onMode('table')}
             >
               Table
             </button>

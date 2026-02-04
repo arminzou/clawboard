@@ -7,7 +7,7 @@ import { CreateTaskModal, EditTaskModal } from './TaskModals';
 import { AppShellV2 } from './layout/AppShellV2';
 import { SidebarV2 } from './layout/SidebarV2';
 import { TopbarV2, type TopbarMode } from './layout/TopbarV2';
-// import { TaskTableV2 } from './TaskTableV2'; // (unused)
+import { TaskTableV2 } from './TaskTableV2';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -600,36 +600,45 @@ export function KanbanPageV2({
         ) : null}
 
         <div className={clsx((loading || error) && 'mt-3')}>
-          <KanbanBoardV2
-            tasks={visibleTasks}
-            tasksAll={tasks}
-            tasksRef={tasksRef}
-            onSetTasks={setTasks}
-            onRefresh={refresh}
-            onEditTask={(t) => setEditTask(t)}
-            onQuickCreate={async (status, title) => {
-              const trimmed = title.trim();
-              if (!trimmed) return;
+          {mode === 'table' ? (
+            <TaskTableV2
+              tasks={visibleTasks}
+              onOpen={(t) => {
+                setEditTask(t);
+              }}
+            />
+          ) : (
+            <KanbanBoardV2
+              tasks={visibleTasks}
+              tasksAll={tasks}
+              tasksRef={tasksRef}
+              onSetTasks={setTasks}
+              onRefresh={refresh}
+              onEditTask={(t) => setEditTask(t)}
+              onQuickCreate={async (status, title) => {
+                const trimmed = title.trim();
+                if (!trimmed) return;
 
-              const assignedTo: Assignee | null =
-                assignee === 'all' ? 'tee' : assignee === '' ? null : (assignee as Assignee);
+                const assignedTo: Assignee | null =
+                  assignee === 'all' ? 'tee' : assignee === '' ? null : (assignee as Assignee);
 
-              const maxPos = Math.max(
-                -1,
-                ...tasksRef.current
-                  .filter((t) => t.status === status)
-                  .map((t) => (t.position ?? 0) as number),
-              );
+                const maxPos = Math.max(
+                  -1,
+                  ...tasksRef.current
+                    .filter((t) => t.status === status)
+                    .map((t) => (t.position ?? 0) as number),
+                );
 
-              await api.createTask({
-                title: trimmed,
-                status,
-                assigned_to: assignedTo,
-                position: maxPos + 1,
-              });
-              await refresh();
-            }}
-          />
+                await api.createTask({
+                  title: trimmed,
+                  status,
+                  assigned_to: assignedTo,
+                  position: maxPos + 1,
+                });
+                await refresh();
+              }}
+            />
+          )}
         </div>
       </AppShellV2>
 
