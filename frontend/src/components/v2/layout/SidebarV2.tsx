@@ -5,6 +5,8 @@ type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
 type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 
+type TagFilter = 'all' | (string & {});
+
 type SavedView = {
   id: string;
   name: string;
@@ -30,6 +32,9 @@ export function SidebarV2({
   onHideDone,
   due,
   onDue,
+  tag,
+  tagOptions,
+  onTag,
   showArchived,
   onShowArchived,
   onArchiveDone,
@@ -61,6 +66,10 @@ export function SidebarV2({
 
   due: DueFilter;
   onDue: (v: DueFilter) => void;
+
+  tag: TagFilter;
+  tagOptions: string[];
+  onTag: (v: TagFilter) => void;
 
   showArchived: boolean;
   onShowArchived: (v: boolean) => void;
@@ -189,6 +198,22 @@ export function SidebarV2({
                   <option value="soon">Due soon (7d)</option>
                   <option value="has">Has due date</option>
                   <option value="none">No due date</option>
+                </select>
+              </label>
+
+              <label className="mt-2 text-sm">
+                <div className="mb-1 text-xs font-medium text-slate-600">Tag</div>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                  value={tag}
+                  onChange={(e) => onTag((e.target.value || 'all') as TagFilter)}
+                >
+                  <option value="all">All</option>
+                  {tagOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
                 </select>
               </label>
 
