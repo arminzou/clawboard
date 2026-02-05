@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import type { Activity } from '../lib/api';
+import { Button } from './v2/ui/Button';
+import { Input } from './v2/ui/Input';
+import { Panel } from './v2/ui/Panel';
 
 function when(ts: string) {
   const d = new Date(ts);
@@ -126,13 +129,13 @@ export function ActivityTimeline({
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Activity</h2>
-          <div className="text-sm text-slate-600">Latest agent events (manual + ingested session logs).</div>
+          <h2 className="text-lg font-semibold text-[rgb(var(--cb-text))]">Activity</h2>
+          <div className="text-sm text-[rgb(var(--cb-text-muted))]">Latest agent events (manual + ingested session logs).</div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="cb-input w-44"
             value={agent}
             onChange={(e) => setAgent(e.target.value)}
           >
@@ -141,21 +144,17 @@ export function ActivityTimeline({
             <option value="fay">fay</option>
             <option value="armin">armin</option>
           </select>
-          <input
-            className="w-64 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-            placeholder="Filter type/desc…"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          />
-          <button
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:opacity-50"
-            onClick={refresh}
-            disabled={loading}
-          >
+
+          <div className="w-72">
+            <Input placeholder="Filter type/desc…" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
+          </div>
+
+          <Button variant="secondary" onClick={refresh} disabled={loading}>
             Refresh
-          </button>
-          <button
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          </Button>
+
+          <Button
+            variant="primary"
             disabled={ingesting}
             onClick={async () => {
               setIngesting(true);
@@ -171,47 +170,48 @@ export function ActivityTimeline({
             }}
           >
             {ingesting ? 'Ingesting…' : 'Ingest sessions'}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
+      {loading ? <div className="text-sm text-[rgb(var(--cb-text-muted))]">Loading…</div> : null}
       {error ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{error}</div>
+        <Panel className="border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{error}</Panel>
       ) : null}
 
       <div className="flex flex-col gap-4">
         {grouped.map((g) => (
           <div key={g.day} className="flex flex-col gap-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{g.day}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">{g.day}</div>
             {g.rows.map((a) => (
-              <div key={a.id} className="rounded-md border border-slate-200 bg-white p-3">
+              <Panel key={a.id} className="p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-medium text-slate-900">
+                  <div className="text-sm font-medium text-[rgb(var(--cb-text))]">
                     {a.agent} • {a.activity_type}
                   </div>
-                  <div className="text-xs text-slate-500">{when(a.timestamp)}</div>
+                  <div className="text-xs text-[rgb(var(--cb-text-muted))]">{when(a.timestamp)}</div>
                 </div>
-                <div className="mt-1 text-sm text-slate-700">{a.description}</div>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
+                <div className="mt-1 text-sm text-[rgb(var(--cb-text))] opacity-90">{a.description}</div>
+                <div className="mt-1 flex flex-wrap gap-3 text-xs text-[rgb(var(--cb-text-muted))]">
                   {a.related_task_id ? (
-                    <button
-                      type="button"
-                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 hover:bg-slate-100"
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="font-mono"
                       onClick={() => onOpenTask?.(a.related_task_id as number)}
                     >
                       task #{a.related_task_id}
-                    </button>
+                    </Button>
                   ) : null}
                   {a.session_key ? <span className="font-mono">{a.session_key}</span> : null}
                 </div>
-              </div>
+              </Panel>
             ))}
           </div>
         ))}
 
         {!grouped.length && !loading ? (
-          <div className="text-sm text-slate-600">No activity yet.</div>
+          <div className="text-sm text-[rgb(var(--cb-text-muted))]">No activity yet.</div>
         ) : null}
       </div>
     </div>
