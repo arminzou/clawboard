@@ -130,7 +130,11 @@ Add fields only when the UI has a clear place for them.
 
 ## Phase 5 — Secondary surfaces (docs / activities)
 
-(Deprioritized until Kanban v2 feels right.)
+(Deprioritized until Kanban v2 feels right — but keep small UX alignment wins here.)
+
+- [x] Wrap Activity + Docs tabs in the v2 shell (topbar + consistent surfaces)
+- [ ] Migrate Activity UI styling to v2 tokens (reduce slate hard-coding)
+- [ ] Migrate Docs UI styling to v2 tokens (reduce slate hard-coding)
 
 ---
 

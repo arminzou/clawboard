@@ -1,6 +1,8 @@
 import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KanbanPageV2 } from './components/v2/KanbanPageV2';
 import { IconRailV2, type AppTabV2 } from './components/v2/layout/IconRailV2';
+import { AppShellV2 } from './components/v2/layout/AppShellV2';
+import { TopbarLiteV2 } from './components/v2/layout/TopbarLiteV2';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -57,7 +59,7 @@ export default function App() {
             ) : null}
 
             {tab === 'activity' ? (
-              <div className="h-full p-4">
+              <AppShellV2 topbar={<TopbarLiteV2 title="Activity" subtitle="Timeline" />}>
                 <ActivityTimeline
                   wsSignal={wsSignal}
                   onOpenTask={(id) => {
@@ -65,13 +67,13 @@ export default function App() {
                     setTab('kanban');
                   }}
                 />
-              </div>
+              </AppShellV2>
             ) : null}
 
             {tab === 'docs' ? (
-              <div className="h-full p-4">
+              <AppShellV2 topbar={<TopbarLiteV2 title="Docs" subtitle="Workspace documents" />}>
                 <DocsView wsSignal={wsSignal} />
-              </div>
+              </AppShellV2>
             ) : null}
           </div>
         </div>
