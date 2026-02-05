@@ -70,7 +70,7 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="whitespace-normal text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
+          <div className="whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="font-mono">#{task.id}</span>
             <span className="h-1 w-1 rounded-full bg-slate-300" />

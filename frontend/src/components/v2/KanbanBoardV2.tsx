@@ -451,7 +451,7 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       )}
       onClick={onOpen}
     >
-      <div className="whitespace-normal text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
+      <div className="whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
