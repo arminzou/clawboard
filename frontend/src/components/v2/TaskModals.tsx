@@ -11,8 +11,18 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'done', title: 'Done' },
 ];
 
-function ModalOverlay({ children }: { children: React.ReactNode }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">{children}</div>;
+function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      {children}
+    </div>
+  );
 }
 
 export function EditTaskModal({
@@ -85,12 +95,13 @@ export function EditTaskModal({
   }, [onClose, save]);
 
   return (
-    <ModalOverlay>
+    <ModalOverlay onClose={onClose}>
       <Panel
         role="dialog"
         aria-modal="true"
         aria-label={`Edit task ${task.id}`}
         className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -302,8 +313,8 @@ export function CreateTaskModal({
   }, [create, onClose]);
 
   return (
-    <ModalOverlay>
-      <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]">
+    <ModalOverlay onClose={onClose}>
+      <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>

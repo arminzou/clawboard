@@ -832,8 +832,14 @@ function EditTaskModal({
   const [deleting, setDeleting] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-slate-900">Edit task #{task.id}</div>
@@ -966,8 +972,14 @@ function CreateTaskModal({
   const canSave = title.trim().length > 0 && !saving;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-slate-900">Create task</div>
