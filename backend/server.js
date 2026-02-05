@@ -159,11 +159,32 @@ server.listen(PORT, HOST, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\nShutting down gracefully...');
-    db.close();
+const shutdown = (signal) => {
+    console.log(`\n${signal} received, shutting down gracefully...`);
+
+    // Stop auto-sync if running
+    if (app.locals.autoSync) {
+        app.locals.autoSync.stop();
+    }
+
+    // Close WebSocket connections
+    wss.clients.forEach((client) => {
+        client.close(1001, 'Server shutting down');
+    });
+
+    // Close server and database
     server.close(() => {
+        db.close();
         console.log('Server closed');
         process.exit(0);
     });
-});
+
+    // Force exit after 5s if graceful shutdown hangs
+    setTimeout(() => {
+        console.error('Forced shutdown after timeout');
+        process.exit(1);
+    }, 5000);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));   // Ctrl-c
+process.on('SIGTERM', () => shutdown('SIGTERM')); // kill command
