@@ -46,6 +46,7 @@ export function EditTaskModal({
   onDelete: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
+  const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
   const [description, setDescription] = useState(task.description ?? '');
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
@@ -60,6 +61,8 @@ export function EditTaskModal({
     if (saving || deleting) return;
     setSaving(true);
     try {
+      // Return focus to the previously focused element after closing.
+      const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       await onSave({
         title: title.trim() || task.title,
         description: description.trim() ? description : null,
@@ -70,12 +73,19 @@ export function EditTaskModal({
         assigned_to: assigned,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
       });
+      queueMicrotask(() => prev?.focus());
     } finally {
       setSaving(false);
     }
   }, [assigned, blockedReason, deleting, description, dueDate, tags, onSave, priority, saving, status, task.title, title]);
 
   useEffect(() => {
+    function isEditable(el: EventTarget | null): boolean {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+    }
+
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -88,11 +98,36 @@ export function EditTaskModal({
         e.preventDefault();
         save();
       }
+
+      if (e.key === 'Tab') {
+        // Only trap focus when the modal is active and the user isn't in another form control.
+        if (!isEditable(e.target)) {
+          e.preventDefault();
+          setActiveField((prev) => (prev === 'title' ? 'description' : 'title'));
+        }
+      }
     }
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose, save]);
+
+  useEffect(() => {
+    if (activeField === 'description') return;
+    // Default to title focus.
+    queueMicrotask(() => {
+      const el = document.querySelector<HTMLInputElement>('input');
+      el?.focus();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeField === 'title') {
+      queueMicrotask(() => document.querySelector<HTMLInputElement>('input')?.focus());
+    } else if (activeField === 'description') {
+      queueMicrotask(() => document.querySelector<HTMLTextAreaElement>('textarea')?.focus());
+    }
+  }, [activeField]);
 
   return (
     <ModalOverlay onClose={onClose}>
@@ -119,6 +154,8 @@ export function EditTaskModal({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onFocus={() => setActiveField('title')}
+              autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -135,6 +172,7 @@ export function EditTaskModal({
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onFocus={() => setActiveField('description')}
             />
           </label>
 
