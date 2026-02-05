@@ -39,7 +39,7 @@ clawboard/
 │           │   └── TaskTableV2.tsx
 │           └── [legacy v1 components]
 ├── data/                 # SQLite database
-├── ROADMAP.md            # Living plan (check for current priorities)
+├── ROADMAP.md            # High-level vision/plan (not for task tracking)
 └── README.md             # Setup + API reference
 ```
 
@@ -66,6 +66,44 @@ npm run build        # Build frontend for production
 **What's next:**
 - Migrate Activity/Docs styling to v2 tokens
 - Consider table view improvements
+
+## Task Management Workflow
+
+**The database is the source of truth** for task status — not ROADMAP.md.
+
+ROADMAP.md is a high-level planning document. For tracking individual task status, use the Clawboard database via API.
+
+### When working on this project:
+
+1. **Before starting work** on a feature/fix:
+   - Check existing tasks: `curl -s http://localhost:3001/api/tasks | jq`
+   - Create a task if none exists, or update existing one to `in_progress`
+
+2. **While working:**
+   - Update `blocked_reason` if you hit blockers
+   - Keep task description current if scope changes
+
+3. **After completing work:**
+   - Update status to `done` (or `review` if needs verification)
+
+### Quick commands:
+
+```bash
+# List tasks
+curl -s http://localhost:3001/api/tasks | jq
+
+# Create task
+curl -X POST http://localhost:3001/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "...", "status": "in_progress", "assigned_to": "tee"}'
+
+# Update status
+curl -X PATCH http://localhost:3001/api/tasks/ID \
+  -H "Content-Type: application/json" \
+  -d '{"status": "done"}'
+```
+
+See `/clawboard-task` skill for full API reference.
 
 ## API Endpoints
 
