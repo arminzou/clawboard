@@ -593,7 +593,16 @@ export function KanbanBoard({
       {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
       {error ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Failed to load tasks: {error}
+          <div>Failed to load tasks: {error}</div>
+          <div className="mt-2">
+            <button
+              type="button"
+              className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-200"
+              onClick={refresh}
+            >
+              Retry
+            </button>
+          </div>
         </div>
       ) : null}
       {byStatus.unknown.length ? (
