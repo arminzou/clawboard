@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TaskStatus } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
 
@@ -14,6 +15,8 @@ type SavedView = {
 
 export function SidebarV2({
   projectName,
+  collapsed,
+  onToggleCollapsed,
   viewsOpen,
   onToggleViewsOpen,
   filtersOpen,
@@ -41,6 +44,9 @@ export function SidebarV2({
   onReset,
 }: {
   projectName: string;
+
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 
   viewsOpen: boolean;
   onToggleViewsOpen: () => void;
@@ -78,22 +84,42 @@ export function SidebarV2({
 
   onReset: () => void;
 }) {
+  // Collapsed state - show only toggle button
+  if (collapsed) {
+    return (
+      <aside className="hidden w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+          onClick={onToggleCollapsed}
+          title="Expand sidebar"
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white lg:block">
       <div className="px-4 py-4">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Project</div>
-            <div className="mt-1 text-base font-semibold text-slate-900">{projectName}</div>
+            <div className="mt-1 truncate text-base font-semibold text-slate-900">{projectName}</div>
           </div>
-          <button
-            type="button"
-            className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
-            title="New board (coming soon)"
-            disabled
-          >
-            +
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              onClick={onToggleCollapsed}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="mt-4">

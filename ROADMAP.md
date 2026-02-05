@@ -144,8 +144,56 @@ Add fields only when the UI has a clear place for them.
 
 ---
 
+## Phase 7 — UI Polish & Workflow (2025-02 review)
+
+### Critical Fixes
+
+- [ ] Modal focus trap (accessibility: can't tab outside modal)
+- [ ] Modal overlay click to dismiss
+- [ ] Task title overflow — add `line-clamp-2` to prevent hiding metadata
+- [ ] Error state retry button (currently dead end)
+
+### Workflow Improvements
+
+- [ ] Bulk operations (multi-select + bulk assign/status/delete)
+- [ ] Task duplication / clone
+- [ ] Due date visible on cards (not just in modal)
+- [ ] Filter by blocked status
+- [ ] Overdue tasks warning banner
+- [ ] Table view sorting (click headers)
+- [ ] Keyboard shortcut help modal (`?` key)
+
+### UI Kit Completion
+
+- [ ] Extract `<Select>` component (currently inconsistent across files)
+- [ ] Extract `<Checkbox>` component (native checkbox doesn't match design)
+- [ ] Toast variants (success/error/warning colors)
+- [ ] Date format utility (inconsistent across views)
+
+### Saved Views Polish
+
+- [ ] Toast confirmation when view saved
+- [ ] Edit saved view name/filters after saving
+- [ ] Show active filters summary in sidebar
+
+### Mobile / Responsive
+
+- [x] Responsive grid breakpoints (1col → 2col at md, 4col at xl) for portrait monitors
+- [x] Collapsible sidebar toggle for more board space
+- [ ] Sidebar slide-in drawer for mobile (currently hidden and broken)
+
+### Code Quality
+
+- [ ] Extract `useLocalStorage` hook (dedupe ~15 try-catch blocks)
+- [ ] Group filter state (10+ useState → single object)
+- [ ] Memoize `TaskCardV2` with `React.memo()`
+
+---
+
 ## Open Questions / Decisions
 
-- Status model: keep 4 columns vs introduce `blocked`
+- Status model: keep 4 columns vs introduce `blocked` (currently using `blocked_reason` field instead)
 - Ordering model: integer `position` vs fractional ordering / reorder endpoint
-- Component strategy: shadcn/ui vs full UI framework
+- Component strategy: shadcn/ui deferred; revisit if local UI kit slows down
+- Pagination: not needed yet, but will matter at 1000+ tasks
+- Advanced search operators: `assignee:tee status:done` syntax for power users

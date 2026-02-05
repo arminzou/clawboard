@@ -200,7 +200,7 @@ export function KanbanBoardV2({
           setOverId(null);
         }}
       >
-        <div className="grid h-full grid-cols-1 gap-3 lg:grid-cols-4">
+        <div className="grid h-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {COLUMNS.map((col) => (
             <KanbanColumnV2
               key={col.key}

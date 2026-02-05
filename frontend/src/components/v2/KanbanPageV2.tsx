@@ -158,6 +158,14 @@ export function KanbanPageV2({
     }
   });
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.sidebar.collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
@@ -383,6 +391,14 @@ export function KanbanPageV2({
     }
   }, [filtersOpen]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.sidebar.collapsed', sidebarCollapsed ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [sidebarCollapsed]);
+
   // Open task requested from elsewhere (e.g. Activity tab)
   useEffect(() => {
     if (!openTaskId) return;
@@ -523,6 +539,8 @@ export function KanbanPageV2({
   const sidebar = (
     <SidebarV2
       projectName={projectName}
+      collapsed={sidebarCollapsed}
+      onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       viewsOpen={viewsOpen}
       onToggleViewsOpen={() => setViewsOpen((v) => !v)}
       filtersOpen={filtersOpen}
