@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "predev": "lsof -ti :3001 | xargs kill -9 2>/dev/null || true",
+    "predev": "lsof -ti :3001 | xargs kill 2>/dev/null; sleep 1; lsof -ti :3001 | xargs kill -9 2>/dev/null || true",
     "dev": "nodemon server.js",
     "init-db": "node db/init.js",
     "sync-docs": "node utils/syncDocs.js",
