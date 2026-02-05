@@ -463,13 +463,13 @@ export function KanbanPageV2({
 
         if (due === 'overdue') {
           if (!hasDue) return false;
-          if ((dueAt as Date) >= startOfToday) return false;
+          if (dueAt! >= startOfToday) return false;
         }
 
         if (due === 'soon') {
           if (!hasDue) return false;
-          if ((dueAt as Date) < startOfToday) return false;
-          if ((dueAt as Date) > soonEnd) return false;
+          if (dueAt! < startOfToday) return false;
+          if (dueAt! > soonEnd) return false;
         }
       }
 
