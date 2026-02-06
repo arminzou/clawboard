@@ -604,7 +604,7 @@ export function KanbanPageV2({
   return (
     <>
       <AppShellV2 sidebar={sidebar} topbar={topbar}>
-        {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
+        {loading ? <div className="text-sm text-[rgb(var(--cb-text-muted))]">Loading…</div> : null}
         {error ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <div>Failed to load tasks: {error}</div>
@@ -621,7 +621,7 @@ export function KanbanPageV2({
         ) : null}
 
         {!loading && visibleTasks.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+          <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-sm text-[rgb(var(--cb-text-muted))]">
             No tasks match your filters.
           </div>
         ) : null}
