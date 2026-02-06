@@ -70,7 +70,7 @@ function TaskCard({ task, onOpen }: { task: Task; onOpen?: () => void }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="whitespace-normal text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
+          <div className="whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{task.title}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="font-mono">#{task.id}</span>
             <span className="h-1 w-1 rounded-full bg-slate-300" />
@@ -593,7 +593,16 @@ export function KanbanBoard({
       {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
       {error ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Failed to load tasks: {error}
+          <div>Failed to load tasks: {error}</div>
+          <div className="mt-2">
+            <button
+              type="button"
+              className="rounded-md bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-200"
+              onClick={refresh}
+            >
+              Retry
+            </button>
+          </div>
         </div>
       ) : null}
       {byStatus.unknown.length ? (
@@ -823,8 +832,14 @@ function EditTaskModal({
   const [deleting, setDeleting] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-slate-900">Edit task #{task.id}</div>
@@ -957,8 +972,14 @@ function CreateTaskModal({
   const canSave = title.trim().length > 0 && !saving;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-slate-900">Create task</div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -11,8 +11,120 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'done', title: 'Done' },
 ];
 
-function ModalOverlay({ children }: { children: React.ReactNode }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">{children}</div>;
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const selector = [
+    'a[href]',
+    'button:not([disabled])',
+    'textarea:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter((el) => {
+    // Skip elements that are not actually focusable in the layout.
+    if (el.hasAttribute('disabled')) return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    return true;
+  });
+}
+
+function useFocusTrap({
+  containerRef,
+  active,
+  onEscape,
+}: {
+  containerRef: React.RefObject<HTMLElement | null>;
+  active: boolean;
+  onEscape?: () => void;
+}) {
+  const focusables = useMemo(() => {
+    const el = containerRef.current;
+    if (!active || !el) return [] as HTMLElement[];
+    return getFocusableElements(el);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const containerEl = container;
+
+    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    // Ensure focus starts inside the modal.
+    queueMicrotask(() => {
+      const targets = getFocusableElements(containerEl);
+      (targets[0] ?? containerEl).focus();
+    });
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && onEscape) {
+        e.preventDefault();
+        onEscape();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const targets = getFocusableElements(containerEl);
+      if (targets.length === 0) {
+        e.preventDefault();
+        containerEl.focus();
+        return;
+      }
+
+      const first = targets[0];
+      const last = targets[targets.length - 1];
+      const current = document.activeElement;
+
+      if (e.shiftKey) {
+        if (current === first || !containerEl.contains(current)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (current === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    function onFocusIn(e: FocusEvent) {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (containerEl.contains(target)) return;
+
+      const targets = getFocusableElements(containerEl);
+      (targets[0] ?? containerEl).focus();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', onFocusIn);
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('focusin', onFocusIn);
+      queueMicrotask(() => prevFocus?.focus());
+    };
+  }, [active, containerRef, onEscape, focusables]);
+}
+
+function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      {children}
+    </div>
+  );
 }
 
 export function EditTaskModal({
@@ -36,6 +148,10 @@ export function EditTaskModal({
   onDelete: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
+  const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap({ containerRef: modalRef, active: true, onEscape: onClose });
   const [description, setDescription] = useState(task.description ?? '');
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
@@ -50,6 +166,8 @@ export function EditTaskModal({
     if (saving || deleting) return;
     setSaving(true);
     try {
+      // Return focus to the previously focused element after closing.
+      const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       await onSave({
         title: title.trim() || task.title,
         description: description.trim() ? description : null,
@@ -60,6 +178,7 @@ export function EditTaskModal({
         assigned_to: assigned,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
       });
+      queueMicrotask(() => prev?.focus());
     } finally {
       setSaving(false);
     }
@@ -67,12 +186,6 @@ export function EditTaskModal({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
       // Ctrl/Cmd+Enter to save from anywhere.
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -82,16 +195,27 @@ export function EditTaskModal({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, save]);
+  }, [save]);
+
+  // Focus is handled by the focus trap + per-field focus effect below.
+
+  useEffect(() => {
+    if (activeField === 'title') {
+      queueMicrotask(() => document.querySelector<HTMLInputElement>('input')?.focus());
+    } else if (activeField === 'description') {
+      queueMicrotask(() => document.querySelector<HTMLTextAreaElement>('textarea')?.focus());
+    }
+  }, [activeField]);
 
   return (
-    <ModalOverlay>
-      <Panel
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Edit task ${task.id}`}
-        className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]"
-      >
+    <ModalOverlay onClose={onClose}>
+      <div ref={modalRef} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-lg">
+        <Panel
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit task ${task.id}`}
+          className="w-full p-4 shadow-[var(--cb-shadow-md)]"
+        >
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Edit task #{task.id}</div>
@@ -108,6 +232,8 @@ export function EditTaskModal({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onFocus={() => setActiveField('title')}
+              autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -124,6 +250,7 @@ export function EditTaskModal({
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onFocus={() => setActiveField('description')}
             />
           </label>
 
@@ -227,7 +354,8 @@ export function EditTaskModal({
             closes.
           </div>
         </div>
-      </Panel>
+        </Panel>
+      </div>
     </ModalOverlay>
   );
 }
@@ -260,6 +388,9 @@ export function CreateTaskModal({
   const [blockedReason, setBlockedReason] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap({ containerRef: modalRef, active: true, onEscape: onClose });
 
   const canCreate = title.trim().length > 0 && !saving;
 
@@ -284,12 +415,6 @@ export function CreateTaskModal({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-
       // Ctrl/Cmd+Enter to create from anywhere.
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -299,11 +424,12 @@ export function CreateTaskModal({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [create, onClose]);
+  }, [create]);
 
   return (
-    <ModalOverlay>
-      <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-w-lg p-4 shadow-[var(--cb-shadow-md)]">
+    <ModalOverlay onClose={onClose}>
+      <div ref={modalRef} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-lg">
+        <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full p-4 shadow-[var(--cb-shadow-md)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
@@ -425,7 +551,8 @@ export function CreateTaskModal({
             closes.
           </div>
         </div>
-      </Panel>
+        </Panel>
+      </div>
     </ModalOverlay>
   );
 }

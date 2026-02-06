@@ -311,9 +311,8 @@ function KanbanColumnV2({
                 },
               },
             ]}
-            trigger={({ toggle, ref }) => (
+            trigger={({ toggle }) => (
               <button
-                ref={ref}
                 type="button"
                 className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
                 title="Menu"
@@ -451,7 +450,7 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
       )}
       onClick={onOpen}
     >
-      <div className="whitespace-normal text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
+      <div className="whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
