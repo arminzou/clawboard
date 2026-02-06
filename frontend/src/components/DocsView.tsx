@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import type { Document as Doc, DocsStats } from '../lib/api';
+import { Input } from './v2/ui/Input';
 
 function countByStatus(stats: DocsStats | null | undefined) {
   const map = new Map<string, number>();
@@ -37,7 +38,7 @@ export function DocsView({
   const [statsLoading, setStatsLoading] = useState(true);
   const [filter, setFilter] = useState<string>(() => {
     try {
-      return window.localStorage.getItem('pm.docs.q') ?? '';
+      return window.localStorage.getItem('cb.docs.q') ?? window.localStorage.getItem('pm.docs.q') ?? '';
     } catch {
       return '';
     }
@@ -45,7 +46,7 @@ export function DocsView({
 
   const [status, setStatus] = useState<string>(() => {
     try {
-      return window.localStorage.getItem('pm.docs.status') ?? '';
+      return window.localStorage.getItem('cb.docs.status') ?? window.localStorage.getItem('pm.docs.status') ?? '';
     } catch {
       return '';
     }
@@ -53,7 +54,7 @@ export function DocsView({
 
   const [typeFilter, setTypeFilter] = useState<string>(() => {
     try {
-      return window.localStorage.getItem('pm.docs.type') ?? '';
+      return window.localStorage.getItem('cb.docs.type') ?? window.localStorage.getItem('pm.docs.type') ?? '';
     } catch {
       return '';
     }
@@ -61,7 +62,10 @@ export function DocsView({
 
   const [dirtyOnly, setDirtyOnly] = useState<boolean>(() => {
     try {
-      return (window.localStorage.getItem('pm.docs.dirtyOnly') ?? '') === '1';
+      return (
+        (window.localStorage.getItem('cb.docs.dirtyOnly') ?? window.localStorage.getItem('pm.docs.dirtyOnly') ?? '') ===
+        '1'
+      );
     } catch {
       return false;
     }
@@ -69,7 +73,7 @@ export function DocsView({
 
   const [sort, setSort] = useState<SortKey>(() => {
     try {
-      const raw = window.localStorage.getItem('pm.docs.sort') ?? 'recent';
+      const raw = window.localStorage.getItem('cb.docs.sort') ?? window.localStorage.getItem('pm.docs.sort') ?? 'recent';
       return (raw === 'recent' || raw === 'path' || raw === 'size' ? raw : 'recent') as SortKey;
     } catch {
       return 'recent';
@@ -103,7 +107,7 @@ export function DocsView({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.docs.q', filter);
+      window.localStorage.setItem('cb.docs.q', filter);
     } catch {
       // ignore
     }
@@ -111,7 +115,7 @@ export function DocsView({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.docs.status', status);
+      window.localStorage.setItem('cb.docs.status', status);
     } catch {
       // ignore
     }
@@ -119,7 +123,7 @@ export function DocsView({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.docs.type', typeFilter);
+      window.localStorage.setItem('cb.docs.type', typeFilter);
     } catch {
       // ignore
     }
@@ -127,7 +131,7 @@ export function DocsView({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.docs.dirtyOnly', dirtyOnly ? '1' : '0');
+      window.localStorage.setItem('cb.docs.dirtyOnly', dirtyOnly ? '1' : '0');
     } catch {
       // ignore
     }
@@ -135,7 +139,7 @@ export function DocsView({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.docs.sort', sort);
+      window.localStorage.setItem('cb.docs.sort', sort);
     } catch {
       // ignore
     }
@@ -209,9 +213,9 @@ export function DocsView({
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Docs</h2>
-          <div className="text-sm text-slate-600">Tracked workspace files.</div>
-          <div className="mt-1 text-xs text-slate-500">
+          <h2 className="text-lg font-semibold text-[rgb(var(--cb-text))]">Docs</h2>
+          <div className="text-sm text-[rgb(var(--cb-text-muted))]">Tracked workspace files.</div>
+          <div className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
             {statsLoading ? (
               'Loading stats…'
             ) : stats ? (
@@ -225,15 +229,16 @@ export function DocsView({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <input
-            className="w-64 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-            placeholder="Filter path…"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
+          <div className="w-72">
+            <Input
+              placeholder="Filter path…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
 
           <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="cb-input"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             title="Git status"
@@ -247,7 +252,7 @@ export function DocsView({
           </select>
 
           <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="cb-input"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             title="File type"
@@ -261,7 +266,7 @@ export function DocsView({
           </select>
 
           <select
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="cb-input"
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
             title="Sort"

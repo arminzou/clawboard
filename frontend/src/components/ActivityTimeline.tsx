@@ -29,7 +29,11 @@ export function ActivityTimeline({
 
   const [agent, setAgent] = useState<string>(() => {
     try {
-      return window.localStorage.getItem('pm.activity.agent') ?? '';
+      return (
+        window.localStorage.getItem('cb.activity.agent') ??
+        window.localStorage.getItem('pm.activity.agent') ??
+        ''
+      );
     } catch {
       return '';
     }
@@ -37,7 +41,7 @@ export function ActivityTimeline({
 
   const [typeFilter, setTypeFilter] = useState<string>(() => {
     try {
-      return window.localStorage.getItem('pm.activity.q') ?? '';
+      return window.localStorage.getItem('cb.activity.q') ?? window.localStorage.getItem('pm.activity.q') ?? '';
     } catch {
       return '';
     }
@@ -65,7 +69,7 @@ export function ActivityTimeline({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.activity.agent', agent);
+      window.localStorage.setItem('cb.activity.agent', agent);
     } catch {
       // ignore
     }
@@ -73,7 +77,7 @@ export function ActivityTimeline({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('pm.activity.q', typeFilter);
+      window.localStorage.setItem('cb.activity.q', typeFilter);
     } catch {
       // ignore
     }
