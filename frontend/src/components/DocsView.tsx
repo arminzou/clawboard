@@ -342,8 +342,8 @@ export function DocsView({
                       : status === 'untracked'
                         ? 'bg-purple-100 text-purple-900'
                         : status === 'clean'
-                          ? 'bg-slate-100 text-slate-700'
-                          : 'bg-slate-100 text-slate-700';
+                          ? 'bg-[rgb(var(--cb-surface-muted))] text-[rgb(var(--cb-text-muted))]'
+                          : 'bg-[rgb(var(--cb-surface-muted))] text-[rgb(var(--cb-text-muted))]';
 
               return (
                 <tr
