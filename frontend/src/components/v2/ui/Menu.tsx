@@ -14,14 +14,13 @@ export function Menu({
   align = 'right',
   className,
 }: {
-  trigger: (opts: { open: boolean; toggle: () => void; ref: (node: HTMLButtonElement | null) => void }) => ReactNode;
+  trigger: (opts: { open: boolean; toggle: () => void }) => ReactNode;
   items: MenuItem[];
   align?: 'left' | 'right';
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -51,13 +50,7 @@ export function Menu({
 
   return (
     <div ref={rootRef} className={clsx('relative', className)}>
-      {trigger({
-        open,
-        toggle,
-        ref: (node) => {
-          btnRef.current = node;
-        },
-      })}
+      {trigger({ open, toggle })}
 
       {open ? (
         <div

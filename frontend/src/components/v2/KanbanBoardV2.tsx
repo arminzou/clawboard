@@ -311,9 +311,8 @@ function KanbanColumnV2({
                 },
               },
             ]}
-            trigger={({ toggle, ref }) => (
+            trigger={({ toggle }) => (
               <button
-                ref={ref}
                 type="button"
                 className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
                 title="Menu"

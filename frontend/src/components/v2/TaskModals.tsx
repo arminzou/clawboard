@@ -197,14 +197,7 @@ export function EditTaskModal({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [save]);
 
-  useEffect(() => {
-    if (activeField === 'description') return;
-    // Default to title focus.
-    queueMicrotask(() => {
-      const el = document.querySelector<HTMLInputElement>('input');
-      el?.focus();
-    });
-  }, []);
+  // Focus is handled by the focus trap + per-field focus effect below.
 
   useEffect(() => {
     if (activeField === 'title') {
