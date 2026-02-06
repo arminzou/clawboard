@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import type { Document as Doc, DocsStats } from '../lib/api';
+import { Button } from './v2/ui/Button';
 import { Input } from './v2/ui/Input';
+import { Panel } from './v2/ui/Panel';
 
 function countByStatus(stats: DocsStats | null | undefined) {
   const map = new Map<string, number>();
@@ -276,22 +278,27 @@ export function DocsView({
             <option value="size">size</option>
           </select>
 
-          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800">
+          <label
+            className={
+              'flex items-center gap-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-2 text-sm text-[rgb(var(--cb-text))]'
+            }
+          >
             <input type="checkbox" checked={dirtyOnly} onChange={(e) => setDirtyOnly(e.target.checked)} />
             dirty only
           </label>
 
-          <button
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+          <Button
+            variant="secondary"
             onClick={() => {
               refresh();
               refreshStats();
             }}
           >
             Refresh
-          </button>
-          <button
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          </Button>
+
+          <Button
+            variant="primary"
             disabled={resyncing}
             onClick={async () => {
               setResyncing(true);
@@ -305,15 +312,15 @@ export function DocsView({
             }}
           >
             {resyncing ? 'Resyncing…' : 'Resync'}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {loading ? <div className="text-sm text-slate-600">Loading…</div> : null}
+      {loading ? <div className="text-sm text-[rgb(var(--cb-text-muted))]">Loading…</div> : null}
 
-      <div className="overflow-auto rounded-lg border border-slate-200 bg-white">
+      <Panel className="overflow-auto p-0">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-slate-50 text-xs uppercase text-slate-600">
+          <thead className="sticky top-0 bg-[rgb(var(--cb-surface-muted))] text-xs uppercase text-[rgb(var(--cb-text-muted))]">
             <tr>
               <th className="px-3 py-2">Path</th>
               <th className="px-3 py-2">Status</th>
@@ -343,11 +350,11 @@ export function DocsView({
                   key={d.id}
                   className={
                     (d.git_status ?? 'clean') !== 'clean'
-                      ? 'border-t border-slate-100 bg-amber-50/40'
-                      : 'border-t border-slate-100'
+                      ? 'border-t border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-accent-soft))]'
+                      : 'border-t border-[rgb(var(--cb-border))]'
                   }
                 >
-                  <td className="px-3 py-2 font-mono text-xs text-slate-800">
+                  <td className="px-3 py-2 font-mono text-xs text-[rgb(var(--cb-text))]">
                     <button
                       type="button"
                       className="text-left hover:underline"
@@ -366,9 +373,9 @@ export function DocsView({
                   <td className="px-3 py-2 text-xs">
                     {status ? <span className={`rounded px-2 py-0.5 ${statusClass}`}>{status}</span> : null}
                   </td>
-                  <td className="px-3 py-2 text-xs text-slate-700">{d.file_type ?? ''}</td>
-                  <td className="px-3 py-2 text-xs text-slate-700">{formatBytes(d.size_bytes)}</td>
-                  <td className="px-3 py-2 text-xs text-slate-700">
+                  <td className="px-3 py-2 text-xs text-[rgb(var(--cb-text-muted))]">{d.file_type ?? ''}</td>
+                  <td className="px-3 py-2 text-xs text-[rgb(var(--cb-text-muted))]">{formatBytes(d.size_bytes)}</td>
+                  <td className="px-3 py-2 text-xs text-[rgb(var(--cb-text-muted))]">
                     {d.last_modified ? new Date(d.last_modified).toLocaleString() : ''}
                   </td>
                 </tr>
@@ -376,10 +383,10 @@ export function DocsView({
             })}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       {!loading && filteredSorted.length === 0 ? (
-        <div className="text-sm text-slate-600">No documents match your filters.</div>
+        <div className="text-sm text-[rgb(var(--cb-text-muted))]">No documents match your filters.</div>
       ) : null}
     </div>
   );
