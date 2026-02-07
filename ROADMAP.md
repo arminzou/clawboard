@@ -167,7 +167,7 @@ Add fields only when the UI has a clear place for them.
 
 - [x] Extract `<Select>` component (currently inconsistent across files)
 - [x] Extract `<Checkbox>` component (native checkbox doesn't match design)
-- [ ] Toast variants (success/error/warning colors)
+- [x] Toast variants (success/error/warning colors)
 - [ ] Date format utility (inconsistent across views)
 
 ### Saved Views Polish
