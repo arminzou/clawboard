@@ -161,7 +161,7 @@ Add fields only when the UI has a clear place for them.
 - [x] Filter by blocked status
 - [ ] Overdue tasks warning banner
 - [x] Table view sorting (click headers)
-- [ ] Keyboard shortcut help modal (`?` key)
+- [x] Keyboard shortcut help modal (`?` key)
 
 ### UI Kit Completion
 
