@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { TaskStatus } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
+import { Select } from '../ui/Select';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
@@ -204,8 +205,7 @@ export function SidebarV2({
             <>
               <label className="mt-2 text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                <Select
                   value={assignee}
                   onChange={(e) => onAssignee(e.target.value as AssigneeFilter)}
                 >
@@ -214,13 +214,12 @@ export function SidebarV2({
                   <option value="fay">fay</option>
                   <option value="armin">armin</option>
                   <option value="">(unassigned)</option>
-                </select>
+                </Select>
               </label>
 
               <label className="mt-2 text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Due</div>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                <Select
                   value={due}
                   onChange={(e) => onDue(e.target.value as DueFilter)}
                 >
@@ -229,13 +228,12 @@ export function SidebarV2({
                   <option value="soon">Due soon (7d)</option>
                   <option value="has">Has due date</option>
                   <option value="none">No due date</option>
-                </select>
+                </Select>
               </label>
 
               <label className="mt-2 text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Tag</div>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                <Select
                   value={tag}
                   onChange={(e) => onTag((e.target.value || 'all') as TagFilter)}
                 >
@@ -245,7 +243,7 @@ export function SidebarV2({
                       {t}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
 
               <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">

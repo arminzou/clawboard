@@ -3,6 +3,7 @@ import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Panel } from './ui/Panel';
+import { Select } from './ui/Select';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -272,8 +273,7 @@ export function EditTaskModal({
 
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
-            <select
-              className="cb-input w-full"
+            <Select
               value={status}
               onChange={(e) => setStatus(e.target.value as TaskStatus)}
             >
@@ -282,14 +282,13 @@ export function EditTaskModal({
                   {c.title}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-              <select
-                className="cb-input w-full"
+              <Select
                 value={priority ?? ''}
                 onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
               >
@@ -298,7 +297,7 @@ export function EditTaskModal({
                 <option value="medium">medium</option>
                 <option value="high">high</option>
                 <option value="urgent">urgent</option>
-              </select>
+              </Select>
             </label>
 
             <label className="text-sm">
@@ -308,8 +307,7 @@ export function EditTaskModal({
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
-              <select
-                className="cb-input w-full"
+              <Select
                 value={assigned ?? ''}
                 onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
               >
@@ -317,7 +315,7 @@ export function EditTaskModal({
                 <option value="tee">tee</option>
                 <option value="fay">fay</option>
                 <option value="armin">armin</option>
-              </select>
+              </Select>
             </label>
           </div>
 
@@ -487,8 +485,7 @@ export function CreateTaskModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
-              <select
-                className="cb-input w-full"
+              <Select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
               >
@@ -497,13 +494,12 @@ export function CreateTaskModal({
                     {c.title}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
-              <select
-                className="cb-input w-full"
+              <Select
                 value={assigned ?? ''}
                 onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
               >
@@ -511,15 +507,14 @@ export function CreateTaskModal({
                 <option value="tee">tee</option>
                 <option value="fay">fay</option>
                 <option value="armin">armin</option>
-              </select>
+              </Select>
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-              <select
-                className="cb-input w-full"
+              <Select
                 value={priority ?? ''}
                 onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
               >
@@ -528,7 +523,7 @@ export function CreateTaskModal({
                 <option value="medium">medium</option>
                 <option value="high">high</option>
                 <option value="urgent">urgent</option>
-              </select>
+              </Select>
             </label>
 
             <label className="text-sm">

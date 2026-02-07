@@ -165,7 +165,7 @@ Add fields only when the UI has a clear place for them.
 
 ### UI Kit Completion
 
-- [ ] Extract `<Select>` component (currently inconsistent across files)
+- [x] Extract `<Select>` component (currently inconsistent across files)
 - [ ] Extract `<Checkbox>` component (native checkbox doesn't match design)
 - [ ] Toast variants (success/error/warning colors)
 - [ ] Date format utility (inconsistent across views)
@@ -187,6 +187,30 @@ Add fields only when the UI has a clear place for them.
 - [ ] Extract `useLocalStorage` hook (dedupe ~15 try-catch blocks)
 - [ ] Group filter state (10+ useState → single object)
 - [ ] Memoize `TaskCardV2` with `React.memo()`
+
+---
+
+## Phase 8 — Multi-Project Hub
+
+Transform Clawboard into a central dashboard for all workspace projects.
+
+### Milestone H — Project Discovery & Backend Migration
+
+- [ ] Project discovery logic (scan `/projects/*` directory)
+- [ ] Database schema migration:
+    - [ ] Create `projects` table (metadata: name, path, icon, color)
+    - [ ] Add `project_id` to `tasks`, `activities`, and `documents` tables
+    - [ ] Populate initial `clawboard` project and link existing records
+- [ ] API updates:
+    - [ ] `GET /api/projects` (list all discovered projects)
+    - [ ] Filter `tasks`/`activities`/`docs` by `project_id`
+
+### Milestone I — Frontend Project Switcher
+
+- [ ] Global "My Tasks" view (cross-project aggregation)
+- [ ] Project switcher in sidebar (functional version of the stub)
+- [ ] URL routing: `/project/:id/kanban`
+- [ ] Project-specific stats/activities summary
 
 ---
 
