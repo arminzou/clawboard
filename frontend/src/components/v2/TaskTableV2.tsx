@@ -1,4 +1,6 @@
 import clsx from 'clsx';
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { Task, TaskStatus } from '../../lib/api';
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -8,11 +10,46 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
   done: 'Done',
 };
 
+const STATUS_ORDER: Record<TaskStatus, number> = {
+  backlog: 0,
+  in_progress: 1,
+  review: 2,
+  done: 3,
+};
+
+const PRIORITY_ORDER: Record<string, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  '': 4,
+};
+
+type SortKey = 'id' | 'title' | 'status' | 'assignee' | 'due' | 'priority' | 'tags' | 'updated';
+type SortDir = 'asc' | 'desc';
+
 function fmtDate(raw: string | null | undefined): string {
   if (!raw) return '';
   const d = new Date(raw.includes('T') ? raw : `${raw}T00:00:00`);
   if (!Number.isFinite(d.getTime())) return String(raw);
   return d.toISOString().slice(0, 10);
+}
+
+function parseDate(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const d = new Date(raw.includes('T') ? raw : `${raw}T00:00:00`);
+  return Number.isFinite(d.getTime()) ? d.getTime() : 0;
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) {
+    return <ChevronsUpDown size={14} className="text-slate-400" />;
+  }
+  return dir === 'asc' ? (
+    <ChevronUp size={14} className="text-[rgb(var(--cb-accent))]" />
+  ) : (
+    <ChevronDown size={14} className="text-[rgb(var(--cb-accent))]" />
+  );
 }
 
 export function TaskTableV2({
@@ -22,24 +59,142 @@ export function TaskTableV2({
   tasks: Task[];
   onOpen: (t: Task) => void;
 }) {
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      // Toggle direction or clear
+      if (sortDir === 'asc') {
+        setSortDir('desc');
+      } else {
+        setSortKey(null);
+        setSortDir('asc');
+      }
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  }
+
+  const sortedTasks = useMemo(() => {
+    if (!sortKey) return tasks;
+
+    return [...tasks].sort((a, b) => {
+      let cmp = 0;
+
+      switch (sortKey) {
+        case 'id':
+          cmp = a.id - b.id;
+          break;
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'status':
+          cmp = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+          break;
+        case 'assignee':
+          cmp = (a.assigned_to ?? '').localeCompare(b.assigned_to ?? '');
+          break;
+        case 'due':
+          cmp = parseDate(a.due_date) - parseDate(b.due_date);
+          break;
+        case 'priority':
+          cmp = (PRIORITY_ORDER[a.priority ?? ''] ?? 99) - (PRIORITY_ORDER[b.priority ?? ''] ?? 99);
+          break;
+        case 'tags':
+          cmp = (a.tags?.join(',') ?? '').localeCompare(b.tags?.join(',') ?? '');
+          break;
+        case 'updated':
+          cmp = parseDate(a.updated_at) - parseDate(b.updated_at);
+          break;
+      }
+
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [tasks, sortKey, sortDir]);
   return (
     <div className="overflow-hidden rounded-2xl border border-[rgb(var(--cb-border))] bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-sm">
           <thead className="bg-[rgb(var(--cb-surface-2))] text-left text-xs font-semibold text-slate-700">
             <tr>
-              <th className="w-[80px] px-4 py-3">ID</th>
-              <th className="min-w-[320px] px-4 py-3">Title</th>
-              <th className="w-[140px] px-4 py-3">Status</th>
-              <th className="w-[140px] px-4 py-3">Assignee</th>
-              <th className="w-[130px] px-4 py-3">Due</th>
-              <th className="w-[120px] px-4 py-3">Priority</th>
-              <th className="min-w-[220px] px-4 py-3">Tags</th>
-              <th className="w-[140px] px-4 py-3">Updated</th>
+              <th className="w-[80px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('id')}
+                >
+                  ID <SortIcon active={sortKey === 'id'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="min-w-[320px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('title')}
+                >
+                  Title <SortIcon active={sortKey === 'title'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="w-[140px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('status')}
+                >
+                  Status <SortIcon active={sortKey === 'status'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="w-[140px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('assignee')}
+                >
+                  Assignee <SortIcon active={sortKey === 'assignee'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="w-[130px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('due')}
+                >
+                  Due <SortIcon active={sortKey === 'due'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="w-[120px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('priority')}
+                >
+                  Priority <SortIcon active={sortKey === 'priority'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="min-w-[220px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('tags')}
+                >
+                  Tags <SortIcon active={sortKey === 'tags'} dir={sortDir} />
+                </button>
+              </th>
+              <th className="w-[140px] px-4 py-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
+                  onClick={() => handleSort('updated')}
+                >
+                  Updated <SortIcon active={sortKey === 'updated'} dir={sortDir} />
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {tasks.map((t) => {
+            {sortedTasks.map((t) => {
               const due = fmtDate(t.due_date ?? null);
               const updated = fmtDate((t.updated_at as string | undefined) ?? (t.created_at as string | undefined));
               const priority = String(t.priority ?? '').trim();
