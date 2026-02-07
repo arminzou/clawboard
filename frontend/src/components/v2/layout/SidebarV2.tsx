@@ -33,6 +33,8 @@ export function SidebarV2({
   onAssignee,
   hideDone,
   onHideDone,
+  blocked,
+  onBlocked,
   due,
   onDue,
   tag,
@@ -69,6 +71,9 @@ export function SidebarV2({
 
   hideDone: boolean;
   onHideDone: (v: boolean) => void;
+
+  blocked: boolean;
+  onBlocked: (v: boolean) => void;
 
   due: DueFilter;
   onDue: (v: DueFilter) => void;
@@ -246,6 +251,11 @@ export function SidebarV2({
               <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
                 <span>Hide done</span>
                 <input type="checkbox" checked={hideDone} onChange={(e) => onHideDone(e.target.checked)} />
+              </label>
+
+              <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                <span>Blocked only</span>
+                <input type="checkbox" checked={blocked} onChange={(e) => onBlocked(e.target.checked)} />
               </label>
 
               <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">

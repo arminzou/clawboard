@@ -31,6 +31,7 @@ type SavedView = {
     view: ViewFilter;
     assignee: AssigneeFilter;
     hideDone: boolean;
+    blocked: boolean;
     showArchived: boolean;
     due: DueFilter;
     tag: TagFilter;
@@ -65,6 +66,14 @@ export function KanbanPageV2({
   const [hideDone, setHideDone] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem('cb.v2.kanban.hideDone') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const [blocked, setBlocked] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.kanban.blocked') === '1';
     } catch {
       return false;
     }
@@ -238,6 +247,14 @@ export function KanbanPageV2({
 
   useEffect(() => {
     try {
+      window.localStorage.setItem('cb.v2.kanban.blocked', blocked ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [blocked]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem('cb.v2.kanban.showArchived', showArchived ? '1' : '0');
     } catch {
       // ignore
@@ -298,18 +315,19 @@ export function KanbanPageV2({
     const applied = lastAppliedFiltersRef.current;
     if (!applied) return;
 
-    const now = { view, assignee, hideDone, showArchived, due, tag, q };
+    const now = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
     const same =
       now.view === applied.view &&
       now.assignee === applied.assignee &&
       now.hideDone === applied.hideDone &&
+      now.blocked === applied.blocked &&
       now.showArchived === applied.showArchived &&
       now.due === applied.due &&
       now.tag === applied.tag &&
       now.q === applied.q;
 
     if (!same) setActiveSavedViewId(null);
-  }, [assignee, hideDone, q, showArchived, due, tag, view, activeSavedViewId]);
+  }, [assignee, hideDone, blocked, q, showArchived, due, tag, view, activeSavedViewId]);
 
   function applySavedView(id: string) {
     const sv = savedViews.find((x) => x.id === id);
@@ -328,6 +346,7 @@ export function KanbanPageV2({
       view: (sv.filters?.view ?? 'all') as ViewFilter,
       assignee: (sv.filters?.assignee ?? 'all') as AssigneeFilter,
       hideDone: Boolean(sv.filters?.hideDone),
+      blocked: Boolean(sv.filters?.blocked),
       showArchived: Boolean(sv.filters?.showArchived),
       due: normalizedDue,
       tag: normalizedTag as TagFilter,
@@ -340,6 +359,7 @@ export function KanbanPageV2({
     setView(filters.view);
     setAssignee(filters.assignee);
     setHideDone(filters.hideDone);
+    setBlocked(filters.blocked);
     setShowArchived(filters.showArchived);
     setDue(filters.due);
     setTag(filters.tag);
@@ -351,7 +371,7 @@ export function KanbanPageV2({
     const trimmed = name?.trim();
     if (!trimmed) return;
 
-    const filters: SavedView['filters'] = { view, assignee, hideDone, showArchived, due, tag, q };
+    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
     const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
     const next: SavedView = { id, name: trimmed, filters };
@@ -469,6 +489,7 @@ export function KanbanPageV2({
       if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
       if (wantTag !== 'all' && !(Array.isArray(t.tags) && t.tags.includes(wantTag))) return false;
       if (hideDone && t.status === 'done') return false;
+      if (blocked && !t.blocked_reason) return false;
 
       if (due !== 'any') {
         const dueAt = parseDueDate(String(t.due_date ?? '').trim());
@@ -557,6 +578,8 @@ export function KanbanPageV2({
       onAssignee={setAssignee}
       hideDone={hideDone}
       onHideDone={setHideDone}
+      blocked={blocked}
+      onBlocked={setBlocked}
       due={due}
       onDue={setDue}
       tag={tag}
@@ -578,6 +601,7 @@ export function KanbanPageV2({
         setAssignee('all');
         setView('all');
         setHideDone(false);
+        setBlocked(false);
         setShowArchived(false);
         setDue('any');
         setTag('all');
