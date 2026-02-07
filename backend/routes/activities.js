@@ -6,7 +6,7 @@ const { ingestSessions } = require('../utils/ingestSessions');
 // Get all activities (with pagination and filtering)
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { agent, limit = 50, offset = 0, since } = req.query;
+    const { agent, limit = 50, offset = 0, since, project_id } = req.query;
     
     let query = 'SELECT * FROM activities';
     const conditions = [];
@@ -19,6 +19,10 @@ router.get('/', (req, res) => {
     if (since) {
         conditions.push('timestamp >= ?');
         params.push(since);
+    }
+    if (project_id) {
+        conditions.push('project_id = ?');
+        params.push(project_id);
     }
     
     if (conditions.length > 0) {

@@ -57,7 +57,7 @@ function parseTagsFromRow(row) {
 // Get all tasks
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { status, assigned_to, include_archived } = req.query;
+    const { status, assigned_to, include_archived, project_id } = req.query;
 
     let query = 'SELECT * FROM tasks';
     const conditions = [];
@@ -76,6 +76,10 @@ router.get('/', (req, res) => {
     if (assigned_to) {
         conditions.push('assigned_to = ?');
         params.push(assigned_to);
+    }
+    if (project_id) {
+        conditions.push('project_id = ?');
+        params.push(project_id);
     }
 
     if (conditions.length > 0) {

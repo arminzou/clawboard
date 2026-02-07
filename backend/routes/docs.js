@@ -6,14 +6,23 @@ const { syncDocs } = require('../utils/syncDocs');
 // Get all tracked documents
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { git_status, limit = 100 } = req.query;
+    const { git_status, limit = 100, project_id } = req.query;
     
     let query = 'SELECT * FROM documents';
+    const conditions = [];
     const params = [];
     
     if (git_status) {
-        query += ' WHERE git_status = ?';
+        conditions.push('git_status = ?');
         params.push(git_status);
+    }
+    if (project_id) {
+        conditions.push('project_id = ?');
+        params.push(project_id);
+    }
+    
+    if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
     }
     
     query += ' ORDER BY last_modified DESC LIMIT ?';
