@@ -15,7 +15,7 @@ import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
-import { formatDate, parseSqliteDate } from '../../lib/date';
+import { formatDate } from '../../lib/date';
 import { Checkbox } from './ui/Checkbox';
 import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
