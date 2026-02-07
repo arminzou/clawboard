@@ -159,7 +159,7 @@ Add fields only when the UI has a clear place for them.
 - [x] Task duplication / clone
 - [x] Due date visible on cards (not just in modal)
 - [x] Filter by blocked status
-- [ ] Overdue tasks warning banner
+- [x] Overdue tasks warning banner
 - [x] Table view sorting (click headers)
 - [x] Keyboard shortcut help modal (`?` key)
 
@@ -168,25 +168,25 @@ Add fields only when the UI has a clear place for them.
 - [x] Extract `<Select>` component (currently inconsistent across files)
 - [x] Extract `<Checkbox>` component (native checkbox doesn't match design)
 - [x] Toast variants (success/error/warning colors)
-- [ ] Date format utility (inconsistent across views)
+- [x] Date format utility (inconsistent across views)
 
 ### Saved Views Polish
 
-- [ ] Toast confirmation when view saved
-- [ ] Edit saved view name/filters after saving
-- [ ] Show active filters summary in sidebar
+- [x] Toast confirmation when view saved
+- [x] Edit saved view name/filters after saving
+- [x] Show active filters summary in sidebar
 
 ### Mobile / Responsive
 
 - [x] Responsive grid breakpoints (1col → 2col at md, 4col at xl) for portrait monitors
 - [x] Collapsible sidebar toggle for more board space
-- [ ] Sidebar slide-in drawer for mobile (currently hidden and broken)
+- [x] Sidebar slide-in drawer for mobile (currently hidden and broken)
 
 ### Code Quality
 
-- [ ] Extract `useLocalStorage` hook (dedupe ~15 try-catch blocks)
-- [ ] Group filter state (10+ useState → single object)
-- [ ] Memoize `TaskCardV2` with `React.memo()`
+- [x] Extract `useLocalStorage` hook (dedupe ~15 try-catch blocks)
+- [x] Group filter state (10+ useState → single object)
+- [x] Memoize `TaskCardV2` with `React.memo()`
 
 ---
 

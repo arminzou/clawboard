@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 import type { TaskStatus } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
 import { Select } from '../ui/Select';
@@ -30,6 +31,8 @@ export function SidebarV2({
   onApplySavedView,
   onSaveCurrentView,
   onDeleteSavedView,
+  onRenameSavedView,
+  onUpdateSavedViewFilters,
   assignee,
   onAssignee,
   hideDone,
@@ -66,6 +69,8 @@ export function SidebarV2({
   onApplySavedView: (id: string) => void;
   onSaveCurrentView: () => void;
   onDeleteSavedView: (id: string) => void;
+  onRenameSavedView?: (id: string) => void;
+  onUpdateSavedViewFilters?: (id: string) => void;
 
   assignee: AssigneeFilter;
   onAssignee: (v: AssigneeFilter) => void;
@@ -90,10 +95,19 @@ export function SidebarV2({
 
   onReset: () => void;
 }) {
+  // Count active filters (non-default values)
+  const activeFilterCount = [
+    assignee !== 'all',
+    hideDone,
+    blocked,
+    due !== 'any',
+    tag !== 'all',
+  ].filter(Boolean).length;
+
   // Collapsed state - show only toggle button
   if (collapsed) {
     return (
-      <aside className="hidden w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
+      <aside className="hidden h-full w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
         <button
           type="button"
           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
@@ -108,7 +122,7 @@ export function SidebarV2({
   }
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white lg:block">
+    <aside className="h-full w-full border-slate-200 bg-white lg:w-72 lg:border-r">
       <div className="px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
@@ -162,6 +176,8 @@ export function SidebarV2({
                       label={sv.name}
                       onClick={() => onApplySavedView(sv.id)}
                       onDelete={() => onDeleteSavedView(sv.id)}
+                      onRename={onRenameSavedView ? () => onRenameSavedView(sv.id) : undefined}
+                      onUpdateFilters={onUpdateSavedViewFilters ? () => onUpdateSavedViewFilters(sv.id) : undefined}
                     />
                   ))}
                   <div className="mt-2 border-t border-slate-100" />
@@ -195,7 +211,14 @@ export function SidebarV2({
             className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
             onClick={onToggleFiltersOpen}
           >
-            <span>Filters</span>
+            <span className="flex items-center gap-2">
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
+                  {activeFilterCount}
+                </span>
+              )}
+            </span>
             <span className="text-slate-400">
               <IconChevron open={filtersOpen} />
             </span>
@@ -203,6 +226,35 @@ export function SidebarV2({
 
           {filtersOpen ? (
             <>
+              {activeFilterCount > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+                  {assignee !== 'all' && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      {assignee === '' ? 'Unassigned' : assignee}
+                    </span>
+                  )}
+                  {hideDone && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      Hide done
+                    </span>
+                  )}
+                  {blocked && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      Blocked only
+                    </span>
+                  )}
+                  {due !== 'any' && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      Due: {due}
+                    </span>
+                  )}
+                  {tag !== 'all' && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      #{tag}
+                    </span>
+                  )}
+                </div>
+              )}
               <label className="mt-2 text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
                 <Select
@@ -341,12 +393,18 @@ function SavedViewButton({
   label,
   onClick,
   onDelete,
+  onRename,
+  onUpdateFilters,
 }: {
   active: boolean;
   label: string;
   onClick: () => void;
   onDelete: () => void;
+  onRename?: () => void;
+  onUpdateFilters?: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div
       className={
@@ -358,18 +416,61 @@ function SavedViewButton({
       <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={onClick} title={label}>
         {label}
       </button>
-      <button
-        type="button"
-        className={
-          active
-            ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15'
-            : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50'
-        }
-        onClick={onDelete}
-        title="Delete saved view"
-      >
-        ×
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          className={
+            active
+              ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15'
+              : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50'
+          }
+          onClick={() => setMenuOpen((v) => !v)}
+          title="Options"
+        >
+          …
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {onRename && (
+                <button
+                  type="button"
+                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onRename();
+                  }}
+                >
+                  Rename
+                </button>
+              )}
+              {onUpdateFilters && (
+                <button
+                  type="button"
+                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onUpdateFilters();
+                  }}
+                >
+                  Update filters
+                </button>
+              )}
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete();
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

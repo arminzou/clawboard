@@ -12,9 +12,10 @@ import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
+import { formatDate, parseSqliteDate } from '../../lib/date';
 import { Checkbox } from './ui/Checkbox';
 import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
@@ -26,12 +27,6 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'review', title: 'Review' },
   { key: 'done', title: 'Done' },
 ];
-
-function parseSqliteTimestamp(ts: string) {
-  if (!ts) return new Date(0);
-  if (ts.includes('T')) return new Date(ts);
-  return new Date(ts.replace(' ', 'T') + 'Z');
-}
 
 function statusLabel(s: TaskStatus) {
   return COLUMNS.find((c) => c.key === s)?.title ?? s;
@@ -451,102 +446,110 @@ function MetaRow({
   );
 }
 
-function TaskCardV2({
-  task,
-  onOpen,
-  dragging,
-  isSelected,
-  onToggleSelection,
-  showCheckbox,
-}: {
-  task: Task;
-  onOpen?: () => void;
-  dragging?: boolean;
-  isSelected?: boolean;
-  onToggleSelection?: (id: number) => void;
-  showCheckbox?: boolean;
-}) {
-  const created = parseSqliteTimestamp(task.created_at);
-  const createdLabel = Number.isFinite(created.getTime()) ? created.toLocaleDateString() : '';
+const TaskCardV2 = memo(
+  function TaskCardV2({
+    task,
+    onOpen,
+    dragging,
+    isSelected,
+    onToggleSelection,
+    showCheckbox,
+  }: {
+    task: Task;
+    onOpen?: () => void;
+    dragging?: boolean;
+    isSelected?: boolean;
+    onToggleSelection?: (id: number) => void;
+    showCheckbox?: boolean;
+  }) {
+    const createdLabel = formatDate(task.created_at);
+    const dueLabel = formatDate(task.due_date);
 
-  const due = task.due_date
-    ? new Date(task.due_date.includes('T') ? task.due_date : `${task.due_date}T00:00:00`)
-    : null;
-  const dueLabel = due && Number.isFinite(due.getTime()) ? due.toLocaleDateString() : '';
+    function handleCheckboxClick(e: React.MouseEvent) {
+      e.stopPropagation();
+      onToggleSelection?.(task.id);
+    }
 
-  function handleCheckboxClick(e: React.MouseEvent) {
-    e.stopPropagation();
-    onToggleSelection?.(task.id);
+    return (
+      <button
+        type="button"
+        className={clsx(
+          'group w-full rounded-xl border bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
+          dragging ? 'transition-none' : 'transition',
+          !dragging && 'hover:-translate-y-px hover:shadow-md',
+          'active:translate-y-0 active:shadow-sm',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]',
+          isSelected
+            ? 'border-[rgb(var(--cb-accent))] ring-2 ring-[rgb(var(--cb-accent)/0.2)]'
+            : 'border-[rgb(var(--cb-border))] hover:border-[rgb(var(--cb-accent)/0.18)]',
+        )}
+        onClick={onOpen}
+      >
+        <div className="flex items-start gap-2">
+          {/* Checkbox - always in DOM for layout, opacity controlled */}
+          <div
+            className={clsx(
+              'shrink-0 pt-0.5 transition-opacity',
+              showCheckbox || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            )}
+            onClick={handleCheckboxClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelection?.(task.id);
+              }
+            }}
+            role="checkbox"
+            aria-checked={isSelected}
+            tabIndex={0}
+          >
+            <Checkbox checked={isSelected} size="sm" readOnly />
+          </div>
+          <div className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">
+            {task.title}
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
+          {task.priority ? <span className={priorityChipClasses(task.priority)}>{task.priority}</span> : null}
+          {task.blocked_reason ? (
+            <Chip variant="neutral" className="text-[11px] py-0.5" title={task.blocked_reason}>
+              blocked
+            </Chip>
+          ) : null}
+          {Array.isArray(task.tags) && task.tags.length
+            ? task.tags.slice(0, 3).map((t) => (
+                <Chip key={t} variant="neutral" className="text-[11px] py-0.5">
+                  {t}
+                </Chip>
+              ))
+            : null}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-1.5">
+          <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
+          <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
+          {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
+          {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
+          <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
+        </div>
+      </button>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.dragging === next.dragging &&
+      prev.isSelected === next.isSelected &&
+      prev.showCheckbox === next.showCheckbox &&
+      prev.task.id === next.task.id &&
+      prev.task.updated_at === next.task.updated_at &&
+      prev.task.status === next.task.status &&
+      prev.task.position === next.task.position
+    );
   }
-
-  return (
-    <button
-      type="button"
-      className={clsx(
-        'group w-full rounded-xl border bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
-        dragging ? 'transition-none' : 'transition',
-        !dragging && 'hover:-translate-y-px hover:shadow-md',
-        'active:translate-y-0 active:shadow-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]',
-        isSelected
-          ? 'border-[rgb(var(--cb-accent))] ring-2 ring-[rgb(var(--cb-accent)/0.2)]'
-          : 'border-[rgb(var(--cb-border))] hover:border-[rgb(var(--cb-accent)/0.18)]',
-      )}
-      onClick={onOpen}
-    >
-      <div className="flex items-start gap-2">
-        {/* Checkbox - always in DOM for layout, opacity controlled */}
-        <div
-          className={clsx(
-            'shrink-0 pt-0.5 transition-opacity',
-            showCheckbox || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-          )}
-          onClick={handleCheckboxClick}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleSelection?.(task.id);
-            }
-          }}
-          role="checkbox"
-          aria-checked={isSelected}
-          tabIndex={0}
-        >
-          <Checkbox checked={isSelected} size="sm" readOnly />
-        </div>
-        <div className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">
-          {task.title}
-        </div>
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
-        {task.priority ? <span className={priorityChipClasses(task.priority)}>{task.priority}</span> : null}
-        {task.blocked_reason ? (
-          <Chip variant="neutral" className="text-[11px] py-0.5" title={task.blocked_reason}>
-            blocked
-          </Chip>
-        ) : null}
-        {Array.isArray(task.tags) && task.tags.length
-          ? task.tags.slice(0, 3).map((t) => (
-              <Chip key={t} variant="neutral" className="text-[11px] py-0.5">
-                {t}
-              </Chip>
-            ))
-          : null}
-      </div>
-
-      <div className="mt-3 flex flex-col gap-1.5">
-        <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
-        <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
-        {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
-        {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
-        <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
-      </div>
-    </button>
-  );
-}
+);
 
 function SortableTaskV2({
   task,

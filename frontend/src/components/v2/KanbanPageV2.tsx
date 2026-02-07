@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
+import { toast } from '../../lib/toast';
 import { BulkActionBar } from './BulkActionBar';
 import { KanbanBoardV2 } from './KanbanBoardV2';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
@@ -10,6 +11,7 @@ import { AppShellV2 } from './layout/AppShellV2';
 import { SidebarV2 } from './layout/SidebarV2';
 import { TopbarV2, type TopbarMode } from './layout/TopbarV2';
 import { TaskTableV2 } from './TaskTableV2';
+import { ToastContainer } from './ui/Toast';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -184,6 +186,16 @@ export function KanbanPageV2({
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return tasks.filter((t) => {
+      if (t.status === 'done' || !t.due_date) return false;
+      const dueAt = new Date(t.due_date.includes('T') ? t.due_date : `${t.due_date}T00:00:00`);
+      return dueAt < startOfToday;
+    }).length;
+  }, [tasks]);
 
   const toggleSelection = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -456,6 +468,7 @@ export function KanbanPageV2({
 
     lastAppliedFiltersRef.current = filters;
     setActiveSavedViewId(id);
+    toast.success(`View "${trimmed}" saved`);
   }
 
   function deleteSavedView(id: string) {
@@ -470,6 +483,37 @@ export function KanbanPageV2({
       setActiveSavedViewId(null);
       lastAppliedFiltersRef.current = null;
     }
+    toast.show(`View "${sv.name}" deleted`);
+  }
+
+  function renameSavedView(id: string) {
+    const sv = savedViews.find((x) => x.id === id);
+    if (!sv) return;
+
+    const newName = window.prompt('Rename view:', sv.name);
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === sv.name) return;
+
+    setSavedViews((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, name: trimmed } : x))
+    );
+    toast.success(`View renamed to "${trimmed}"`);
+  }
+
+  function updateSavedViewFilters(id: string) {
+    const sv = savedViews.find((x) => x.id === id);
+    if (!sv) return;
+
+    const ok = window.confirm(`Update "${sv.name}" with current filters?`);
+    if (!ok) return;
+
+    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
+    setSavedViews((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, filters } : x))
+    );
+    lastAppliedFiltersRef.current = filters;
+    setActiveSavedViewId(id);
+    toast.success(`View "${sv.name}" filters updated`);
   }
 
   useEffect(() => {
@@ -651,6 +695,8 @@ export function KanbanPageV2({
       onApplySavedView={applySavedView}
       onSaveCurrentView={saveCurrentView}
       onDeleteSavedView={deleteSavedView}
+      onRenameSavedView={renameSavedView}
+      onUpdateSavedViewFilters={updateSavedViewFilters}
       assignee={assignee}
       onAssignee={setAssignee}
       hideDone={hideDone}
@@ -705,6 +751,27 @@ export function KanbanPageV2({
   return (
     <>
       <AppShellV2 sidebar={sidebar} topbar={topbar}>
+        {overdueCount > 0 && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600">
+                !
+              </span>
+              <span className="font-medium">
+                {overdueCount} task{overdueCount === 1 ? ' is' : 's are'} overdue.
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setDue('overdue');
+                setView('all');
+              }}
+              className="text-xs font-semibold uppercase tracking-wider text-red-600 hover:text-red-700 hover:underline"
+            >
+              View all
+            </button>
+          </div>
+        )}
         {loading ? <div className="text-sm text-[rgb(var(--cb-text-muted))]">Loading…</div> : null}
         {error ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -840,6 +907,8 @@ export function KanbanPageV2({
       {showKeyboardHelp ? (
         <KeyboardHelpModal onClose={() => setShowKeyboardHelp(false)} />
       ) : null}
+
+      <ToastContainer />
     </>
   );
 }
