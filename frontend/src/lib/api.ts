@@ -124,6 +124,20 @@ export const api = {
     if (!(res.status === 204 || res.ok)) throw new Error(`${res.status} ${res.statusText}`);
   },
 
+  /** Duplicate a task by creating a copy with "(copy)" appended to the title */
+  async duplicateTask(task: Task) {
+    return api.createTask({
+      title: `${task.title} (copy)`,
+      description: task.description ?? undefined,
+      status: task.status,
+      priority: task.priority ?? undefined,
+      due_date: task.due_date ?? undefined,
+      tags: task.tags,
+      blocked_reason: task.blocked_reason ?? undefined,
+      assigned_to: task.assigned_to,
+    });
+  },
+
   async listActivities(params?: { agent?: string; limit?: number; offset?: number; since?: string }) {
     const usp = new URLSearchParams();
     if (params?.agent) usp.set('agent', params.agent);

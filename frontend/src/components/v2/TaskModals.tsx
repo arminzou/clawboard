@@ -133,6 +133,7 @@ export function EditTaskModal({
   onClose,
   onSave,
   onDelete,
+  onDuplicate,
 }: {
   task: Task;
   onClose: () => void;
@@ -147,6 +148,7 @@ export function EditTaskModal({
     blocked_reason?: string | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
+  onDuplicate?: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
@@ -162,6 +164,7 @@ export function EditTaskModal({
   const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const save = useCallback(async () => {
     if (saving || deleting) return;
@@ -320,28 +323,47 @@ export function EditTaskModal({
           </div>
 
           <div className="mt-2 flex justify-between gap-2">
-            <Button
-              variant="danger"
-              disabled={saving || deleting}
-              onClick={async () => {
-                const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
-                if (!ok) return;
-                setDeleting(true);
-                try {
-                  await onDelete();
-                } finally {
-                  setDeleting(false);
-                }
-              }}
-            >
-              {deleting ? 'Deleting…' : 'Delete'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                disabled={saving || deleting || duplicating}
+                onClick={async () => {
+                  const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
+                  if (!ok) return;
+                  setDeleting(true);
+                  try {
+                    await onDelete();
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+
+              {onDuplicate ? (
+                <Button
+                  variant="secondary"
+                  disabled={saving || deleting || duplicating}
+                  onClick={async () => {
+                    setDuplicating(true);
+                    try {
+                      await onDuplicate();
+                    } finally {
+                      setDuplicating(false);
+                    }
+                  }}
+                >
+                  {duplicating ? 'Duplicating…' : 'Duplicate'}
+                </Button>
+              ) : null}
+            </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" disabled={saving || deleting} onClick={onClose}>
+              <Button variant="secondary" disabled={saving || deleting || duplicating} onClick={onClose}>
                 Cancel
               </Button>
-              <Button variant="primary" disabled={saving || deleting} onClick={save}>
+              <Button variant="primary" disabled={saving || deleting || duplicating} onClick={save}>
                 Save
               </Button>
             </div>

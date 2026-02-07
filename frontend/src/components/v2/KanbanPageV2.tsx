@@ -232,6 +232,14 @@ export function KanbanPageV2({
     await refresh();
   }
 
+  async function handleBulkDuplicate() {
+    const ids = Array.from(selectedIds);
+    const tasksToDuplicate = tasks.filter((t) => ids.includes(t.id));
+    await Promise.all(tasksToDuplicate.map((t) => api.duplicateTask(t)));
+    clearSelection();
+    await refresh();
+  }
+
   async function refresh() {
     setLoading(true);
     setError(null);
@@ -778,6 +786,11 @@ export function KanbanPageV2({
             setEditTask(null);
             await refresh();
           }}
+          onDuplicate={async () => {
+            await api.duplicateTask(editTask);
+            setEditTask(null);
+            await refresh();
+          }}
         />
       ) : null}
 
@@ -812,6 +825,7 @@ export function KanbanPageV2({
           onBulkAssign={handleBulkAssign}
           onBulkStatus={handleBulkStatus}
           onBulkDelete={handleBulkDelete}
+          onBulkDuplicate={handleBulkDuplicate}
         />
       ) : null}
     </>
