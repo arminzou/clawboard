@@ -155,8 +155,8 @@ Add fields only when the UI has a clear place for them.
 
 ### Workflow Improvements
 
-- [ ] Bulk operations (multi-select + bulk assign/status/delete)
-- [ ] Task duplication / clone
+- [x] Bulk operations (multi-select + bulk assign/status/delete)
+- [x] Task duplication / clone
 - [x] Due date visible on cards (not just in modal)
 - [x] Filter by blocked status
 - [ ] Overdue tasks warning banner
@@ -166,7 +166,7 @@ Add fields only when the UI has a clear place for them.
 ### UI Kit Completion
 
 - [x] Extract `<Select>` component (currently inconsistent across files)
-- [ ] Extract `<Checkbox>` component (native checkbox doesn't match design)
+- [x] Extract `<Checkbox>` component (native checkbox doesn't match design)
 - [ ] Toast variants (success/error/warning colors)
 - [ ] Date format utility (inconsistent across views)
 
