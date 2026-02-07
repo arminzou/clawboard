@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
+import { BulkActionBar } from './BulkActionBar';
 import { KanbanBoardV2 } from './KanbanBoardV2';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
 import { AppShellV2 } from './layout/AppShellV2';
@@ -179,6 +180,58 @@ export function KanbanPageV2({
   const [createOpen, setCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+
+  const toggleSelection = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Clear selection when tasks change significantly (e.g., after delete)
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const taskIds = new Set(tasks.map((t) => t.id));
+      const next = new Set<number>();
+      for (const id of prev) {
+        if (taskIds.has(id)) next.add(id);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [tasks]);
+
+  async function handleBulkAssign(assignee: Assignee | null) {
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => api.updateTask(id, { assigned_to: assignee })));
+    clearSelection();
+    await refresh();
+  }
+
+  async function handleBulkStatus(status: TaskStatus) {
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => api.updateTask(id, { status })));
+    clearSelection();
+    await refresh();
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => api.deleteTask(id)));
+    clearSelection();
+    await refresh();
+  }
+
   async function refresh() {
     setLoading(true);
     setError(null);
@@ -223,11 +276,19 @@ export function KanbanPageV2({
         e.preventDefault();
         searchRef.current?.focus();
       }
+
+      // Clear bulk selection with Escape
+      if (e.key === 'Escape') {
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          clearSelection();
+        }
+      }
     }
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [selectedIds.size, clearSelection]);
 
   useEffect(() => {
     try {
@@ -688,6 +749,8 @@ export function KanbanPageV2({
                 });
                 await refresh();
               }}
+              selectedIds={selectedIds}
+              onToggleSelection={toggleSelection}
             />
           )}
         </div>
@@ -739,6 +802,16 @@ export function KanbanPageV2({
             setCreatePrefill(null);
             await refresh();
           }}
+        />
+      ) : null}
+
+      {selectedIds.size > 0 ? (
+        <BulkActionBar
+          count={selectedIds.size}
+          onClearSelection={clearSelection}
+          onBulkAssign={handleBulkAssign}
+          onBulkStatus={handleBulkStatus}
+          onBulkDelete={handleBulkDelete}
         />
       ) : null}
     </>

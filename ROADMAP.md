@@ -198,9 +198,9 @@ Transform Clawboard into a central dashboard for all workspace projects.
 
 - [ ] Project discovery logic (scan `/projects/*` directory)
 - [ ] Database schema migration:
-    - [ ] Create `projects` table (metadata: name, path, icon, color)
-    - [ ] Add `project_id` to `tasks`, `activities`, and `documents` tables
-    - [ ] Populate initial `clawboard` project and link existing records
+    - [x] Create `projects` table (metadata: name, path, icon, color)
+    - [x] Add `project_id` to `tasks`, `activities`, and `documents` tables
+    - [x] Populate initial `clawboard` project and link existing records
 - [ ] API updates:
     - [ ] `GET /api/projects` (list all discovered projects)
     - [ ] Filter `tasks`/`activities`/`docs` by `project_id`

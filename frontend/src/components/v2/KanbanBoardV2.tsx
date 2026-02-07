@@ -15,6 +15,7 @@ import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
+import { Checkbox } from './ui/Checkbox';
 import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
 import { Menu } from './ui/Menu';
@@ -44,6 +45,8 @@ export function KanbanBoardV2({
   onRefresh,
   onEditTask,
   onQuickCreate,
+  selectedIds,
+  onToggleSelection,
 }: {
   tasks: Task[];
   tasksAll: Task[];
@@ -52,7 +55,10 @@ export function KanbanBoardV2({
   onRefresh: () => Promise<void>;
   onEditTask: (t: Task) => void;
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
+  selectedIds?: Set<number>;
+  onToggleSelection?: (id: number) => void;
 }) {
+  const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
@@ -212,6 +218,9 @@ export function KanbanBoardV2({
               overId={overId}
               onOpenTask={onEditTask}
               onQuickCreate={onQuickCreate}
+              selectedIds={selectedIds}
+              onToggleSelection={onToggleSelection}
+              hasSelection={hasSelection}
             />
           ))}
         </div>
@@ -231,6 +240,9 @@ function KanbanColumnV2({
   overId,
   onOpenTask,
   onQuickCreate,
+  selectedIds,
+  onToggleSelection,
+  hasSelection,
 }: {
   id: TaskStatus;
   title: string;
@@ -240,6 +252,9 @@ function KanbanColumnV2({
   overId: string | null;
   onOpenTask: (t: Task) => void;
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
+  selectedIds?: Set<number>;
+  onToggleSelection?: (id: number) => void;
+  hasSelection?: boolean;
 }) {
   const { setNodeRef } = useDroppable({ id });
   const showDropHint =
@@ -367,7 +382,14 @@ function KanbanColumnV2({
             {tasks.map((t) => (
               <div key={t.id}>
                 {showDropHint && overId === String(t.id) && activeTaskId !== String(t.id) ? <InsertLine /> : null}
-                <SortableTaskV2 task={t} onOpen={() => onOpenTask(t)} boardDragging={!!activeTaskId} />
+                <SortableTaskV2
+                  task={t}
+                  onOpen={() => onOpenTask(t)}
+                  boardDragging={!!activeTaskId}
+                  isSelected={selectedIds?.has(t.id)}
+                  onToggleSelection={onToggleSelection}
+                  showCheckbox={hasSelection}
+                />
               </div>
             ))}
             {showDropHint && overId === id ? <InsertLine /> : null}
@@ -429,7 +451,21 @@ function MetaRow({
   );
 }
 
-function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => void; dragging?: boolean }) {
+function TaskCardV2({
+  task,
+  onOpen,
+  dragging,
+  isSelected,
+  onToggleSelection,
+  showCheckbox,
+}: {
+  task: Task;
+  onOpen?: () => void;
+  dragging?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: number) => void;
+  showCheckbox?: boolean;
+}) {
   const created = parseSqliteTimestamp(task.created_at);
   const createdLabel = Number.isFinite(created.getTime()) ? created.toLocaleDateString() : '';
 
@@ -438,19 +474,51 @@ function TaskCardV2({ task, onOpen, dragging }: { task: Task; onOpen?: () => voi
     : null;
   const dueLabel = due && Number.isFinite(due.getTime()) ? due.toLocaleDateString() : '';
 
+  function handleCheckboxClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onToggleSelection?.(task.id);
+  }
+
   return (
     <button
       type="button"
       className={clsx(
-        'group w-full rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
+        'group w-full rounded-xl border bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
         dragging ? 'transition-none' : 'transition',
-        !dragging && 'hover:-translate-y-px hover:border-[rgb(var(--cb-accent)/0.18)] hover:shadow-md',
+        !dragging && 'hover:-translate-y-px hover:shadow-md',
         'active:translate-y-0 active:shadow-sm',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]',
+        isSelected
+          ? 'border-[rgb(var(--cb-accent))] ring-2 ring-[rgb(var(--cb-accent)/0.2)]'
+          : 'border-[rgb(var(--cb-border))] hover:border-[rgb(var(--cb-accent)/0.18)]',
       )}
       onClick={onOpen}
     >
-      <div className="whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">{task.title}</div>
+      <div className="flex items-start gap-2">
+        {/* Checkbox - always in DOM for layout, opacity controlled */}
+        <div
+          className={clsx(
+            'shrink-0 pt-0.5 transition-opacity',
+            showCheckbox || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+          )}
+          onClick={handleCheckboxClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelection?.(task.id);
+            }
+          }}
+          role="checkbox"
+          aria-checked={isSelected}
+          tabIndex={0}
+        >
+          <Checkbox checked={isSelected} size="sm" readOnly />
+        </div>
+        <div className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))]">
+          {task.title}
+        </div>
+      </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
@@ -484,10 +552,16 @@ function SortableTaskV2({
   task,
   onOpen,
   boardDragging,
+  isSelected,
+  onToggleSelection,
+  showCheckbox,
 }: {
   task: Task;
   onOpen: () => void;
   boardDragging?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: number) => void;
+  showCheckbox?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(task.id) });
 
@@ -508,7 +582,14 @@ function SortableTaskV2({
       {...attributes}
       {...listeners}
     >
-      <TaskCardV2 task={task} onOpen={onOpen} dragging={boardDragging} />
+      <TaskCardV2
+        task={task}
+        onOpen={onOpen}
+        dragging={boardDragging}
+        isSelected={isSelected}
+        onToggleSelection={onToggleSelection}
+        showCheckbox={showCheckbox}
+      />
     </div>
   );
 }
