@@ -201,11 +201,11 @@ Transform Clawboard into a central dashboard for all workspace projects.
     - [x] Create `projects` table (metadata: name, path, icon, color)
     - [x] Add `project_id` to `tasks`, `activities`, and `documents` tables
     - [x] Populate initial `clawboard` project and link existing records
-- [ ] API updates:
+- [x] API updates:
     - [x] `GET /api/projects` (list all discovered projects)
     - [x] `POST /api/projects/discover` (scan workspace and sync)
     - [x] `GET /api/projects/:id` + `PATCH /api/projects/:id`
-    - [ ] Filter `tasks`/`activities`/`docs` by `project_id`
+    - [x] Filter `tasks`/`activities`/`docs` by `project_id`
 
 ### Milestone I — Frontend Project Switcher
 
