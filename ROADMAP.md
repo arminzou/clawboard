@@ -148,17 +148,17 @@ Add fields only when the UI has a clear place for them.
 
 ### Critical Fixes
 
-- [ ] Modal focus trap (accessibility: can't tab outside modal)
-- [ ] Modal overlay click to dismiss
-- [ ] Task title overflow — add `line-clamp-2` to prevent hiding metadata
-- [ ] Error state retry button (currently dead end)
+- [x] Modal focus trap (accessibility: can't tab outside modal)
+- [x] Modal overlay click to dismiss
+- [x] Task title overflow — add `line-clamp-2` to prevent hiding metadata
+- [x] Error state retry button (currently dead end)
 
 ### Workflow Improvements
 
 - [ ] Bulk operations (multi-select + bulk assign/status/delete)
 - [ ] Task duplication / clone
-- [ ] Due date visible on cards (not just in modal)
-- [ ] Filter by blocked status
+- [x] Due date visible on cards (not just in modal)
+- [x] Filter by blocked status
 - [ ] Overdue tasks warning banner
 - [ ] Table view sorting (click headers)
 - [ ] Keyboard shortcut help modal (`?` key)
