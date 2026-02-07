@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
 import { BulkActionBar } from './BulkActionBar';
 import { KanbanBoardV2 } from './KanbanBoardV2';
+import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
 import { AppShellV2 } from './layout/AppShellV2';
 import { SidebarV2 } from './layout/SidebarV2';
@@ -179,6 +180,7 @@ export function KanbanPageV2({
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
@@ -291,6 +293,12 @@ export function KanbanPageV2({
           e.preventDefault();
           clearSelection();
         }
+      }
+
+      // Show keyboard shortcuts help with ?
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowKeyboardHelp(true);
       }
     }
 
@@ -827,6 +835,10 @@ export function KanbanPageV2({
           onBulkDelete={handleBulkDelete}
           onBulkDuplicate={handleBulkDuplicate}
         />
+      ) : null}
+
+      {showKeyboardHelp ? (
+        <KeyboardHelpModal onClose={() => setShowKeyboardHelp(false)} />
       ) : null}
     </>
   );

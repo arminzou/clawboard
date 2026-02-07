@@ -160,7 +160,7 @@ Add fields only when the UI has a clear place for them.
 - [x] Due date visible on cards (not just in modal)
 - [x] Filter by blocked status
 - [ ] Overdue tasks warning banner
-- [ ] Table view sorting (click headers)
+- [x] Table view sorting (click headers)
 - [ ] Keyboard shortcut help modal (`?` key)
 
 ### UI Kit Completion
