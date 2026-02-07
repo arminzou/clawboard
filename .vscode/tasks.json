@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "dev",
+            "problemMatcher": [],
+            "label": "npm: dev",
+            "detail": "concurrently -n backend,frontend -c blue,green \"PORT=3001 npm --prefix backend run dev\" \"npm --prefix frontend run dev\""
+        }
+    ]
+}
