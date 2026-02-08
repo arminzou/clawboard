@@ -207,14 +207,14 @@ Transform Clawboard into a central dashboard for all workspace projects.
     - [x] `GET /api/projects/:id` + `PATCH /api/projects/:id`
     - [x] Filter `tasks`/`activities`/`docs` by `project_id`
 
-### Milestone I — Frontend Project Switcher
+### Milestone I — Frontend Project Switcher ✅
 
 - [x] Project switcher in sidebar (functional dropdown with project list)
 - [x] Filter tasks by selected project
 - [x] "All Projects" view (cross-project aggregation)
 - [x] Global "My Tasks" quick-access view (cross-project, shows count)
 - [x] Project-specific stats API (`/api/projects/:id/stats`, `/api/projects/stats/summary`)
-- [ ] URL routing: `/project/:id/kanban` (requires React Router)
+- [x] URL routing: `/`, `/project/:id`, `/activity`, `/docs` (React Router)
 - [ ] Stats display widget in UI (optional, API ready)
 
 ---
