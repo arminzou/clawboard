@@ -53,6 +53,31 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ProjectStats {
+  project_id: number;
+  project_name: string;
+  tasks: {
+    total: number;
+    by_status: Array<{ status: string; count: number }>;
+    by_priority: Array<{ priority: string | null; count: number }>;
+    by_assignee: Array<{ assigned_to: string | null; count: number }>;
+    overdue: number;
+    completed_last_7d: number;
+  };
+}
+
+export interface SummaryStats {
+  projects: {
+    total: number;
+  };
+  tasks: {
+    total: number;
+    by_status: Array<{ status: string; count: number }>;
+    by_project: Array<{ project_name: string; project_id: number; count: number }>;
+    overdue: number;
+  };
+}
+
 export interface DocsStats {
   total: number;
   by_type: Array<{ file_type: string | null; count: number }>;
@@ -229,5 +254,13 @@ export const api = {
         body: JSON.stringify(body),
       }),
     );
+  },
+
+  async getProjectStats(id: number) {
+    return json<ProjectStats>(await fetch(withBase(`/api/projects/${id}/stats`), { headers: authHeaders() }));
+  },
+
+  async getSummaryStats() {
+    return json<SummaryStats>(await fetch(withBase('/api/projects/stats/summary'), { headers: authHeaders() }));
   },
 };

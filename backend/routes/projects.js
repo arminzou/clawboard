@@ -156,4 +156,106 @@ router.patch('/:id', (req, res) => {
   }
 });
 
+/**
+ * GET /api/projects/:id/stats
+ * Get task statistics for a specific project.
+ */
+router.get('/:id/stats', (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const stats = {
+      project_id: parseInt(id, 10),
+      project_name: project.name,
+      tasks: {
+        total: db.prepare('SELECT COUNT(*) as count FROM tasks WHERE project_id = ? AND archived_at IS NULL').get(id).count,
+        by_status: db.prepare(`
+          SELECT status, COUNT(*) as count 
+          FROM tasks 
+          WHERE project_id = ? AND archived_at IS NULL
+          GROUP BY status
+        `).all(id),
+        by_priority: db.prepare(`
+          SELECT priority, COUNT(*) as count 
+          FROM tasks 
+          WHERE project_id = ? AND archived_at IS NULL
+          GROUP BY priority
+        `).all(id),
+        by_assignee: db.prepare(`
+          SELECT assigned_to, COUNT(*) as count 
+          FROM tasks 
+          WHERE project_id = ? AND archived_at IS NULL
+          GROUP BY assigned_to
+        `).all(id),
+        overdue: db.prepare(`
+          SELECT COUNT(*) as count 
+          FROM tasks 
+          WHERE project_id = ? AND archived_at IS NULL AND status != 'done'
+            AND due_date IS NOT NULL AND due_date < date('now')
+        `).get(id).count,
+        completed_last_7d: db.prepare(`
+          SELECT COUNT(*) as count 
+          FROM tasks 
+          WHERE project_id = ? AND status = 'done'
+            AND completed_at >= datetime('now', '-7 days')
+        `).get(id).count,
+      },
+    };
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Failed to get project stats:', err);
+    res.status(500).json({ error: 'Failed to get project stats' });
+  }
+});
+
+/**
+ * GET /api/projects/stats/summary
+ * Get aggregated stats across all projects.
+ */
+router.get('/stats/summary', (req, res) => {
+  const db = req.app.locals.db;
+
+  try {
+    const stats = {
+      projects: {
+        total: db.prepare('SELECT COUNT(*) as count FROM projects').get().count,
+      },
+      tasks: {
+        total: db.prepare('SELECT COUNT(*) as count FROM tasks WHERE archived_at IS NULL').get().count,
+        by_status: db.prepare(`
+          SELECT status, COUNT(*) as count 
+          FROM tasks 
+          WHERE archived_at IS NULL
+          GROUP BY status
+        `).all(),
+        by_project: db.prepare(`
+          SELECT p.name as project_name, p.id as project_id, COUNT(t.id) as count 
+          FROM projects p
+          LEFT JOIN tasks t ON t.project_id = p.id AND t.archived_at IS NULL
+          GROUP BY p.id
+          ORDER BY count DESC
+        `).all(),
+        overdue: db.prepare(`
+          SELECT COUNT(*) as count 
+          FROM tasks 
+          WHERE archived_at IS NULL AND status != 'done'
+            AND due_date IS NOT NULL AND due_date < date('now')
+        `).get().count,
+      },
+    };
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Failed to get summary stats:', err);
+    res.status(500).json({ error: 'Failed to get summary stats' });
+  }
+});
+
 module.exports = router;
