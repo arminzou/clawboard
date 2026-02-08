@@ -57,7 +57,7 @@ function parseTagsFromRow(row) {
 // Get all tasks
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { status, assigned_to, include_archived, project_id } = req.query;
+    const { status, assigned_to, include_archived, project_id, context_key, context_type } = req.query;
 
     let query = 'SELECT * FROM tasks';
     const conditions = [];
@@ -80,6 +80,14 @@ router.get('/', (req, res) => {
     if (project_id) {
         conditions.push('project_id = ?');
         params.push(project_id);
+    }
+    if (context_key) {
+        conditions.push('context_key = ?');
+        params.push(context_key);
+    }
+    if (context_type) {
+        conditions.push('context_type = ?');
+        params.push(context_type);
     }
 
     if (conditions.length > 0) {
@@ -113,7 +121,11 @@ router.get('/:id', (req, res) => {
 // Create task
 router.post('/', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status = 'backlog', priority, due_date, assigned_to, position, tags, blocked_reason, project_id } = req.body;
+    const { 
+        title, description, status = 'backlog', priority, 
+        due_date, assigned_to, position, tags, 
+        blocked_reason, project_id, context_key, context_type 
+    } = req.body;
 
     if (!title) {
         return res.status(400).json({ error: 'Title is required' });
@@ -135,15 +147,25 @@ router.post('/', (req, res) => {
         const tagsJson = normalizedTags === undefined ? null : JSON.stringify(normalizedTags);
         const normalizedBlockedReason = typeof blocked_reason === 'string' && blocked_reason.trim() ? blocked_reason.trim() : null;
         const resolvedProjectId = project_id != null ? Number(project_id) : null;
+        const normalizedContextKey = typeof context_key === 'string' && context_key.trim() ? context_key.trim() : null;
+        const normalizedContextType = typeof context_type === 'string' && context_type.trim() ? context_type.trim() : null;
 
         const result = db
             .prepare(
                 `
-            INSERT INTO tasks (title, description, status, priority, due_date, tags, blocked_reason, assigned_to, position, project_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (
+                title, description, status, priority, due_date, 
+                tags, blocked_reason, assigned_to, position, project_id,
+                context_key, context_type
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
             )
-            .run(title, description, status, priority, normalizedDueDate, tagsJson, normalizedBlockedReason, assigned_to, resolvedPosition, resolvedProjectId);
+            .run(
+                title, description, status, priority, normalizedDueDate, 
+                tagsJson, normalizedBlockedReason, assigned_to, resolvedPosition, resolvedProjectId,
+                normalizedContextKey, normalizedContextType
+            );
 
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
 
@@ -159,7 +181,11 @@ router.post('/', (req, res) => {
 // Update task
 router.patch('/:id', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status, priority, due_date, assigned_to, position, archived_at, tags, blocked_reason } = req.body;
+    const { 
+        title, description, status, priority, due_date, 
+        assigned_to, position, archived_at, tags, blocked_reason,
+        context_key, context_type
+    } = req.body;
 
     const updates = [];
     const params = [];
@@ -212,6 +238,14 @@ router.patch('/:id', (req, res) => {
     if (req.body.project_id !== undefined) {
         updates.push('project_id = ?');
         params.push(req.body.project_id != null ? Number(req.body.project_id) : null);
+    }
+    if (context_key !== undefined) {
+        updates.push('context_key = ?');
+        params.push(typeof context_key === 'string' && context_key.trim() ? context_key.trim() : null);
+    }
+    if (context_type !== undefined) {
+        updates.push('context_type = ?');
+        params.push(typeof context_type === 'string' && context_type.trim() ? context_type.trim() : null);
     }
 
     if (updates.length === 0) {

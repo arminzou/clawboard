@@ -30,6 +30,8 @@ type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 
 type TagFilter = 'all' | (string & {});
 
+type ContextFilter = 'all' | 'current' | (string & {});
+
 type SavedView = {
   id: string;
   name: string;
@@ -140,6 +142,17 @@ export function KanbanPageV2({
       return 'all';
     }
   });
+
+  const [context, setContext] = useState<ContextFilter>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.context') ?? 'all';
+      return (raw?.trim() ? raw.trim() : 'all') as ContextFilter;
+    } catch {
+      return 'all';
+    }
+  });
+
+  const [currentContextKey, setCurrentContextKey] = useState<string | null>(null);
 
   const [assignee, setAssignee] = useState<AssigneeFilter>(() => {
     try {
@@ -411,6 +424,25 @@ export function KanbanPageV2({
 
   useEffect(() => {
     try {
+      window.localStorage.setItem('cb.v2.kanban.context', context);
+    } catch {
+      // ignore
+    }
+  }, [context]);
+
+  // Fetch current context key when project changes
+  useEffect(() => {
+    if (!currentProjectId) {
+      setCurrentContextKey(null);
+      return;
+    }
+    api.getProjectContext(currentProjectId)
+      .then((ctx) => setCurrentContextKey(ctx.key))
+      .catch(() => setCurrentContextKey(null));
+  }, [currentProjectId]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem('cb.v2.kanban.assignee', assignee);
     } catch {
       // ignore
@@ -655,6 +687,12 @@ export function KanbanPageV2({
       if (hideDone && t.status === 'done') return false;
       if (blocked && !t.blocked_reason) return false;
 
+      // Context filtering
+      if (context !== 'all' && currentContextKey) {
+        const taskContext = t.context_key ?? null;
+        if (context === 'current' && taskContext !== currentContextKey) return false;
+      }
+
       if (due !== 'any') {
         const dueAt = parseDueDate(String(t.due_date ?? '').trim());
         const hasDue = !!dueAt;
@@ -678,7 +716,7 @@ export function KanbanPageV2({
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, tag, hideDone, q, tasks, due]);
+  }, [assignee, tag, hideDone, q, tasks, due, context, currentContextKey]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
@@ -783,6 +821,9 @@ export function KanbanPageV2({
         await api.archiveDone(body);
         await refresh();
       }}
+      context={context}
+      onContext={setContext}
+      currentContextKey={currentContextKey}
       onReset={() => {
         setQ('');
         setAssignee('all');
@@ -792,6 +833,7 @@ export function KanbanPageV2({
         setShowArchived(false);
         setDue('any');
         setTag('all');
+        setContext('all');
       }}
       onMyTasks={() => {
         // Switch to all projects and filter by tee
@@ -802,6 +844,7 @@ export function KanbanPageV2({
         setBlocked(false);
         setDue('any');
         setTag('all');
+        setContext('all');
         setQ('');
       }}
       myTasksCount={tasks.filter((t) => t.assigned_to === 'tee' && t.status !== 'done').length}

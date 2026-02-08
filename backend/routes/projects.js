@@ -249,4 +249,32 @@ router.get('/stats/summary', (req, res) => {
   }
 });
 
+/**
+ * GET /api/projects/:id/context
+ * Get current git context (branch/worktree) for the project.
+ */
+router.get('/:id/context', (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { getGitContext } = require('../utils/gitContext');
+
+  try {
+    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (!project.path) {
+      return res.json({ key: null, type: null });
+    }
+
+    const absPath = path.resolve(PROJECTS_DIR, project.path);
+    const context = getGitContext(absPath);
+    res.json(context);
+  } catch (err) {
+    console.error('Failed to get project context:', err);
+    res.status(500).json({ error: 'Failed to get project context' });
+  }
+});
+
 module.exports = router;

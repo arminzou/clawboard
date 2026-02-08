@@ -234,11 +234,11 @@ Support for multi-worktree and branch-based workflows within a single project.
 - [x] VS Code debug configuration (full-stack: backend + frontend)
 - [x] Database unification (`clawboard.db` in `data/` directory)
 
-**Phase 2: Context Filtering (Todo)**
-- [ ] Backend: Update Task API to accept and return context fields
-- [ ] Backend: Implement Context Discovery helper (detect current branch/worktree)
-- [ ] Frontend: "Context Filter" dropdown in Project View (Current vs. Global)
-- [ ] Frontend: Context badges on task cards (e.g., `[ui]`, `[feat/api]`)
+**Phase 2: Context Filtering (Complete)**
+- [x] Backend: Update Task API to accept and return context fields (#65)
+- [x] Backend: Implement Context Discovery helper (detect current branch/worktree)
+- [x] Frontend: "Context Filter" dropdown in Project View (Current vs. Global) (#66)
+- [x] Frontend: Context badges on task cards (e.g., `[ui]`, `[feat/api]`) (#66)
 
 ---
 

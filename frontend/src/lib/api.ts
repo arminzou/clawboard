@@ -18,6 +18,8 @@ export interface Task {
   position: number;
   archived_at?: string | null;
   project_id: number | null;
+  context_key?: string | null;
+  context_type?: string | null;
 }
 
 export interface Activity {
@@ -113,12 +115,21 @@ export const api = {
     return json<{ status: string; timestamp: string }>(await fetch(withBase('/api/health'), { headers: authHeaders() }));
   },
 
-  async listTasks(params?: { status?: TaskStatus; assigned_to?: string; include_archived?: boolean; project_id?: number }) {
+  async listTasks(params?: { 
+    status?: TaskStatus; 
+    assigned_to?: string; 
+    include_archived?: boolean; 
+    project_id?: number;
+    context_key?: string;
+    context_type?: string;
+  }) {
     const usp = new URLSearchParams();
     if (params?.status) usp.set('status', params.status);
     if (params?.assigned_to) usp.set('assigned_to', params.assigned_to);
     if (params?.include_archived) usp.set('include_archived', '1');
     if (params?.project_id) usp.set('project_id', String(params.project_id));
+    if (params?.context_key) usp.set('context_key', params.context_key);
+    if (params?.context_type) usp.set('context_type', params.context_type);
     const url = `${withBase('/api/tasks')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Task[]>(await fetch(url, { headers: authHeaders() }));
   },
@@ -134,7 +145,7 @@ export const api = {
   },
 
   async createTask(
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'project_id'>> & { title: string },
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'project_id' | 'context_key' | 'context_type'>> & { title: string },
   ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
@@ -147,7 +158,7 @@ export const api = {
 
   async updateTask(
     id: number,
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'archived_at'>>,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'archived_at' | 'context_key' | 'context_type'>>,
   ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
@@ -271,5 +282,11 @@ export const api = {
 
   async getSummaryStats() {
     return json<SummaryStats>(await fetch(withBase('/api/projects/stats/summary'), { headers: authHeaders() }));
+  },
+
+  async getProjectContext(id: number) {
+    return json<{ key: string | null; type: 'branch' | 'worktree' | null }>(
+      await fetch(withBase(`/api/projects/${id}/context`), { headers: authHeaders() }),
+    );
   },
 };

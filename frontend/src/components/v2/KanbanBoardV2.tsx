@@ -531,6 +531,13 @@ const TaskCardV2 = memo(
         <div className="mt-3 flex flex-col gap-1.5">
           <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
           <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
+          {task.context_key ? (
+            <MetaRow 
+              icon={<span className="text-[10px] font-bold opacity-70">CTX</span>} 
+              label={task.context_type ?? 'context'} 
+              value={task.context_key} 
+            />
+          ) : null}
           {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
           {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
           <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />

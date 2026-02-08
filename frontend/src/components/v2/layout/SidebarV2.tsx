@@ -10,6 +10,8 @@ type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 
 type TagFilter = 'all' | (string & {});
 
+type ContextFilter = 'all' | 'current' | (string & {});
+
 type SavedView = {
   id: string;
   name: string;
@@ -103,6 +105,10 @@ export function SidebarV2({
 
   onArchiveDone: () => void | Promise<void>;
 
+  context: ContextFilter;
+  onContext: (v: ContextFilter) => void;
+  currentContextKey: string | null;
+
   onReset: () => void;
 
   onMyTasks?: () => void;
@@ -111,6 +117,7 @@ export function SidebarV2({
   // Count active filters (non-default values)
   const activeFilterCount = [
     assignee !== 'all',
+    context !== 'all',
     hideDone,
     blocked,
     due !== 'any',
@@ -365,6 +372,11 @@ export function SidebarV2({
                       #{tag}
                     </span>
                   )}
+                  {context !== 'all' && (
+                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                      Context: {context === 'current' ? currentContextKey || 'current' : context}
+                    </span>
+                  )}
                 </div>
               )}
               <label className="mt-2 text-sm">
@@ -409,6 +421,19 @@ export function SidebarV2({
                   ))}
                 </Select>
               </label>
+
+              {currentContextKey && (
+                <label className="mt-2 text-sm">
+                  <div className="mb-1 text-xs font-medium text-slate-600">Context (branch/worktree)</div>
+                  <Select
+                    value={context}
+                    onChange={(e) => onContext((e.target.value || 'all') as ContextFilter)}
+                  >
+                    <option value="all">All contexts</option>
+                    <option value="current">Current: {currentContextKey}</option>
+                  </Select>
+                </label>
+              )}
 
               <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
                 <span>Hide done</span>
