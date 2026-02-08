@@ -740,6 +740,18 @@ export function KanbanPageV2({
         setDue('any');
         setTag('all');
       }}
+      onMyTasks={() => {
+        // Switch to all projects and filter by tee
+        setCurrentProjectId(null);
+        setAssignee('tee');
+        setView('all');
+        setHideDone(false);
+        setBlocked(false);
+        setDue('any');
+        setTag('all');
+        setQ('');
+      }}
+      myTasksCount={tasks.filter((t) => t.assigned_to === 'tee' && t.status !== 'done').length}
     />
   );
 

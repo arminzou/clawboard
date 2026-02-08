@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ChevronDown, Folder } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Folder, User } from 'lucide-react';
 import { useState } from 'react';
 import type { TaskStatus, Project } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
@@ -51,6 +51,8 @@ export function SidebarV2({
   onShowArchived,
   onArchiveDone,
   onReset,
+  onMyTasks,
+  myTasksCount,
 }: {
   projectName: string;
   projects?: Project[];
@@ -100,6 +102,9 @@ export function SidebarV2({
   onArchiveDone: () => void | Promise<void>;
 
   onReset: () => void;
+
+  onMyTasks?: () => void;
+  myTasksCount?: number;
 }) {
   // Count active filters (non-default values)
   const activeFilterCount = [
@@ -207,6 +212,24 @@ export function SidebarV2({
             </button>
           </div>
         </div>
+
+        {onMyTasks && (
+          <button
+            type="button"
+            className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+            onClick={onMyTasks}
+          >
+            <span className="flex items-center gap-2">
+              <User size={16} />
+              <span>My Tasks</span>
+            </span>
+            {myTasksCount !== undefined && (
+              <Chip variant="strong" className="bg-indigo-200 text-indigo-800">
+                {myTasksCount}
+              </Chip>
+            )}
+          </button>
+        )}
 
         <div className="mt-4">
           <button
