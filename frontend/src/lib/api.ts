@@ -256,6 +256,15 @@ export const api = {
     );
   },
 
+  async deleteProject(id: number, cleanupTasks = false) {
+    return json<{ success: boolean; message: string }>(
+      await fetch(withBase(`/api/projects/${id}?cleanupTasks=${cleanupTasks}`), {
+        method: 'DELETE',
+        headers: authHeaders(),
+      }),
+    );
+  },
+
   async getProjectStats(id: number) {
     return json<ProjectStats>(await fetch(withBase(`/api/projects/${id}/stats`), { headers: authHeaders() }));
   },

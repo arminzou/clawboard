@@ -59,7 +59,7 @@ export function KanbanPageV2({
   const navigate = useNavigate();
 
   // Project management
-  const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProjects();
+  const { projects, currentProjectId, currentProject, setCurrentProjectId, refresh: refreshProjects } = useProjects();
 
   // Sync URL with project state
   useEffect(() => {
@@ -290,6 +290,13 @@ export function KanbanPageV2({
     setLoading(true);
     setError(null);
     try {
+      // Trigger project discovery first
+      await api.discoverProjects();
+      
+      // Refresh project list
+      await refreshProjects();
+      
+      // Then refresh tasks
       const params: { include_archived?: boolean; project_id?: number } = { include_archived: showArchived };
       if (currentProjectId) {
         params.project_id = currentProjectId;
@@ -703,6 +710,23 @@ export function KanbanPageV2({
     return baseFiltered.filter((t) => t.status === view);
   }, [baseFiltered, view]);
 
+  const handleDeleteProject = useCallback(async (id: number) => {
+    try {
+      await api.deleteProject(id, false); // false = unlink tasks, don't delete them
+      // Switch to "All Projects" if we just deleted the current project
+      if (currentProjectId === id) {
+        setCurrentProjectId(null);
+        navigate('/');
+      }
+      // Refresh project list
+      await refreshProjects();
+      toast.success('Project deleted');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to delete project: ${msg}`);
+    }
+  }, [currentProjectId, setCurrentProjectId, navigate, refreshProjects]);
+
   const projectName = currentProject?.name ?? (currentProjectId === null ? 'All Projects' : 'Clawboard');
   const boardName = 'Tasks';
 
@@ -720,6 +744,7 @@ export function KanbanPageV2({
       projects={projects}
       currentProjectId={currentProjectId}
       onProjectChange={handleProjectChange}
+      onDeleteProject={handleDeleteProject}
       collapsed={sidebarCollapsed}
       onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       viewsOpen={viewsOpen}

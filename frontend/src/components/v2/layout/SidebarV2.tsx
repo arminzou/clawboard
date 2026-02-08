@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ChevronDown, Folder, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { TaskStatus, Project } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
@@ -20,6 +20,7 @@ export function SidebarV2({
   projects,
   currentProjectId,
   onProjectChange,
+  onDeleteProject,
   collapsed,
   onToggleCollapsed,
   viewsOpen,
@@ -58,6 +59,7 @@ export function SidebarV2({
   projects?: Project[];
   currentProjectId?: number | null;
   onProjectChange?: (id: number | null) => void;
+  onDeleteProject?: (id: number) => void | Promise<void>;
 
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -172,25 +174,46 @@ export function SidebarV2({
                       </button>
                       <div className="my-1 border-t border-slate-100" />
                       {projects.map((p) => (
-                        <button
+                        <div
                           key={p.id}
-                          type="button"
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                          className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
                             currentProjectId === p.id ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
                           }`}
-                          onClick={() => {
-                            onProjectChange(p.id);
-                            setProjectMenuOpen(false);
-                          }}
                         >
-                          <span
-                            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
-                            style={{ backgroundColor: p.color || '#6366f1' }}
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                            onClick={() => {
+                              onProjectChange(p.id);
+                              setProjectMenuOpen(false);
+                            }}
                           >
-                            <Folder size={10} className="text-white" />
-                          </span>
-                          <span className="truncate">{p.name}</span>
-                        </button>
+                            <span
+                              className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+                              style={{ backgroundColor: p.color || '#6366f1' }}
+                            >
+                              <Folder size={10} className="text-white" />
+                            </span>
+                            <span className="truncate">{p.name}</span>
+                          </button>
+                          {onDeleteProject && (
+                            <button
+                              type="button"
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const ok = window.confirm(`Delete project "${p.name}"? This will unlink all associated tasks.`);
+                                if (ok) {
+                                  onDeleteProject(p.id);
+                                  setProjectMenuOpen(false);
+                                }
+                              }}
+                              title={`Delete project "${p.name}"`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </>

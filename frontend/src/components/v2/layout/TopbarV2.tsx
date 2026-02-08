@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react';
 import type { RefObject } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -21,7 +22,7 @@ export function TopbarV2({
   onQ: (v: string) => void;
   searchRef: RefObject<HTMLInputElement | null>;
   onCreate: () => void;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
 }) {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -85,8 +86,8 @@ export function TopbarV2({
             + Add
           </Button>
 
-          <Button variant="secondary" onClick={onRefresh} title="Refresh">
-            ⟳
+          <Button variant="secondary" onClick={onRefresh} title="Refresh (⟳)" className="p-2">
+            <RefreshCw size={18} />
           </Button>
         </div>
       </div>

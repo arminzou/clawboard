@@ -5,7 +5,7 @@ const path = require('path');
 const router = express.Router();
 
 // Workspace projects directory (relative to backend)
-const PROJECTS_DIR = path.resolve(__dirname, '../../../');
+const PROJECTS_DIR = path.resolve(__dirname, '../../../../');
 
 /**
  * GET /api/projects
@@ -48,54 +48,10 @@ router.get('/:id', (req, res) => {
  */
 router.post('/discover', (req, res) => {
   const db = req.app.locals.db;
+  const { syncProjects } = require('../utils/syncProjects');
 
   try {
-    // Read existing projects from DB
-    const existing = db.prepare('SELECT slug, path FROM projects').all();
-    const existingSlugs = new Set(existing.map((p) => p.slug));
-
-    // Scan projects directory
-    const projectsPath = path.join(PROJECTS_DIR, 'projects');
-    if (!fs.existsSync(projectsPath)) {
-      return res.json({ discovered: 0, total: existing.length, message: 'Projects directory not found' });
-    }
-
-    const entries = fs.readdirSync(projectsPath, { withFileTypes: true });
-    const dirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith('.'));
-
-    const insertStmt = db.prepare(`
-      INSERT INTO projects (name, slug, path, description, icon, color)
-      VALUES (?, ?, ?, ?, 'folder', '#6366f1')
-    `);
-
-    let discovered = 0;
-    for (const dir of dirs) {
-      const slug = dir.name;
-      if (existingSlugs.has(slug)) continue;
-
-      const dirPath = `projects/${slug}`;
-      const name = slug
-        .split(/[-_]/)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
-
-      // Check for README to get description
-      let description = '';
-      const readmePath = path.join(projectsPath, slug, 'README.md');
-      if (fs.existsSync(readmePath)) {
-        try {
-          const content = fs.readFileSync(readmePath, 'utf8');
-          const firstLine = content.split('\n').find((l) => l.trim() && !l.startsWith('#'));
-          if (firstLine) description = firstLine.trim().slice(0, 200);
-        } catch {
-          // ignore
-        }
-      }
-
-      insertStmt.run(name, slug, dirPath, description);
-      discovered++;
-    }
-
+    const { discovered } = syncProjects(db);
     const total = db.prepare('SELECT COUNT(*) as count FROM projects').get().count;
     res.json({ discovered, total });
   } catch (err) {
@@ -153,6 +109,41 @@ router.patch('/:id', (req, res) => {
   } catch (err) {
     console.error('Failed to update project:', err);
     res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+/**
+ * DELETE /api/projects/:id
+ * Remove a project and optionally cleanup its tasks.
+ * query param: cleanupTasks=true
+ */
+router.delete('/:id', (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const cleanupTasks = req.query.cleanupTasks === 'true';
+
+  try {
+    db.transaction(() => {
+      if (cleanupTasks) {
+        // Option A: Delete related tasks entirely
+        db.prepare('DELETE FROM tasks WHERE project_id = ?').run(id);
+      } else {
+        // Option B: Unlink tasks (set project_id to NULL) so they remain in "All Projects"
+        db.prepare('UPDATE tasks SET project_id = NULL WHERE project_id = ?').run(id);
+      }
+
+      // Delete the project entry
+      const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+      
+      if (result.changes === 0) {
+        throw new Error('Project not found');
+      }
+    })();
+
+    res.json({ success: true, message: cleanupTasks ? 'Project and tasks deleted' : 'Project removed, tasks unlinked' });
+  } catch (err) {
+    console.error('Failed to delete project:', err);
+    res.status(err.message === 'Project not found' ? 404 : 500).json({ error: err.message });
   }
 });
 
