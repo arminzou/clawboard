@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type Project } from '../lib/api';
+import { useWebSocket } from './useWebSocket';
+import { toast } from '../lib/toast';
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -20,7 +22,7 @@ export function useProjects() {
     setCurrentProjectIdState(id);
   }, []);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -31,11 +33,26 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
+
+  // Listen for WebSocket updates
+  useWebSocket({
+    onMessage: (msg) => {
+      if (msg.type === 'projects_updated') {
+        console.log('[useProjects] Received projects_updated event, refreshing...', msg.data);
+        const data = msg.data as { discovered?: number };
+        const discovered = data?.discovered ?? 0;
+        if (discovered > 0) {
+          toast.success(`${discovered} new project${discovered > 1 ? 's' : ''} discovered`);
+        }
+        refresh();
+      }
+    },
+  });
 
   useEffect(() => {
     try {

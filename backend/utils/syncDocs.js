@@ -4,7 +4,7 @@ const Database = require('better-sqlite3');
 const { getGitStatusMap } = require('./gitStatus');
 
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || path.resolve(__dirname, '../../..');
-const DB_PATH = path.join(__dirname, '../../data/tasks.db');
+const DB_PATH = path.join(__dirname, '../../data/clawboard.db');
 
 function walk(dir, fileList = []) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

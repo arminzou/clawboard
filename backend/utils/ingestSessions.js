@@ -28,7 +28,7 @@ function inferAgentFromPath(p) {
 }
 
 function ingestSessions({ agents = DEFAULT_AGENTS } = {}) {
-  const dbPath = path.join(__dirname, '../../data/tasks.db');
+  const dbPath = path.join(__dirname, '../../data/clawboard.db');
   const db = new Database(dbPath);
 
   // Ensure schema migrations applied

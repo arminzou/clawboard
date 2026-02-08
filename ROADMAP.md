@@ -217,13 +217,24 @@ Transform Clawboard into a central dashboard for all workspace projects.
 - [x] URL routing: `/`, `/project/:id`, `/activity`, `/docs` (React Router)
 - [ ] Stats display widget in UI (optional, API ready)
 
-### Milestone J — Contextual Task Management (Worktrees & Branches)
+### Milestone J — Contextual Task Management (Worktrees & Branches) ✅
 
 Support for multi-worktree and branch-based workflows within a single project.
 
+**Phase 1: Infrastructure (Complete)**
 - [x] Database schema migration (v6):
     - [x] Add `context_key` (path/branch) and `context_type` (worktree/branch) to `tasks`
 - [x] Refine Project Discovery (ignore folders with `.git` files to avoid worktree duplication)
+- [x] Backend: `syncProjects` utility for automatic workspace scanning
+- [x] Backend: Auto-sync integration (runs every 10s, scans workspace for new projects)
+- [x] Backend: WebSocket broadcasting on project discovery
+- [x] Frontend: `useProjects` hook with real-time WebSocket updates
+- [x] Frontend: Refresh button triggers manual discovery
+- [x] Frontend: Delete project button with confirmation
+- [x] VS Code debug configuration (full-stack: backend + frontend)
+- [x] Database unification (`clawboard.db` in `data/` directory)
+
+**Phase 2: Context Filtering (Todo)**
 - [ ] Backend: Update Task API to accept and return context fields
 - [ ] Backend: Implement Context Discovery helper (detect current branch/worktree)
 - [ ] Frontend: "Context Filter" dropdown in Project View (Current vs. Global)

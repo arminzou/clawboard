@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '127.0.0.1';
 
 // Database setup
-const DB_PATH = path.join(__dirname, '../data/tasks.db');
+const DB_PATH = path.join(__dirname, '../data/clawboard.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL'); // Better performance for concurrent reads/writes
 
@@ -152,7 +152,7 @@ server.listen(PORT, HOST, () => {
     if (String(process.env.AUTO_SYNC || '').toLowerCase() === '1' || String(process.env.AUTO_SYNC || '').toLowerCase() === 'true') {
         const intervalMs = Number(process.env.SYNC_INTERVAL_MS || 60_000);
         const { createAutoSync } = require('./utils/autoSync');
-        const auto = createAutoSync({ intervalMs, log: console });
+        const auto = createAutoSync({ intervalMs, log: console, db, broadcast: app.locals.broadcast });
         app.locals.autoSync = auto;
         console.log(`🔁 Auto-sync enabled (every ${intervalMs}ms)\n`);
     } else {
