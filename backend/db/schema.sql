@@ -15,7 +15,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
     position INTEGER DEFAULT 0, -- for ordering within columns
-    archived_at DATETIME
+    archived_at DATETIME,
+    project_id INTEGER,
+    context_key TEXT, -- e.g., 'projects/clawboard-ui-polish' or 'feature/branch-name'
+    context_type TEXT, -- 'worktree' or 'branch'
+    FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at);

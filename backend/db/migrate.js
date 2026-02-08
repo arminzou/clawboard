@@ -74,17 +74,23 @@ function migrate(db) {
     db.pragma('user_version = 5');
   }
 
-  // 4 -> 5: add tasks.blocked_reason
-  if (v < 5) {
-    const hasBlockedReason = db
-      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='blocked_reason'")
+  // 5 -> 6: add tasks.context_key and tasks.context_type for worktree/branch support
+  if (v < 6) {
+    const hasContextKey = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='context_key'")
       .get();
-
-    if (!hasBlockedReason) {
-      db.exec('ALTER TABLE tasks ADD COLUMN blocked_reason TEXT');
+    if (!hasContextKey) {
+      db.exec('ALTER TABLE tasks ADD COLUMN context_key TEXT');
     }
 
-    db.pragma('user_version = 5');
+    const hasContextType = db
+      .prepare("SELECT 1 FROM pragma_table_info('tasks') WHERE name='context_type'")
+      .get();
+    if (!hasContextType) {
+      db.exec('ALTER TABLE tasks ADD COLUMN context_type TEXT');
+    }
+
+    db.pragma('user_version = 6');
   }
 
   // Keep schema.sql aligned for fresh init
