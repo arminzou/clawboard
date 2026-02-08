@@ -209,6 +209,10 @@ router.patch('/:id', (req, res) => {
         updates.push('archived_at = ?');
         params.push(archived_at);
     }
+    if (req.body.project_id !== undefined) {
+        updates.push('project_id = ?');
+        params.push(req.body.project_id != null ? Number(req.body.project_id) : null);
+    }
 
     if (updates.length === 0) {
         return res.status(400).json({ error: 'No fields to update' });
