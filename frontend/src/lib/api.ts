@@ -17,6 +17,7 @@ export interface Task {
   completed_at: string | null;
   position: number;
   archived_at?: string | null;
+  project_id: number | null;
 }
 
 export interface Activity {
@@ -38,6 +39,18 @@ export interface Document {
   last_modified_by: string | null;
   size_bytes: number | null;
   git_status: string | null;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  slug: string;
+  path: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DocsStats {
@@ -75,11 +88,12 @@ export const api = {
     return json<{ status: string; timestamp: string }>(await fetch(withBase('/api/health'), { headers: authHeaders() }));
   },
 
-  async listTasks(params?: { status?: TaskStatus; assigned_to?: string; include_archived?: boolean }) {
+  async listTasks(params?: { status?: TaskStatus; assigned_to?: string; include_archived?: boolean; project_id?: number }) {
     const usp = new URLSearchParams();
     if (params?.status) usp.set('status', params.status);
     if (params?.assigned_to) usp.set('assigned_to', params.assigned_to);
     if (params?.include_archived) usp.set('include_archived', '1');
+    if (params?.project_id) usp.set('project_id', String(params.project_id));
     const url = `${withBase('/api/tasks')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Task[]>(await fetch(url, { headers: authHeaders() }));
   },
@@ -95,7 +109,7 @@ export const api = {
   },
 
   async createTask(
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position'>> & { title: string },
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'project_id'>> & { title: string },
   ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
@@ -184,6 +198,33 @@ export const api = {
     return json<Document>(
       await fetch(withBase('/api/docs/sync'), {
         method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async listProjects() {
+    return json<Project[]>(await fetch(withBase('/api/projects'), { headers: authHeaders() }));
+  },
+
+  async discoverProjects() {
+    return json<{ discovered: number; total: number }>(
+      await fetch(withBase('/api/projects/discover'), {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    );
+  },
+
+  async getProject(id: number) {
+    return json<Project>(await fetch(withBase(`/api/projects/${id}`), { headers: authHeaders() }));
+  },
+
+  async updateProject(id: number, body: Partial<Pick<Project, 'name' | 'description' | 'icon' | 'color'>>) {
+    return json<Project>(
+      await fetch(withBase(`/api/projects/${id}`), {
+        method: 'PATCH',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       }),

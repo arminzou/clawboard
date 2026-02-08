@@ -113,7 +113,7 @@ router.get('/:id', (req, res) => {
 // Create task
 router.post('/', (req, res) => {
     const db = req.app.locals.db;
-    const { title, description, status = 'backlog', priority, due_date, assigned_to, position, tags, blocked_reason } = req.body;
+    const { title, description, status = 'backlog', priority, due_date, assigned_to, position, tags, blocked_reason, project_id } = req.body;
 
     if (!title) {
         return res.status(400).json({ error: 'Title is required' });
@@ -134,15 +134,16 @@ router.post('/', (req, res) => {
         const normalizedTags = normalizeTags(tags);
         const tagsJson = normalizedTags === undefined ? null : JSON.stringify(normalizedTags);
         const normalizedBlockedReason = typeof blocked_reason === 'string' && blocked_reason.trim() ? blocked_reason.trim() : null;
+        const resolvedProjectId = project_id != null ? Number(project_id) : null;
 
         const result = db
             .prepare(
                 `
-            INSERT INTO tasks (title, description, status, priority, due_date, tags, blocked_reason, assigned_to, position)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (title, description, status, priority, due_date, tags, blocked_reason, assigned_to, position, project_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
             )
-            .run(title, description, status, priority, normalizedDueDate, tagsJson, normalizedBlockedReason, assigned_to, resolvedPosition);
+            .run(title, description, status, priority, normalizedDueDate, tagsJson, normalizedBlockedReason, assigned_to, resolvedPosition, resolvedProjectId);
 
         const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
 

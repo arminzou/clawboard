@@ -12,6 +12,7 @@ import { SidebarV2 } from './layout/SidebarV2';
 import { TopbarV2, type TopbarMode } from './layout/TopbarV2';
 import { TaskTableV2 } from './TaskTableV2';
 import { ToastContainer } from './ui/Toast';
+import { useProjects } from '../../hooks/useProjects';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -52,6 +53,9 @@ export function KanbanPageV2({
   openTaskId?: number | null;
   onOpenTaskConsumed?: () => void;
 }) {
+  // Project management
+  const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProjects();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const tasksRef = useRef<Task[]>([]);
 
@@ -258,7 +262,11 @@ export function KanbanPageV2({
     setLoading(true);
     setError(null);
     try {
-      const all = await api.listTasks({ include_archived: showArchived });
+      const params: { include_archived?: boolean; project_id?: number } = { include_archived: showArchived };
+      if (currentProjectId) {
+        params.project_id = currentProjectId;
+      }
+      const all = await api.listTasks(params);
       setTasks(all);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -271,7 +279,7 @@ export function KanbanPageV2({
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showArchived]);
+  }, [showArchived, currentProjectId]);
 
   useEffect(() => {
     tasksRef.current = tasks;
@@ -667,7 +675,7 @@ export function KanbanPageV2({
     return baseFiltered.filter((t) => t.status === view);
   }, [baseFiltered, view]);
 
-  const projectName = 'Clawboard';
+  const projectName = currentProject?.name ?? (currentProjectId === null ? 'All Projects' : 'Clawboard');
   const boardName = 'Tasks';
 
   const viewItems = useMemo(
@@ -681,6 +689,9 @@ export function KanbanPageV2({
   const sidebar = (
     <SidebarV2
       projectName={projectName}
+      projects={projects}
+      currentProjectId={currentProjectId}
+      onProjectChange={setCurrentProjectId}
       collapsed={sidebarCollapsed}
       onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       viewsOpen={viewsOpen}
@@ -829,6 +840,7 @@ export function KanbanPageV2({
                   status,
                   assigned_to: assignedTo,
                   position: maxPos + 1,
+                  project_id: currentProjectId ?? undefined,
                 });
                 await refresh();
               }}
@@ -885,7 +897,7 @@ export function KanbanPageV2({
                     .filter(Boolean)
                 : body.tags;
 
-            await api.createTask({ ...body, tags: normalizedTags });
+            await api.createTask({ ...body, tags: normalizedTags, project_id: currentProjectId ?? undefined });
             setCreateOpen(false);
             setCreatePrefill(null);
             await refresh();

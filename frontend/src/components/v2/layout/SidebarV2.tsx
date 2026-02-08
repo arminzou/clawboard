@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Folder } from 'lucide-react';
 import { useState } from 'react';
-import type { TaskStatus } from '../../../lib/api';
+import type { TaskStatus, Project } from '../../../lib/api';
 import { Chip } from '../ui/Chip';
 import { Select } from '../ui/Select';
 
@@ -17,6 +17,9 @@ type SavedView = {
 
 export function SidebarV2({
   projectName,
+  projects,
+  currentProjectId,
+  onProjectChange,
   collapsed,
   onToggleCollapsed,
   viewsOpen,
@@ -50,6 +53,9 @@ export function SidebarV2({
   onReset,
 }: {
   projectName: string;
+  projects?: Project[];
+  currentProjectId?: number | null;
+  onProjectChange?: (id: number | null) => void;
 
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -121,13 +127,73 @@ export function SidebarV2({
     );
   }
 
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+
   return (
     <aside className="h-full w-full border-slate-200 bg-white lg:w-72 lg:border-r">
       <div className="px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Project</div>
-            <div className="mt-1 truncate text-base font-semibold text-slate-900">{projectName}</div>
+            {projects && projects.length > 1 && onProjectChange ? (
+              <div className="relative mt-1">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                  onClick={() => setProjectMenuOpen((v) => !v)}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Folder size={16} className="shrink-0 text-slate-400" />
+                    <span className="truncate">{projectName}</span>
+                  </span>
+                  <ChevronDown size={14} className={`shrink-0 text-slate-400 transition ${projectMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {projectMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setProjectMenuOpen(false)} />
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                      <button
+                        type="button"
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                          currentProjectId === null ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                        onClick={() => {
+                          onProjectChange(null);
+                          setProjectMenuOpen(false);
+                        }}
+                      >
+                        <Folder size={16} className="shrink-0 text-slate-400" />
+                        <span>All Projects</span>
+                      </button>
+                      <div className="my-1 border-t border-slate-100" />
+                      {projects.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                            currentProjectId === p.id ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                          onClick={() => {
+                            onProjectChange(p.id);
+                            setProjectMenuOpen(false);
+                          }}
+                        >
+                          <span
+                            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+                            style={{ backgroundColor: p.color || '#6366f1' }}
+                          >
+                            <Folder size={10} className="text-white" />
+                          </span>
+                          <span className="truncate">{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="mt-1 truncate text-base font-semibold text-slate-900">{projectName}</div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
