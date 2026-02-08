@@ -185,6 +185,9 @@ export const api = {
       tags: task.tags,
       blocked_reason: task.blocked_reason ?? undefined,
       assigned_to: task.assigned_to,
+      project_id: task.project_id ?? undefined,
+      context_key: task.context_key ?? undefined,
+      context_type: task.context_type ?? undefined,
     });
   },
 
