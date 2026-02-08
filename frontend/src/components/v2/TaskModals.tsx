@@ -221,13 +221,60 @@ export function EditTaskModal({
           className="w-full p-4 shadow-[var(--cb-shadow-md)]"
         >
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="flex-1">
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Edit task #{task.id}</div>
             <div className="text-xs text-[rgb(var(--cb-text-muted))]">Status: {status}</div>
           </div>
-          <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
-            ✕
-          </Button>
+          
+          <div className="flex items-center gap-1 -mr-1 -mt-1">
+            {onDuplicate ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={saving || deleting || duplicating}
+                onClick={async () => {
+                  setDuplicating(true);
+                  try {
+                    await onDuplicate();
+                  } finally {
+                    setDuplicating(false);
+                  }
+                }}
+                title="Duplicate task"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                </svg>
+              </Button>
+            ) : null}
+
+            <Button
+              variant="ghost-danger"
+              size="icon"
+              disabled={saving || deleting || duplicating}
+              onClick={async () => {
+                const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
+                if (!ok) return;
+                setDeleting(true);
+                try {
+                  await onDelete();
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              title="Delete task"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </Button>
+
+            <div className="mx-1 h-4 w-px bg-[rgb(var(--cb-border))]" />
+
+            <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
+              ✕
+            </Button>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
@@ -322,51 +369,10 @@ export function EditTaskModal({
             </label>
           </div>
 
-          <div className="mt-2 flex justify-between gap-2">
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                disabled={saving || deleting || duplicating}
-                onClick={async () => {
-                  const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
-                  if (!ok) return;
-                  setDeleting(true);
-                  try {
-                    await onDelete();
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-              >
-                {deleting ? 'Deleting…' : 'Delete'}
-              </Button>
-
-              {onDuplicate ? (
-                <Button
-                  variant="secondary"
-                  disabled={saving || deleting || duplicating}
-                  onClick={async () => {
-                    setDuplicating(true);
-                    try {
-                      await onDuplicate();
-                    } finally {
-                      setDuplicating(false);
-                    }
-                  }}
-                >
-                  {duplicating ? 'Duplicating…' : 'Duplicate'}
-                </Button>
-              ) : null}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" disabled={saving || deleting || duplicating} onClick={onClose}>
-                Cancel
-              </Button>
-              <Button variant="primary" disabled={saving || deleting || duplicating} onClick={save}>
-                Save
-              </Button>
-            </div>
+          <div className="mt-6 flex items-center justify-end gap-2 border-t border-[rgb(var(--cb-border))] pt-4">
+            <Button variant="primary" className="w-full sm:w-auto" disabled={saving || deleting || duplicating} onClick={save}>
+              Save Changes
+            </Button>
           </div>
 
           <div className="text-[11px] text-[rgb(var(--cb-text-muted))]">

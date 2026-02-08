@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
-type Size = 'sm' | 'md';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ghost-danger';
+type Size = 'sm' | 'md' | 'icon';
 
 export function Button({
   variant = 'secondary',
@@ -18,21 +18,23 @@ export function Button({
   right?: ReactNode;
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.70)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]';
+    'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.70)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] active:scale-[0.98]';
 
   const sizes: Record<Size, string> = {
     sm: 'px-2.5 py-1.5 text-sm',
-    md: 'px-3 py-2 text-sm',
+    md: 'px-4 py-2 text-sm',
+    icon: 'h-9 w-9 p-0',
   };
 
   const variants: Record<Variant, string> = {
     primary:
       'bg-[rgb(var(--cb-accent))] text-[rgb(var(--cb-surface))] shadow-sm hover:bg-[rgb(var(--cb-accent)/0.92)]',
     secondary:
-      'border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] text-[rgb(var(--cb-text))] shadow-sm hover:bg-[rgb(var(--cb-surface-muted))]',
+      'border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] text-[rgb(var(--cb-text))] shadow-sm hover:bg-[rgb(var(--cb-border)/0.5)]',
     ghost: 'text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]',
     danger:
-      'border border-red-200 bg-[rgb(var(--cb-surface))] text-red-700 shadow-sm hover:bg-red-50',
+      'border border-red-200 bg-red-50/50 text-red-700 shadow-sm hover:bg-red-50 hover:border-red-300',
+    'ghost-danger': 'text-red-600 hover:bg-red-50',
   };
 
   return (
@@ -66,7 +68,7 @@ export function IconButton({
       title={label}
       aria-label={label}
       className={clsx(
-        'inline-flex h-10 w-10 items-center justify-center rounded-2xl transition disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex h-10 w-10 items-center justify-center rounded-2xl transition disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-surface)/0.70)]',
         active
           ? 'bg-[rgb(var(--cb-surface))] text-[rgb(var(--cb-accent))]'
