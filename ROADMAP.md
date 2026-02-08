@@ -212,7 +212,7 @@ Transform Clawboard into a central dashboard for all workspace projects.
 - [x] Project switcher in sidebar (functional dropdown with project list)
 - [x] Filter tasks by selected project
 - [x] "All Projects" view (cross-project aggregation)
-- [ ] Global "My Tasks" quick-access view
+- [x] Global "My Tasks" quick-access view (cross-project, shows count)
 - [ ] URL routing: `/project/:id/kanban` (requires React Router)
 - [ ] Project-specific stats/activities summary
 
