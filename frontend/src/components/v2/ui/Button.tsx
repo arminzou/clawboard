@@ -1,22 +1,22 @@
 import clsx from 'clsx';
+import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'ghost-danger';
 type Size = 'sm' | 'md' | 'icon';
 
-export function Button({
-  variant = 'secondary',
-  size = 'md',
-  left,
-  right,
-  className,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: Variant;
-  size?: Size;
-  left?: ReactNode;
-  right?: ReactNode;
-}) {
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: Variant;
+    size?: Size;
+    left?: ReactNode;
+    right?: ReactNode;
+  }
+>(function Button(
+  { variant = 'secondary', size = 'md', left, right, className, ...props },
+  ref,
+) {
   const base =
     'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.70)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))] active:scale-[0.98]';
 
@@ -40,6 +40,7 @@ export function Button({
   return (
     <button
       {...props}
+      ref={ref}
       className={clsx(base, sizes[size], variants[variant], className)}
       type={props.type ?? 'button'}
     >
@@ -48,7 +49,7 @@ export function Button({
       {right ? <span className="-mr-0.5">{right}</span> : null}
     </button>
   );
-}
+});
 
 export function IconButton({
   label,

@@ -4,6 +4,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Panel } from './ui/Panel';
 import { Select } from './ui/Select';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -165,6 +166,7 @@ export function EditTaskModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const save = useCallback(async () => {
     if (saving || deleting) return;
@@ -231,16 +233,7 @@ export function EditTaskModal({
               variant="ghost-danger"
               size="icon"
               disabled={saving || deleting || duplicating}
-              onClick={async () => {
-                const ok = window.confirm(`Delete task #${task.id}? This cannot be undone.`);
-                if (!ok) return;
-                setDeleting(true);
-                try {
-                  await onDelete();
-                } finally {
-                  setDeleting(false);
-                }
-              }}
+              onClick={() => setShowDeleteConfirm(true)}
               title="Delete task"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
@@ -361,6 +354,24 @@ export function EditTaskModal({
         </div>
         </Panel>
       </div>
+
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="Delete Task"
+          message={`Are you sure you want to delete task #${task.id}? This action cannot be undone.`}
+          confirmLabel={deleting ? 'Deleting...' : 'Delete Task'}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await onDelete();
+            } finally {
+              setDeleting(false);
+              setShowDeleteConfirm(false);
+            }
+          }}
+          onClose={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </ModalOverlay>
   );
 }

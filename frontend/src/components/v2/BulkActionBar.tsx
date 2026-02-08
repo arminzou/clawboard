@@ -1,7 +1,9 @@
 import clsx from 'clsx';
 import { Copy, Trash2, UserCheck, X, Workflow } from 'lucide-react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Assignee, TaskStatus } from '../../lib/api';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 type BulkActionBarProps = {
   count: number;
@@ -37,6 +39,7 @@ export function BulkActionBar({
   const [busy, setBusy] = useState(false);
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleAssign(value: string) {
     setShowAssignMenu(false);
@@ -59,14 +62,12 @@ export function BulkActionBar({
   }
 
   async function handleDelete() {
-    const ok = window.confirm(`Delete ${count} task${count === 1 ? '' : 's'}? This cannot be undone.`);
-    if (!ok) return;
-
     setBusy(true);
     try {
       await onBulkDelete();
     } finally {
       setBusy(false);
+      setShowDeleteConfirm(false);
     }
   }
 
@@ -178,11 +179,22 @@ export function BulkActionBar({
       <button
         type="button"
         className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
-        onClick={handleDelete}
+        onClick={() => setShowDeleteConfirm(true)}
       >
         <Trash2 size={16} />
         Delete
       </button>
+
+      {showDeleteConfirm && createPortal(
+        <ConfirmModal
+          title={`Delete ${count} Task${count === 1 ? '' : 's'}`}
+          message={`Are you sure you want to delete ${count} task${count === 1 ? '' : 's'}? This action cannot be undone.`}
+          confirmLabel={busy ? 'Deleting...' : `Delete ${count} Task${count === 1 ? '' : 's'}`}
+          onConfirm={handleDelete}
+          onClose={() => setShowDeleteConfirm(false)}
+        />,
+        document.body
+      )}
     </div>
   );
 }
