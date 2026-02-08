@@ -242,6 +242,61 @@ Support for multi-worktree and branch-based workflows within a single project.
 
 ---
 
+## Phase 9 — Real-time Collaboration (Planning)
+
+Enable multiple agents (Tee, Fay, Armin) to work on the same board with awareness of each other's activity.
+
+### Goals
+
+1. **Presence Awareness** — See who's currently viewing the board
+2. **Activity Indicators** — Know when someone is editing a task
+3. **Conflict Prevention** — Avoid stepping on each other's work
+4. **Seamless Sync** — Changes propagate instantly without refresh
+
+### Milestone K — Presence System
+
+- [ ] Backend: Track connected clients via WebSocket (`user_id`, `last_seen`, `current_view`)
+- [ ] Backend: Broadcast presence updates on connect/disconnect/navigation
+- [ ] Backend: API endpoint `GET /api/presence` (current viewers)
+- [ ] Frontend: Presence avatars in topbar (show who's online)
+- [ ] Frontend: "X is viewing this project" indicator in sidebar
+
+### Milestone L — Task Locking & Edit Indicators
+
+- [ ] Backend: Soft-lock mechanism (task `editing_by` field, auto-expires after 30s)
+- [ ] Backend: WebSocket event for lock acquire/release
+- [ ] Frontend: "Being edited by X" badge on task cards
+- [ ] Frontend: Warning modal when opening a locked task
+- [ ] Frontend: Auto-release lock on modal close or timeout
+
+### Milestone M — Enhanced Sync & Conflict Handling
+
+- [ ] Backend: Version/timestamp field on tasks for optimistic concurrency
+- [ ] Backend: Reject stale updates with 409 Conflict + current state
+- [ ] Frontend: Conflict resolution UI (show diff, choose version)
+- [ ] Frontend: Retry queue for failed updates during network hiccups
+
+### Milestone N — Agent-Specific Features
+
+- [ ] Agent identification in presence (Tee 🐱, Fay 🐱, Armin 👤)
+- [ ] Activity feed: "Tee moved #42 to In Progress" (already partially exists)
+- [ ] Agent task assignment quick-actions (one-click assign to self)
+- [ ] "Handoff" feature: Agent can flag a task for another agent's attention
+
+### Technical Considerations
+
+- **WebSocket Protocol**: Extend current WS messages with presence events
+- **Storage**: In-memory presence (Redis later if scaling needed)
+- **Heartbeat**: Clients ping every 15s to maintain presence; stale after 30s
+- **Conflict Window**: 30s soft-lock is long enough for quick edits, short enough to not block
+
+### Dependencies
+
+- Task #63 (Add WebSocket support) — *Already implemented in current codebase*
+- Stable user/agent identification — *Use `assigned_to` field convention*
+
+---
+
 ## Open Questions / Decisions
 
 - Status model: keep 4 columns vs introduce `blocked` (currently using `blocked_reason` field instead)
