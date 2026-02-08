@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
@@ -53,8 +54,35 @@ export function KanbanPageV2({
   openTaskId?: number | null;
   onOpenTaskConsumed?: () => void;
 }) {
+  // URL routing
+  const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
+  const navigate = useNavigate();
+
   // Project management
   const { projects, currentProjectId, currentProject, setCurrentProjectId } = useProjects();
+
+  // Sync URL with project state
+  useEffect(() => {
+    if (urlProjectId) {
+      const id = parseInt(urlProjectId, 10);
+      if (!Number.isNaN(id) && id !== currentProjectId) {
+        setCurrentProjectId(id);
+      }
+    } else if (currentProjectId !== null && urlProjectId === undefined) {
+      // On root path, show all projects
+      // Don't change state on initial load
+    }
+  }, [urlProjectId, currentProjectId, setCurrentProjectId]);
+
+  // Navigate when project changes from sidebar
+  const handleProjectChange = useCallback((id: number | null) => {
+    setCurrentProjectId(id);
+    if (id === null) {
+      navigate('/');
+    } else {
+      navigate(`/project/${id}`);
+    }
+  }, [setCurrentProjectId, navigate]);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const tasksRef = useRef<Task[]>([]);
@@ -691,7 +719,7 @@ export function KanbanPageV2({
       projectName={projectName}
       projects={projects}
       currentProjectId={currentProjectId}
-      onProjectChange={setCurrentProjectId}
+      onProjectChange={handleProjectChange}
       collapsed={sidebarCollapsed}
       onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       viewsOpen={viewsOpen}

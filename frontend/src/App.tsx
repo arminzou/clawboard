@@ -1,4 +1,5 @@
-import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Component, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { KanbanPageV2 } from './components/v2/KanbanPageV2';
 import { IconRailV2, type AppTabV2 } from './components/v2/layout/IconRailV2';
 import { AppShellV2 } from './components/v2/layout/AppShellV2';
@@ -12,10 +13,15 @@ import './index.css';
 type Tab = AppTabV2;
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(() => {
-    const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pm.tab') : null;
-    return (raw === 'kanban' || raw === 'activity' || raw === 'docs' ? raw : 'kanban') as Tab;
-  });
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const tab = useMemo(() => {
+    const p = location.pathname;
+    if (p.startsWith('/activity')) return 'activity';
+    if (p.startsWith('/docs')) return 'docs';
+    return 'kanban';
+  }, [location.pathname]);
 
   const [toast, setToast] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
@@ -33,13 +39,11 @@ export default function App() {
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('pm.tab', tab);
-    } catch {
-      // ignore
-    }
-  }, [tab]);
+  const setTab = useCallback((t: Tab) => {
+    if (t === 'activity') navigate('/activity');
+    else if (t === 'docs') navigate('/docs');
+    else navigate('/');
+  }, [navigate]);
 
   return (
     <ErrorBoundary>
@@ -50,31 +54,51 @@ export default function App() {
           <IconRailV2 tab={tab} onTab={setTab} />
 
           <div className="min-w-0 flex-1">
-            {tab === 'kanban' ? (
-              <KanbanPageV2
-                wsSignal={wsSignal}
-                openTaskId={openTaskId}
-                onOpenTaskConsumed={() => setOpenTaskId(null)}
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <KanbanPageV2
+                    wsSignal={wsSignal}
+                    openTaskId={openTaskId}
+                    onOpenTaskConsumed={() => setOpenTaskId(null)}
+                  />
+                }
               />
-            ) : null}
-
-            {tab === 'activity' ? (
-              <AppShellV2 topbar={<TopbarLiteV2 title="Activity" subtitle="Timeline" />}>
-                <ActivityTimeline
-                  wsSignal={wsSignal}
-                  onOpenTask={(id) => {
-                    setOpenTaskId(id);
-                    setTab('kanban');
-                  }}
-                />
-              </AppShellV2>
-            ) : null}
-
-            {tab === 'docs' ? (
-              <AppShellV2 topbar={<TopbarLiteV2 title="Docs" subtitle="Workspace documents" />}>
-                <DocsView wsSignal={wsSignal} />
-              </AppShellV2>
-            ) : null}
+              <Route
+                path="/project/:projectId"
+                element={
+                  <KanbanPageV2
+                    wsSignal={wsSignal}
+                    openTaskId={openTaskId}
+                    onOpenTaskConsumed={() => setOpenTaskId(null)}
+                  />
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <AppShellV2 topbar={<TopbarLiteV2 title="Activity" subtitle="Timeline" />}>
+                    <ActivityTimeline
+                      wsSignal={wsSignal}
+                      onOpenTask={(id) => {
+                        setOpenTaskId(id);
+                        navigate('/');
+                      }}
+                    />
+                  </AppShellV2>
+                }
+              />
+              <Route
+                path="/docs"
+                element={
+                  <AppShellV2 topbar={<TopbarLiteV2 title="Docs" subtitle="Workspace documents" />}>
+                    <DocsView wsSignal={wsSignal} />
+                  </AppShellV2>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </div>
         </div>
       </div>
