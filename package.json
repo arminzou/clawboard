@@ -6,6 +6,7 @@
     "dev": "concurrently -n backend,frontend -c blue,green \"PORT=3001 npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "PORT=3001 npm --prefix backend run dev",
+    "stop": "lsof -ti :3001,5173 | xargs kill -9 2>/dev/null || true",
     "init": "npm install && npm --prefix backend install && npm --prefix backend run init-db && npm --prefix frontend install",
     "build": "npm --prefix frontend run build",
     "start": "npm --prefix backend run start",
