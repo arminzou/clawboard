@@ -274,21 +274,21 @@ export function EditTaskModal({
             />
           </label>
 
-          <label className="text-sm">
-            <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
-            <Select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-            >
-              {COLUMNS.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.title}
-                </option>
-              ))}
-            </Select>
-          </label>
-
           <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
+              <Select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+              >
+                {COLUMNS.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.title}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
               <Select
@@ -520,21 +520,6 @@ export function CreateTaskModal({
             </label>
 
             <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
-              <Select
-                value={assigned ?? ''}
-                onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
-              >
-                <option value="">(unassigned)</option>
-                <option value="tee">tee</option>
-                <option value="fay">fay</option>
-                <option value="armin">armin</option>
-              </Select>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
               <Select
                 value={priority ?? ''}
@@ -551,6 +536,19 @@ export function CreateTaskModal({
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </label>
+
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
+              <Select
+                value={assigned ?? ''}
+                onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
+              >
+                <option value="">(unassigned)</option>
+                <option value="tee">tee</option>
+                <option value="fay">fay</option>
+                <option value="armin">armin</option>
+              </Select>
             </label>
           </div>
 

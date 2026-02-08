@@ -79,6 +79,10 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     box-shadow: var(--cb-shadow-sm);
+    /* Normalize iOS appearance, especially for date inputs */
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 2.25rem; /* ~36px, ensures consistent height with Select on iOS */
   }
 
   .cb-input::placeholder {
