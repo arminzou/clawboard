@@ -297,6 +297,64 @@ Enable multiple agents (Tee, Fay, Armin) to work on the same board with awarenes
 
 ---
 
+## Phase 10 — Backend Clean Architecture
+
+Refactor backend for maintainability as codebase grows. Enable unit testing, separate concerns, migrate to TypeScript.
+
+### Principles
+
+- **Pragmatic layering** — not enterprise astronaut architecture
+- **No DI framework** — constructor injection only
+- **Keep better-sqlite3** — no ORM overhead
+- **One type per model** — no DTO/Entity split
+- **Incremental migration** — .js and .ts can coexist
+
+### Target Structure
+
+```
+backend/
+  src/
+    routes/          # Thin HTTP handlers (parse → call service → respond)
+    services/        # Business logic (TaskService, ProjectService)
+    repositories/    # Data access (abstracts SQLite queries)
+    models/          # TypeScript interfaces
+    middleware/      # Auth, error handler, logging
+    utils/           # Pure helpers (normalizeTags, etc.)
+    websocket/       # WS connection manager + broadcast
+  db/
+    migrations/      # Versioned SQL migrations
+  server.ts          # Entry point (just wiring)
+```
+
+### Milestone O — TypeScript & Core Abstractions (High Priority)
+
+- [ ] Add TypeScript to backend (#74)
+- [ ] Extract models/types layer (#75)
+- [ ] Extract TaskRepository (#76)
+- [ ] Extract TaskService (#77)
+- [ ] Refactor routes/tasks.ts to thin handlers (#78)
+
+### Milestone P — Infrastructure & Error Handling (Medium Priority)
+
+- [ ] Add centralized error handling middleware (#79)
+- [ ] Extract WebSocket manager (#80)
+- [ ] Extract ProjectRepository + ProjectService (#81)
+
+### Milestone Q — Cleanup & Testing (Lower Priority)
+
+- [ ] Extract ActivityRepository + ActivityService (#82)
+- [ ] Slim down server.ts to pure wiring (#83)
+- [ ] Add unit tests for TaskService (#84)
+
+### Benefits
+
+- **Testable**: Services can be unit tested without Express
+- **Maintainable**: Clear ownership of logic per layer
+- **Swappable**: Could swap SQLite for Postgres by changing repositories only
+- **Type-safe**: Catch bugs at compile time, better IDE support
+
+---
+
 ## Open Questions / Decisions
 
 - Status model: keep 4 columns vs introduce `blocked` (currently using `blocked_reason` field instead)
