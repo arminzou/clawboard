@@ -1,134 +1,89 @@
-# Clawboard
+# Clawboard 📋
 
-A live web application for managing agent tasks, tracking activities, and monitoring workspace documents.
+Clawboard is your self-hosted engineering dashboard and multi-project task hub. It’s designed to give you (and your AI agents) a single place to track work, activities, and documentation across your entire workspace.
 
-## Architecture
+*Note: You are currently looking at the "Clean Architecture" refactor phase (Phase 10).*
 
-**Backend:** Node.js + Express + SQLite + WebSocket  
-**Frontend:** React + TypeScript + Tailwind (coming in Phase 2)
+---
 
-## Project Structure
+## 🏗 The Big Picture
+
+Think of Clawboard as the "Command Center" for your homelab or workspace. Instead of having tasks scattered across separate projects, Clawboard:
+1.  **Discovers Projects**: Automatically scans your workspace folders for git projects.
+2.  **Unifies Tasks**: Provides a single Kanban board that can filter by project, branch, or worktree.
+3.  **Tracks History**: Logs what you and your agents are doing in real-time.
+4.  **Monitors Docs**: Keeps an eye on your workspace documentation files.
+
+## 🛠 Tech Stack (The "How")
+
+### Current (Transitioning)
+- **Backend**: Node.js + Express (The web server)
+- **Database**: SQLite (A simple, file-based database—no complex setup required)
+- **Real-time**: WebSockets (Allows the UI to update instantly when a task changes)
+- **Frontend**: React + TypeScript + Tailwind CSS (The visual dashboard)
+
+### Moving Toward (Phase 10)
+- **Full TypeScript**: Adding "guardrails" to the backend for better safety.
+- **Clean Architecture**: Separating the "brain" (logic) from the "hands" (database) to make the code easier to maintain and test.
+
+---
+
+## 🚀 Getting Started
+
+If this is your first time setting up Clawboard:
+
+### 1. Initial Setup (One-time)
+This installs all the dependencies and sets up your database.
+```bash
+npm run init
+```
+
+### 2. Start Development
+This starts both the backend server and the frontend dashboard.
+```bash
+npm run dev
+```
+*Access the dashboard at: `http://localhost:5173` (or whatever Vite tells you!)*
+
+---
+
+## 📁 Folder Structure (The "Where")
 
 ```
 clawboard/
-├── backend/           # API server
-│   ├── server.js     # Main Express server
-│   ├── db/           # Database schema & initialization
-│   ├── routes/       # API endpoints (tasks, activities, docs)
-│   └── utils/        # Helper functions
-├── frontend/         # React dashboard (Phase 2)
-├── data/             # SQLite database
-└── README.md
+├── backend/           # The Server (The "Engine")
+│   ├── routes/       # Handlers for web requests (Tasks, Projects, etc.)
+│   ├── db/           # Database setup and migrations
+│   └── server.js     # Entry point (being refactored to server.ts)
+├── frontend/         # The User Interface (The "Dashboard")
+│   ├── src/
+│   │   ├── components/ # Reusable UI pieces (Buttons, Cards, Boards)
+│   │   ├── hooks/      # Shared logic (WebSocket connection, Project listing)
+│   │   └── lib/        # API clients and utilities
+├── data/             # Your actual data (clawboard.db)
+├── docs/             # Documentation and Learning Guides
+└── README.md         # You are here!
 ```
 
-## Phase 2: Frontend MVP (Current)
+---
 
-### Setup
+## 🔐 Security (API Keys)
 
-```bash
-# one-time
-cd clawboard
-npm run init
+By default, Clawboard is open for local use. If you want to secure it, you can set an API key in your environment:
 
-# dev (runs backend+frontend)
-npm run dev
-```
+- **Backend**: `CLAWBOARD_API_KEY="your-secret-key"`
+- **Frontend**: `VITE_CLAWBOARD_API_KEY="your-secret-key"`
 
-### Optional auth (API key)
+---
 
-If you ever expose Clawboard beyond localhost, you can enable a simple API key.
+## 🗺 Roadmap
 
-Backend:
+We track our progress and future plans in [ROADMAP.md](./ROADMAP.md). 
 
-```bash
-export CLAWBOARD_API_KEY="your-long-random-key"
-```
+Currently, we are focusing on **Phase 10: Backend Clean Architecture**, moving the server logic into a more structured, testable, and robust system.
 
-Frontend (Vite):
+---
 
-```bash
-export VITE_CLAWBOARD_API_KEY="your-long-random-key"
-```
+## 💡 Learning More
 
-Notes:
-- HTTP requests use `Authorization: Bearer <key>`.
-- WebSocket connects with `?apiKey=<key>`.
-
-Notes:
-- `npm run init` installs root + backend + frontend dependencies, and initializes the SQLite DB.
-- The frontend dev server proxies `/api` + `/ws` to the backend.
-
-### Production-ish (single server)
-
-```bash
-npm run build
-npm run start
-```
-
-This will serve the built frontend from the backend process.
-
-If you already have a backend running on :3001, start only the frontend:
-
-```bash
-npm run dev:frontend
-```
-
-### API Endpoints
-
-**Tasks** (`/api/tasks`)
-- `GET /api/tasks` - List all tasks (query: `?status=backlog&assigned_to=tee`)
-- `GET /api/tasks/:id` - Get single task
-- `POST /api/tasks` - Create task
-- `PATCH /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
-
-**Activities** (`/api/activities`)
-- `GET /api/activities` - List activities (query: `?agent=tee&limit=50&since=2024-01-01`)
-- `POST /api/activities` - Log activity
-- `GET /api/activities/agent/:agent` - Activities for specific agent
-- `GET /api/activities/stats` - Activity statistics
-
-**Documents** (`/api/docs`)
-- `GET /api/docs` - List tracked documents
-- `POST /api/docs/sync` - Update/insert document record
-- `GET /api/docs/stats` - Document statistics
-
-**WebSocket** (`ws://localhost:3001/ws`)
-- Real-time updates for tasks, activities, and documents
-
-### Database Schema
-
-**Tasks:** `id, title, description, status, priority, due_date, tags, blocked_reason, assigned_to, timestamps, position`  
-**Activities:** `id, agent, activity_type, description, details, session_key, related_task_id, timestamp`  
-**Documents:** `id, file_path, file_type, last_modified, last_modified_by, size_bytes, git_status`
-
-## Roadmap
-
-See [ROADMAP.md](./ROADMAP.md) for the living plan and current priorities.
-
-## Development
-
-**Test API:**
-```bash
-# Health check
-curl http://localhost:3001/api/health
-
-# Get all tasks
-curl http://localhost:3001/api/tasks
-
-# Create a task
-curl -X POST http://localhost:3001/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Test task","status":"backlog","assigned_to":"tee"}'
-```
-
-**Log an activity:**
-```bash
-curl -X POST http://localhost:3001/api/activities \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent":"tee",
-    "activity_type":"file_edit",
-    "description":"Updated README.md"
-  }'
-```
+If you are new to Node.js, TypeScript, or modern web architecture, check out our **Learning Guides** in `docs/learning/`. We're building this project "Explain-as-we-go" style!

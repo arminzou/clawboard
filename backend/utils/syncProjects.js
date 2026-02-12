@@ -6,13 +6,13 @@ const path = require('path');
  * Returns { discovered: number }
  */
 function syncProjects(db, broadcast = null) {
-  // Relative to workspace root (go up from backend/utils/ to workspace-tee/)
-  // __dirname is: workspace-tee/projects/clawboard/backend/utils
-  // We need: workspace-tee/
-  const PROJECTS_DIR = path.resolve(__dirname, '../../../../');
-  const projectsPath = path.join(PROJECTS_DIR, 'projects');
+  // Use environment variable or fall back to home-based default
+  const projectsPath =
+    process.env.CLAWBOARD_PROJECTS_DIR ||
+    path.join(require('os').homedir(), 'projects');
 
   if (!fs.existsSync(projectsPath)) {
+    console.warn(`[syncProjects] Directory not found: ${projectsPath}`);
     return { discovered: 0 };
   }
 
@@ -43,7 +43,8 @@ function syncProjects(db, broadcast = null) {
     const slug = dir.name;
     if (existingSlugs.has(slug)) continue;
 
-    const dirPath = `projects/${slug}`;
+    // Use absolute path for robustness
+    const dirPath = path.join(projectsPath, slug);
     const name = slug
       .split(/[-_]/)
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

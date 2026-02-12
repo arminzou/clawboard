@@ -6,6 +6,9 @@ const fs = require('fs');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 
+// Load environment variables from .env (one directory up from backend/)
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 // Import routes
 const tasksRouter = require('./routes/tasks');
 const tasksArchiveRouter = require('./routes/tasks.archive');
