@@ -32,6 +32,18 @@ function statusLabel(s: TaskStatus) {
   return COLUMNS.find((c) => c.key === s)?.title ?? s;
 }
 
+function useIsTouch() {
+  const [isTouch, setIsTouch] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(pointer: coarse)');
+    const update = () => setIsTouch(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+  return isTouch;
+}
+
 export function KanbanBoard({
   tasks,
   tasksAll,
@@ -56,6 +68,9 @@ export function KanbanBoard({
   const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+
+  const isTouch = useIsTouch();
+  const dragEnabled = !isTouch;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -206,7 +221,7 @@ export function KanbanBoard({
   return (
     <div className="h-full">
       <DndContext
-        sensors={sensors}
+        sensors={dragEnabled ? sensors : []}
         collisionDetection={closestCorners}
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
@@ -229,6 +244,7 @@ export function KanbanBoard({
               tasks={byStatus[col.key]}
               activeTaskId={activeTaskId}
               overId={overId}
+              dragEnabled={dragEnabled}
               onOpenTask={onEditTask}
               onQuickCreate={onQuickCreate}
               selectedIds={selectedIds}
@@ -251,6 +267,7 @@ function KanbanColumn({
   tasks,
   activeTaskId,
   overId,
+  dragEnabled,
   onOpenTask,
   onQuickCreate,
   selectedIds,
@@ -263,6 +280,7 @@ function KanbanColumn({
   tasks: Task[];
   activeTaskId: string | null;
   overId: string | null;
+  dragEnabled: boolean;
   onOpenTask: (t: Task) => void;
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
   selectedIds?: Set<number>;
@@ -403,6 +421,7 @@ function KanbanColumn({
                   task={t}
                   onOpen={() => onOpenTask(t)}
                   boardDragging={!!activeTaskId}
+                  dragEnabled={dragEnabled}
                   isSelected={selectedIds?.has(t.id)}
                   onToggleSelection={onToggleSelection}
                   showCheckbox={hasSelection}
@@ -468,6 +487,8 @@ function MetaRow({
   );
 }
 
+type DragHandleProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+
 const TaskCard = memo(
   function TaskCard({
     task,
@@ -476,6 +497,7 @@ const TaskCard = memo(
     isSelected,
     onToggleSelection,
     showCheckbox,
+    dragEnabled,
     dragHandleProps,
   }: {
     task: Task;
@@ -484,7 +506,8 @@ const TaskCard = memo(
     isSelected?: boolean;
     onToggleSelection?: (id: number) => void;
     showCheckbox?: boolean;
-    dragHandleProps?: any;
+    dragEnabled?: boolean;
+    dragHandleProps?: DragHandleProps;
   }) {
     const createdLabel = formatDate(task.created_at);
     const dueLabel = formatDate(task.due_date);
@@ -527,6 +550,7 @@ const TaskCard = memo(
             data-testid={`task-drag-handle-${task.id}`}
             className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))] outline-none text-left"
             onClick={onOpen}
+            style={dragEnabled ? { touchAction: 'none' } : undefined}
             {...dragHandleProps}
           >
             {task.title}
@@ -537,6 +561,7 @@ const TaskCard = memo(
           type="button" 
           className="w-full mt-2 outline-none text-left" 
           onClick={onOpen}
+          style={dragEnabled ? { touchAction: 'none' } : undefined}
           {...dragHandleProps}
         >
           <div className="flex flex-wrap items-center gap-1.5">
@@ -591,6 +616,7 @@ function SortableTask({
   task,
   onOpen,
   boardDragging,
+  dragEnabled,
   isSelected,
   onToggleSelection,
   showCheckbox,
@@ -598,11 +624,15 @@ function SortableTask({
   task: Task;
   onOpen: () => void;
   boardDragging?: boolean;
+  dragEnabled: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(task.id) });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: String(task.id),
+    disabled: !dragEnabled,
+  });
 
   // Avoid animated layout jitter while dragging by disabling transitions on the active item.
   const style = {
@@ -626,7 +656,8 @@ function SortableTask({
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}
         showCheckbox={showCheckbox}
-        dragHandleProps={{ ...attributes, ...listeners }}
+        dragEnabled={dragEnabled}
+        dragHandleProps={dragEnabled ? { ...attributes, ...listeners } : undefined}
       />
     </div>
   );

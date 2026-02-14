@@ -127,6 +127,8 @@ export function Sidebar({
     tag !== 'all',
   ].filter(Boolean).length;
 
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+
   // Collapsed state - show only toggle button
   if (collapsed) {
     return (
@@ -143,8 +145,6 @@ export function Sidebar({
       </aside>
     );
   }
-
-  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
 
   return (
     <aside className="h-full w-full border-slate-200 bg-white lg:w-72 lg:border-r">

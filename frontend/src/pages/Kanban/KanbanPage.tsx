@@ -683,7 +683,7 @@ export function KanbanPage({
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, tag, hideDone, q, tasks, due, context, currentContextKey]);
+  }, [assignee, tag, hideDone, blocked, q, tasks, due, context, currentContextKey]);
 
   const tagOptions = useMemo(() => {
     const set = new Set<string>();
