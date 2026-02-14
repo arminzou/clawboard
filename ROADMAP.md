@@ -30,7 +30,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - [x] **Extract models/types layer (#75)**: Define the "shape" of our data in code.
 - [x] **Extract TaskRepository (#76)**: Move SQL queries into a dedicated "Data Layer."
 - [x] **Extract TaskService (#77)**: Move business logic into a dedicated "Brain Layer."
-- [ ] **Add unit tests for TaskService (#84)**: Verify the "Brain" works correctly.
+- [x] **Add unit tests for TaskService (#84)**: Verify the "Brain" works correctly.
 - [x] **Refactor routes to thin handlers (#78)**: Make controllers focus only on HTTP.
 - [x] **Add centralized error handling middleware (#79)**: One place to format errors + map domain errors → HTTP.
 - [x] **Extract WebSocket manager (#80)**: Separate real-time broadcast concerns from server wiring.
