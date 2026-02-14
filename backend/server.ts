@@ -1,112 +1,49 @@
-import express, { type NextFunction, type Request, type Response } from 'express';
-import cors from 'cors';
-import Database from 'better-sqlite3';
+import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import http from 'http';
+import { createDatabase } from './src/infra/database/dbConnection';
 import { createWebSocketHub } from './src/infra/realtime/websocketHub';
+import { applyCommonMiddleware } from './src/presentation/http/middleware/commonMiddleware';
+import { registerRoutes } from './src/presentation/http/routes';
 
 // Load environment variables from .env (one directory up from backend/)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Import routes (mixed legacy + new)
-import { createTasksRouter } from './src/presentation/http/routes/tasksRouter';
-import { createProjectsRouter } from './src/presentation/http/routes/projectsRouter';
-import { createActivitiesRouter } from './src/presentation/http/routes/activitiesRouter';
-import { errorHandler } from './src/presentation/http/middleware/errorHandler';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const tasksArchiveRouter = require('./routes/tasks.archive');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const docsRouter = require('./routes/docs');
-
-const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = String(process.env.HOST ?? '127.0.0.1');
-
-// Database setup
 const DB_PATH = path.join(__dirname, '../data/clawboard.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL'); // Better performance for concurrent reads/writes
 
-// Migrations
-try {
-    const { migrate } = require('./db/migrate');
-    migrate(db);
-} catch (e) {
-    console.error('Migration failed:', e);
-    process.exit(1);
-}
+// Initialize core dependencies
+const app = express();
+const db = createDatabase(DB_PATH);
 
-// Make db available to routes
+// Make db available to routes (legacy pattern, to be removed when all routes migrated)
 app.locals.db = db;
 
-// Broadcast is used by routes (e.g. tasks) to push real-time updates.
-// WebSocket hub is initialized later (after HTTP server is created), so we start with a no-op.
+// Broadcast placeholder (will be wired up after WebSocket hub is created)
 let broadcastImpl: (data: unknown) => void = () => {};
 app.locals.broadcast = (data: unknown) => broadcastImpl(data);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Apply middleware (CORS, JSON parsing, auth, logging)
+applyCommonMiddleware(app);
 
-// Optional auth (only enforced when CLAWBOARD_API_KEY is set)
-const { requireApiKey, isRequestAuthorized } = require('./utils/auth');
-app.use('/api', requireApiKey({ allowPaths: ['/health'] }));
+// Register API routes
+registerRoutes(app, db, app.locals.broadcast);
 
-// Request logging
-app.use((req: Request, _res: Response, next: NextFunction) => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
-    next();
-});
-
-// API Routes
-app.use(
-    '/api/tasks',
-    createTasksRouter({
-        db,
-        broadcast: app.locals.broadcast,
-    }),
-);
-app.use('/api/tasks', tasksArchiveRouter);
-app.use(
-    '/api/activities',
-    createActivitiesRouter({
-        db,
-        broadcast: app.locals.broadcast,
-    }),
-);
-app.use('/api/docs', docsRouter);
-app.use(
-    '/api/projects',
-    createProjectsRouter({
-        db,
-    }),
-);
-
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Centralized error handling (new TS router paths throw HttpError)
-app.use(errorHandler);
-
-// Frontend (production build)
+// Frontend SPA fallback (production build)
 const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
 const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 const HAS_FRONTEND = fs.existsSync(FRONTEND_INDEX);
 
 if (HAS_FRONTEND) {
-    // Serve SPA
     app.use(express.static(FRONTEND_DIST));
-
     // History API fallback (avoid intercepting /api/*)
     app.get(/^\/(?!api\/).*/, (req, res) => {
         res.sendFile(FRONTEND_INDEX);
     });
 } else {
-    // Root route (helpful for quick sanity checks)
     app.get('/', (req, res) => {
         res.json({
             name: 'Clawboard Backend',
@@ -116,6 +53,7 @@ if (HAS_FRONTEND) {
                 tasks: '/api/tasks',
                 activities: '/api/activities',
                 docs: '/api/docs',
+                projects: '/api/projects',
             },
             note: 'Frontend build not found. Run: npm --prefix frontend run build',
         });
@@ -126,6 +64,8 @@ if (HAS_FRONTEND) {
 const server = http.createServer(app);
 
 // WebSocket hub (real-time updates)
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { isRequestAuthorized } = require('./utils/auth');
 const { wss, broadcast } = createWebSocketHub({
     server,
     path: '/ws',
@@ -133,10 +73,10 @@ const { wss, broadcast } = createWebSocketHub({
     log: console,
 });
 
-// Now that the hub exists, route broadcasts will reach connected clients.
+// Wire up broadcast to routes
 broadcastImpl = broadcast;
 
-// Start server
+// Server error handling
 server.on('error', (err: NodeJS.ErrnoException) => {
     if (err?.code === 'EADDRINUSE') {
         console.error(`\n❌ Port ${PORT} is already in use.`);
@@ -151,6 +91,7 @@ server.on('error', (err: NodeJS.ErrnoException) => {
     throw err;
 });
 
+// Start server
 server.listen(PORT, HOST, () => {
     const baseUrl = `http://${HOST}:${PORT}`;
     const wsUrl = `ws://${HOST}:${PORT}/ws`;
@@ -158,9 +99,10 @@ server.listen(PORT, HOST, () => {
     console.log(`📊 WebSocket endpoint: ${wsUrl}`);
     console.log(`💾 Database: ${DB_PATH}`);
 
-    // Optional: keep dashboard data fresh automatically
+    // Optional: auto-sync for dashboard data freshness
     if (String(process.env.AUTO_SYNC || '').toLowerCase() === '1' || String(process.env.AUTO_SYNC || '').toLowerCase() === 'true') {
         const intervalMs = Number(process.env.SYNC_INTERVAL_MS || 60_000);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { createAutoSync } = require('./utils/autoSync');
         const auto = createAutoSync({ intervalMs, log: console, db, broadcast: app.locals.broadcast });
         app.locals.autoSync = auto;
@@ -174,29 +116,27 @@ server.listen(PORT, HOST, () => {
 const shutdown = (signal: string) => {
     console.log(`\n${signal} received, shutting down gracefully...`);
 
-    // Stop auto-sync if running
-    if (app.locals.autoSync) {
-        app.locals.autoSync.stop();
-    }
+    if (app.locals.autoSync) app.locals.autoSync.stop();
 
-    // Close WebSocket connections
-    wss.clients.forEach((client: import('ws').WebSocket) => {
-        client.close(1001, 'Server shutting down');
+    wss.clients.forEach((client) => {
+        try {
+            client.close(1001, 'Server shutting down');
+        } catch {
+            // ignore
+        }
     });
 
-    // Close server and database
     server.close(() => {
         db.close();
         console.log('Server closed');
         process.exit(0);
     });
 
-    // Force exit after 5s if graceful shutdown hangs
     setTimeout(() => {
         console.error('Forced shutdown after timeout');
         process.exit(1);
     }, 5000);
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));   // Ctrl-c
-process.on('SIGTERM', () => shutdown('SIGTERM')); // kill command
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

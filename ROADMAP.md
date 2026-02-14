@@ -36,7 +36,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - [x] **Extract WebSocket manager (#80)**: Separate real-time broadcast concerns from server wiring.
 - [x] **Extract ProjectRepository + ProjectService (#81)**: Clean separation for project discovery + metadata.
 - [x] **Extract ActivityRepository + ActivityService (#82)**: Clean separation for activity timeline.
-- [ ] **Slim down server.ts to pure wiring (#83)**: Server should just compose dependencies + register routes.
+- [x] **Slim down server.ts to pure wiring (#83)**: Server should just compose dependencies + register routes.
 
 ---
 
