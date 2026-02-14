@@ -355,34 +355,64 @@ export function Sidebar({
               {activeFilterCount > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
                   {assignee !== 'all' && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onAssignee('all')}
+                      title="Clear assignee filter"
+                    >
                       {assignee === '' ? 'Unassigned' : assignee}
-                    </span>
+                    </button>
                   )}
                   {hideDone && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onHideDone(false)}
+                      title="Clear hide done"
+                    >
                       Hide done
-                    </span>
+                    </button>
                   )}
                   {blocked && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onBlocked(false)}
+                      title="Clear blocked filter"
+                    >
                       Blocked only
-                    </span>
+                    </button>
                   )}
                   {due !== 'any' && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onDue('any')}
+                      title="Clear due filter"
+                    >
                       Due: {due}
-                    </span>
+                    </button>
                   )}
                   {tag !== 'all' && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onTag('all')}
+                      title="Clear tag filter"
+                    >
                       #{tag}
-                    </span>
+                    </button>
                   )}
                   {context !== 'all' && (
-                    <span className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+                    <button
+                      type="button"
+                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      onClick={() => onContext('all')}
+                      title="Clear context filter"
+                    >
                       Context: {context === 'current' ? currentContextKey || 'current' : context}
-                    </span>
+                    </button>
                   )}
                 </div>
               )}
