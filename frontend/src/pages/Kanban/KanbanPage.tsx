@@ -13,7 +13,10 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Topbar, type TopbarMode } from '../../components/layout/Topbar';
 import { TaskTable } from './TaskTable';
+import { Button } from '../../components/ui/Button';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { Input } from '../../components/ui/Input';
+import { Panel } from '../../components/ui/Panel';
 import { useProjects } from '../../hooks/useProjects';
 import { useKanbanData } from './hooks/useKanbanData';
 
@@ -233,6 +236,9 @@ export function KanbanPage({
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [showSaveViewModal, setShowSaveViewModal] = useState(false);
+  const [saveViewName, setSaveViewName] = useState('');
+  const saveViewRef = useRef<HTMLInputElement | null>(null);
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
@@ -258,6 +264,11 @@ export function KanbanPage({
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (!showSaveViewModal) return;
+    requestAnimationFrame(() => saveViewRef.current?.focus());
+  }, [showSaveViewModal]);
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -502,19 +513,8 @@ export function KanbanPage({
   }
 
   function saveCurrentView() {
-    const name = window.prompt('Save current view as…');
-    const trimmed = name?.trim();
-    if (!trimmed) return;
-
-    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
-    const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-
-    const next: SavedView = { id, name: trimmed, filters };
-    setSavedViews((prev) => [...prev, next]);
-
-    lastAppliedFiltersRef.current = filters;
-    setActiveSavedViewId(id);
-    toast.success(`View "${trimmed}" saved`);
+    setSaveViewName('');
+    setShowSaveViewModal(true);
   }
 
   function deleteSavedView(id: string) {
@@ -1007,6 +1007,75 @@ export function KanbanPage({
           }}
           onClose={() => setShowArchiveConfirm(false)}
         />,
+        document.body
+      )}
+
+      {showSaveViewModal && createPortal(
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowSaveViewModal(false);
+          }}
+        >
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-full max-w-sm"
+            style={{ animation: 'modal-pop 0.15s ease-out' }}
+          >
+            <style>{`
+              @keyframes modal-pop {
+                from {
+                  opacity: 0;
+                  transform: scale(0.95);
+                }
+                to {
+                  opacity: 1;
+                  transform: scale(1);
+                }
+              }
+            `}</style>
+            <Panel className="p-6 shadow-xl">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[rgb(var(--cb-text))]">Save current view</h3>
+                  <p className="mt-1 text-sm text-[rgb(var(--cb-text-muted))]">Give this filter set a name.</p>
+                </div>
+                <Input
+                  ref={saveViewRef}
+                  value={saveViewName}
+                  onChange={(e) => setSaveViewName(e.target.value)}
+                  placeholder="View name"
+                />
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setShowSaveViewModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={() => {
+                      const trimmed = saveViewName.trim();
+                      if (!trimmed) return;
+
+                      const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
+                      const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+
+                      const next: SavedView = { id, name: trimmed, filters };
+                      setSavedViews((prev) => [...prev, next]);
+
+                      lastAppliedFiltersRef.current = filters;
+                      setActiveSavedViewId(id);
+                      toast.success(`View "${trimmed}" saved`);
+                      setShowSaveViewModal(false);
+                    }}
+                  >
+                    Save view
+                  </Button>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        </div>,
         document.body
       )}
     </>
