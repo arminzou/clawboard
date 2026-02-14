@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { api } from '../lib/api';
-import type { Assignee, Task, TaskStatus } from '../lib/api';
-import { toast } from '../lib/toast';
+import { api } from '../../lib/api';
+import type { Assignee, Task, TaskStatus } from '../../lib/api';
+import { toast } from '../../lib/toast';
 import { BulkActionBar } from './BulkActionBar';
 import { KanbanBoard } from './KanbanBoard';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
-import { AppShell } from './layout/AppShell';
-import { Sidebar } from './layout/Sidebar';
-import { Topbar, type TopbarMode } from './layout/Topbar';
+import { AppShell } from '../../components/layout/AppShell';
+import { Sidebar } from '../../components/layout/Sidebar';
+import { Topbar, type TopbarMode } from '../../components/layout/Topbar';
 import { TaskTable } from './TaskTable';
-import { useProjects } from '../hooks/useProjects';
+import { useProjects } from '../../hooks/useProjects';
+import { useKanbanData } from './hooks/useKanbanData';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -85,11 +86,6 @@ export function KanbanPage({
     }
   }, [setCurrentProjectId, navigate]);
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const tasksRef = useRef<Task[]>([]);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const [view, setView] = useState<ViewFilter>(() => {
     try {
@@ -122,6 +118,12 @@ export function KanbanPage({
     } catch {
       return false;
     }
+  });
+
+  const { tasks, setTasks, tasksRef, loading, error, refresh } = useKanbanData({
+    currentProjectId,
+    showArchived,
+    refreshProjects,
   });
 
   const [due, setDue] = useState<DueFilter>(() => {
@@ -297,40 +299,6 @@ export function KanbanPage({
     clearSelection();
     await refresh();
   }
-
-  async function refresh() {
-    setLoading(true);
-    setError(null);
-    try {
-      // Trigger project discovery first
-      await api.discoverProjects();
-      
-      // Refresh project list
-      await refreshProjects();
-      
-      // Then refresh tasks
-      const params: { include_archived?: boolean; project_id?: number } = { include_archived: showArchived };
-      if (currentProjectId) {
-        params.project_id = currentProjectId;
-      }
-      const all = await api.listTasks(params);
-      setTasks(all);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showArchived, currentProjectId]);
-
-  useEffect(() => {
-    tasksRef.current = tasks;
-  }, [tasks]);
 
   // Keyboard shortcuts (Kanban only)
   useEffect(() => {

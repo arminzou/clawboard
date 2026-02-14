@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Button } from './ui/Button';
-import { Panel } from './ui/Panel';
+import { Button } from '../../components/ui/Button';
+import { Panel } from '../../components/ui/Panel';
 
 const SHORTCUTS = [
   { key: 'n', description: 'Create new task' },

@@ -35,6 +35,36 @@ Make sure all current functionality works end-to-end before starting Phase 9.
 
 ---
 
+## 🧭 Frontend Clean Architecture — Option A (Planned)
+
+Page-centered structure with shared UI and cross-page hooks.
+
+### Target Structure
+```
+src/
+  pages/
+    Kanban/
+    Activity/
+    Docs/
+  components/
+    layout/
+    ui/
+  lib/
+  hooks/
+```
+
+### Steps
+- [ ] Move Kanban page modules into `pages/Kanban/`
+- [ ] Move Activity page modules into `pages/Activity/`
+- [ ] Move Docs page modules into `pages/Docs/`
+- [ ] Keep shared UI primitives in `components/ui/`
+- [ ] Keep layout components in `components/layout/`
+- [ ] Keep cross-page hooks in `hooks/`
+- [ ] Normalize imports after moves
+- [ ] Run TypeScript + Playwright smoke checks
+
+---
+
 ## ✅ Phase 9 — Backend Clean Architecture (Completed)
 
 Refactor backend for maintainability as codebase grows. Enable unit testing, separate concerns, migrate to TypeScript.

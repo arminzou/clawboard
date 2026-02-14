@@ -13,13 +13,13 @@ import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { api } from '../lib/api';
-import type { Task, TaskStatus } from '../lib/api';
-import { formatDate } from '../lib/date';
-import { Checkbox } from './ui/Checkbox';
-import { Chip } from './ui/Chip';
-import { Input } from './ui/Input';
-import { Menu } from './ui/Menu';
+import { api } from '../../lib/api';
+import type { Task, TaskStatus } from '../../lib/api';
+import { formatDate } from '../../lib/date';
+import { Checkbox } from '../../components/ui/Checkbox';
+import { Chip } from '../../components/ui/Chip';
+import { Input } from '../../components/ui/Input';
+import { Menu } from '../../components/ui/Menu';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },

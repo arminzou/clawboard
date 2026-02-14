@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Assignee, Task, TaskPriority, TaskStatus } from '../lib/api';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Panel } from './ui/Panel';
-import { Select } from './ui/Select';
-import { ConfirmModal } from './ui/ConfirmModal';
+import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Panel } from '../../components/ui/Panel';
+import { Select } from '../../components/ui/Select';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },

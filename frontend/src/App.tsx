@@ -1,11 +1,11 @@
 import { Component, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { KanbanPage } from './components/KanbanPage';
+import { KanbanPage } from './pages/Kanban/KanbanPage';
 import { IconRail, type AppTab } from './components/layout/IconRail';
 import { AppShell } from './components/layout/AppShell';
 import { TopbarLite } from './components/layout/TopbarLite';
-import { ActivityTimeline } from './components/ActivityTimeline';
-import { DocsView } from './components/DocsView';
+import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
+import { DocsView } from './pages/Docs/DocsView';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { toast } from './lib/toast';

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '../lib/api';
-import type { Document as Doc, DocsStats } from '../lib/api';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Panel } from './ui/Panel';
+import { api } from '../../lib/api';
+import type { Document as Doc, DocsStats } from '../../lib/api';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Panel } from '../../components/ui/Panel';
 
 function countByStatus(stats: DocsStats | null | undefined) {
   const map = new Map<string, number>();
