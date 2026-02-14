@@ -35,7 +35,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - [x] **Add centralized error handling middleware (#79)**: One place to format errors + map domain errors → HTTP.
 - [x] **Extract WebSocket manager (#80)**: Separate real-time broadcast concerns from server wiring.
 - [x] **Extract ProjectRepository + ProjectService (#81)**: Clean separation for project discovery + metadata.
-- [ ] **Extract ActivityRepository + ActivityService (#82)**: Clean separation for activity timeline.
+- [x] **Extract ActivityRepository + ActivityService (#82)**: Clean separation for activity timeline.
 - [ ] **Slim down server.ts to pure wiring (#83)**: Server should just compose dependencies + register routes.
 
 ---

@@ -13,11 +13,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 // Import routes (mixed legacy + new)
 import { createTasksRouter } from './src/presentation/http/routes/tasksRouter';
 import { createProjectsRouter } from './src/presentation/http/routes/projectsRouter';
+import { createActivitiesRouter } from './src/presentation/http/routes/activitiesRouter';
 import { errorHandler } from './src/presentation/http/middleware/errorHandler';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const tasksArchiveRouter = require('./routes/tasks.archive');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const activitiesRouter = require('./routes/activities');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const docsRouter = require('./routes/docs');
 
@@ -70,7 +69,13 @@ app.use(
     }),
 );
 app.use('/api/tasks', tasksArchiveRouter);
-app.use('/api/activities', activitiesRouter);
+app.use(
+    '/api/activities',
+    createActivitiesRouter({
+        db,
+        broadcast: app.locals.broadcast,
+    }),
+);
 app.use('/api/docs', docsRouter);
 app.use(
     '/api/projects',
