@@ -21,6 +21,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - **Explain as we go**: Document architectural decisions and fundamentals in `docs/learning/`.
 - **Pragmatic layering**: Clear separation without over-engineering.
 - **Incremental migration**: `.js` and `.ts` can coexist during the move.
+- **Legacy layout note**: backend currently has `routes/`, `utils/`, `db/` at the top-level (pre-migration). As part of Phase 10, we will progressively move HTTP wiring/controllers under `backend/src/` (keeping `src/domain`, `src/repositories`, `src/services`, etc.) and delete the legacy folders once fully migrated.
 
 ### Milestone O — TypeScript, Testing & Core Abstractions (High Priority)
 
