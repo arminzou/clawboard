@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
@@ -12,6 +13,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Topbar, type TopbarMode } from '../../components/layout/Topbar';
 import { TaskTable } from './TaskTable';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useProjects } from '../../hooks/useProjects';
 import { useKanbanData } from './hooks/useKanbanData';
 
@@ -229,6 +231,8 @@ export function KanbanPage({
   const [createOpen, setCreateOpen] = useState(false);
   const [createPrefill, setCreatePrefill] = useState<{ status?: TaskStatus } | null>(null);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [archiveBusy, setArchiveBusy] = useState(false);
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
@@ -779,14 +783,8 @@ export function KanbanPage({
       onTag={setTag}
       showArchived={showArchived}
       onShowArchived={setShowArchived}
-      onArchiveDone={async () => {
-        const scopeLabel = assignee === 'all' ? 'all assignees' : assignee === '' ? 'unassigned only' : assignee;
-        const ok = window.confirm(`Archive all done tasks (${scopeLabel})?`);
-        if (!ok) return;
-
-        const body = assignee === 'all' ? undefined : { assigned_to: assignee === '' ? null : (assignee as Assignee) };
-        await api.archiveDone(body);
-        await refresh();
+      onArchiveDone={() => {
+        setShowArchiveConfirm(true);
       }}
       context={context}
       onContext={setContext}
@@ -988,6 +986,29 @@ export function KanbanPage({
       {showKeyboardHelp ? (
         <KeyboardHelpModal onClose={() => setShowKeyboardHelp(false)} />
       ) : null}
+
+      {showArchiveConfirm && createPortal(
+        <ConfirmModal
+          title="Archive done tasks"
+          message={`Archive all done tasks (${assignee === 'all' ? 'all assignees' : assignee === '' ? 'unassigned only' : assignee})?`}
+          confirmLabel={archiveBusy ? 'Archiving...' : 'Archive done tasks'}
+          variant="primary"
+          onConfirm={async () => {
+            if (archiveBusy) return;
+            setArchiveBusy(true);
+            try {
+              const body = assignee === 'all' ? undefined : { assigned_to: assignee === '' ? null : (assignee as Assignee) };
+              await api.archiveDone(body);
+              await refresh();
+              setShowArchiveConfirm(false);
+            } finally {
+              setArchiveBusy(false);
+            }
+          }}
+          onClose={() => setShowArchiveConfirm(false)}
+        />,
+        document.body
+      )}
     </>
   );
 }
