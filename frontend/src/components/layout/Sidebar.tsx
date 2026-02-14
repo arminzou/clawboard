@@ -583,7 +583,7 @@ function SavedViewButton({
     <div
       className={
         active
-          ? 'flex w-full items-center justify-between gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white'
+          ? 'flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-900 shadow-sm'
           : 'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
       }
     >
@@ -591,7 +591,7 @@ function SavedViewButton({
         type="button"
         className={
           active
-            ? 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-white/10 active:bg-white/20 active:translate-y-px active:shadow-inner'
+            ? 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
             : 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
         }
         onClick={onClick}
@@ -604,7 +604,7 @@ function SavedViewButton({
           type="button"
           className={
             active
-              ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white transition hover:bg-white/15 active:bg-white/25 active:translate-y-px active:shadow-inner'
+              ? 'rounded-lg border border-indigo-200 bg-white px-2 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
               : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
           }
           onClick={() => setMenuOpen((v) => !v)}
