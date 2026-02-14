@@ -135,7 +135,7 @@ export function Sidebar({
       <aside className="hidden h-full w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 active:translate-y-px active:shadow-inner"
           onClick={onToggleCollapsed}
           title="Expand sidebar"
           aria-label="Expand sidebar"
@@ -156,7 +156,7 @@ export function Sidebar({
               <div className="relative mt-1">
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                   onClick={() => setProjectMenuOpen((v) => !v)}
                 >
                   <span className="flex items-center gap-2 truncate">
@@ -171,9 +171,11 @@ export function Sidebar({
                     <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                       <button
                         type="button"
-                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                          currentProjectId === null ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
-                        }`}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition ${
+                          currentProjectId === null
+                            ? 'bg-indigo-50 font-semibold text-indigo-700 active:bg-indigo-100'
+                            : 'text-slate-700 hover:bg-slate-50 active:bg-slate-100'
+                        } active:translate-y-px active:shadow-inner`}
                         onClick={() => {
                           onProjectChange(null);
                           setProjectMenuOpen(false);
@@ -186,13 +188,15 @@ export function Sidebar({
                       {projects.map((p) => (
                         <div
                           key={p.id}
-                          className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
-                            currentProjectId === p.id ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-700 hover:bg-slate-50'
-                          }`}
+                          className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition ${
+                            currentProjectId === p.id
+                              ? 'bg-indigo-50 font-semibold text-indigo-700 active:bg-indigo-100'
+                              : 'text-slate-700 hover:bg-slate-50 active:bg-slate-100'
+                          } active:translate-y-px active:shadow-inner`}
                         >
                           <button
                             type="button"
-                            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                            className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                             onClick={() => {
                               onProjectChange(p.id);
                               setProjectMenuOpen(false);
@@ -209,7 +213,7 @@ export function Sidebar({
                           {onDeleteProject && (
                             <button
                               type="button"
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-red-50 hover:text-red-600"
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-100 active:translate-y-px active:shadow-inner"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const ok = window.confirm(`Delete project "${p.name}"? This will unlink all associated tasks.`);
@@ -236,7 +240,7 @@ export function Sidebar({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 active:translate-y-px active:shadow-inner"
               onClick={onToggleCollapsed}
               title="Collapse sidebar"
               aria-label="Collapse sidebar"
@@ -249,7 +253,7 @@ export function Sidebar({
         {onMyTasks && (
           <button
             type="button"
-            className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+            className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner"
             onClick={onMyTasks}
           >
             <span className="flex items-center gap-2">
@@ -267,7 +271,7 @@ export function Sidebar({
         <div className="mt-4">
           <button
             type="button"
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
+            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
             onClick={onToggleViewsOpen}
           >
             <span>Views</span>
@@ -284,7 +288,7 @@ export function Sidebar({
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved</div>
                     <button
                       type="button"
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                       onClick={onSaveCurrentView}
                       title="Save current filters"
                     >
@@ -307,7 +311,7 @@ export function Sidebar({
               ) : (
                 <button
                   type="button"
-                  className="mb-1 mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                  className="mb-1 mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                   onClick={onSaveCurrentView}
                 >
                   Save current view
@@ -330,7 +334,7 @@ export function Sidebar({
         <div className="mt-4 border-t border-slate-100 pt-4">
           <button
             type="button"
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-50"
+            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
             onClick={onToggleFiltersOpen}
           >
             <span className="flex items-center gap-2">
@@ -455,7 +459,7 @@ export function Sidebar({
 
               <button
                 type="button"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                 onClick={() => void onArchiveDone()}
               >
                 Archive done
@@ -463,7 +467,7 @@ export function Sidebar({
 
               <button
                 type="button"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                 onClick={onReset}
               >
                 Reset
@@ -472,7 +476,7 @@ export function Sidebar({
           ) : (
             <button
               type="button"
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
               onClick={onReset}
             >
               Reset
@@ -515,8 +519,8 @@ function ViewButton({
       type="button"
       className={
         active
-          ? 'flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white'
-          : 'flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
+          ? 'flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white transition active:bg-slate-800 active:translate-y-px active:shadow-inner'
+          : 'flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
       }
       onClick={onClick}
     >
@@ -553,7 +557,16 @@ function SavedViewButton({
           : 'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
       }
     >
-      <button type="button" className="min-w-0 flex-1 truncate text-left" onClick={onClick} title={label}>
+      <button
+        type="button"
+        className={
+          active
+            ? 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-white/10 active:bg-white/20 active:translate-y-px active:shadow-inner'
+            : 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
+        }
+        onClick={onClick}
+        title={label}
+      >
         {label}
       </button>
       <div className="relative">
@@ -561,8 +574,8 @@ function SavedViewButton({
           type="button"
           className={
             active
-              ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15'
-              : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50'
+              ? 'rounded-lg border border-white/15 bg-white/10 px-2 py-1 text-xs text-white transition hover:bg-white/15 active:bg-white/25 active:translate-y-px active:shadow-inner'
+              : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
           }
           onClick={() => setMenuOpen((v) => !v)}
           title="Options"
@@ -576,7 +589,7 @@ function SavedViewButton({
               {onRename && (
                 <button
                   type="button"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50"
+                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                   onClick={() => {
                     setMenuOpen(false);
                     onRename();
@@ -588,7 +601,7 @@ function SavedViewButton({
               {onUpdateFilters && (
                 <button
                   type="button"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50"
+                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                   onClick={() => {
                     setMenuOpen(false);
                     onUpdateFilters();
@@ -599,7 +612,7 @@ function SavedViewButton({
               )}
               <button
                 type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50"
+                className="block w-full px-3 py-1.5 text-left text-xs text-red-600 transition hover:bg-red-50 active:bg-red-100 active:translate-y-px active:shadow-inner"
                 onClick={() => {
                   setMenuOpen(false);
                   onDelete();
