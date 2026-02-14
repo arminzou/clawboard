@@ -947,13 +947,7 @@ export function KanbanPage({
             await api.deleteTask(editTask.id);
             setEditTask(null);
             await refresh();
-          }}
-          onDuplicate={async () => {
-            await api.duplicateTask(editTask);
-            setEditTask(null);
-            await refresh();
-          }}
-        />
+          }}        />
       ) : null}
 
       {createOpen ? (

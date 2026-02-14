@@ -134,7 +134,6 @@ export function EditTaskModal({
   onClose,
   onSave,
   onDelete,
-  onDuplicate,
 }: {
   task: Task;
   onClose: () => void;
@@ -149,7 +148,6 @@ export function EditTaskModal({
     blocked_reason?: string | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
-  onDuplicate?: () => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
@@ -164,9 +162,7 @@ export function EditTaskModal({
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [duplicating, setDuplicating] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const save = useCallback(async () => {
     if (saving || deleting) return;
@@ -232,7 +228,7 @@ export function EditTaskModal({
             <Button
               variant="ghost-danger"
               size="icon"
-              disabled={saving || deleting || duplicating}
+              disabled={saving || deleting}
               onClick={() => setShowDeleteConfirm(true)}
               title="Delete task"
             >
@@ -342,7 +338,7 @@ export function EditTaskModal({
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-2 border-t border-[rgb(var(--cb-border))] pt-4">
-            <Button variant="primary" className="w-full sm:w-auto" disabled={saving || deleting || duplicating} onClick={save}>
+            <Button variant="primary" className="w-full sm:w-auto" disabled={saving || deleting} onClick={save}>
               Save Changes
             </Button>
           </div>
