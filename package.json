@@ -3,18 +3,19 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c blue,green \"PORT=3001 npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
-    "dev:frontend": "npm --prefix frontend run dev",
-    "dev:backend": "PORT=3001 npm --prefix backend run dev",
+    "dev": "concurrently -n backend,frontend -c blue,green \"PORT=3001 pnpm -C backend dev\" \"pnpm -C frontend dev\"",
+    "dev:frontend": "pnpm -C frontend dev",
+    "dev:backend": "PORT=3001 pnpm -C backend dev",
     "stop": "lsof -ti :3001,5173 | xargs kill -9 2>/dev/null || true",
-    "init": "npm install && npm --prefix backend install && npm --prefix backend run init-db && npm --prefix frontend install",
-    "build": "npm --prefix frontend run build",
-    "start": "npm --prefix backend run start",
-    "start:prod": "npm run build && npm run start",
-    "sync-docs": "npm --prefix backend run sync-docs",
-    "ingest-sessions": "npm --prefix backend run ingest-sessions",
-    "test:e2e": "playwright test"
+    "init": "pnpm install && pnpm -C backend install && pnpm -C backend init-db && pnpm -C frontend install",
+    "build": "pnpm -C frontend build",
+    "start": "pnpm -C backend start",
+    "start:prod": "pnpm run build && pnpm run start",
+    "sync-docs": "pnpm -C backend sync-docs",
+    "ingest-sessions": "pnpm -C backend ingest-sessions",
+    "test:e2e": "pnpm playwright test"
   },
+  "packageManager": "pnpm@10.29.2",
   "devDependencies": {
     "@playwright/test": "^1.54.2",
     "concurrently": "^9.2.0"
