@@ -239,6 +239,14 @@ export function KanbanPage({
   const [showSaveViewModal, setShowSaveViewModal] = useState(false);
   const [saveViewName, setSaveViewName] = useState('');
   const saveViewRef = useRef<HTMLInputElement | null>(null);
+  const [showRenameViewModal, setShowRenameViewModal] = useState(false);
+  const [renameViewId, setRenameViewId] = useState<string | null>(null);
+  const [renameViewName, setRenameViewName] = useState('');
+  const renameViewRef = useRef<HTMLInputElement | null>(null);
+  const [showUpdateViewConfirm, setShowUpdateViewConfirm] = useState(false);
+  const [updateViewId, setUpdateViewId] = useState<string | null>(null);
+  const [showDeleteViewConfirm, setShowDeleteViewConfirm] = useState(false);
+  const [deleteViewId, setDeleteViewId] = useState<string | null>(null);
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
@@ -269,6 +277,11 @@ export function KanbanPage({
     if (!showSaveViewModal) return;
     requestAnimationFrame(() => saveViewRef.current?.focus());
   }, [showSaveViewModal]);
+
+  useEffect(() => {
+    if (!showRenameViewModal) return;
+    requestAnimationFrame(() => renameViewRef.current?.focus());
+  }, [showRenameViewModal]);
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -521,45 +534,25 @@ export function KanbanPage({
     const sv = savedViews.find((x) => x.id === id);
     if (!sv) return;
 
-    const ok = window.confirm(`Delete saved view "${sv.name}"?`);
-    if (!ok) return;
-
-    setSavedViews((prev) => prev.filter((x) => x.id !== id));
-    if (activeSavedViewId === id) {
-      setActiveSavedViewId(null);
-      lastAppliedFiltersRef.current = null;
-    }
-    toast.show(`View "${sv.name}" deleted`);
+    setDeleteViewId(id);
+    setShowDeleteViewConfirm(true);
   }
 
   function renameSavedView(id: string) {
     const sv = savedViews.find((x) => x.id === id);
     if (!sv) return;
 
-    const newName = window.prompt('Rename view:', sv.name);
-    const trimmed = newName?.trim();
-    if (!trimmed || trimmed === sv.name) return;
-
-    setSavedViews((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, name: trimmed } : x))
-    );
-    toast.success(`View renamed to "${trimmed}"`);
+    setRenameViewId(id);
+    setRenameViewName(sv.name);
+    setShowRenameViewModal(true);
   }
 
   function updateSavedViewFilters(id: string) {
     const sv = savedViews.find((x) => x.id === id);
     if (!sv) return;
 
-    const ok = window.confirm(`Update "${sv.name}" with current filters?`);
-    if (!ok) return;
-
-    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
-    setSavedViews((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, filters } : x))
-    );
-    lastAppliedFiltersRef.current = filters;
-    setActiveSavedViewId(id);
-    toast.success(`View "${sv.name}" filters updated`);
+    setUpdateViewId(id);
+    setShowUpdateViewConfirm(true);
   }
 
   useEffect(() => {
@@ -1076,6 +1069,129 @@ export function KanbanPage({
             </Panel>
           </div>
         </div>,
+        document.body
+      )}
+
+      {showRenameViewModal && createPortal(
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowRenameViewModal(false);
+          }}
+        >
+          <div
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-full max-w-sm"
+            style={{ animation: 'modal-pop 0.15s ease-out' }}
+          >
+            <style>{`
+              @keyframes modal-pop {
+                from {
+                  opacity: 0;
+                  transform: scale(0.95);
+                }
+                to {
+                  opacity: 1;
+                  transform: scale(1);
+                }
+              }
+            `}</style>
+            <Panel className="p-6 shadow-xl">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[rgb(var(--cb-text))]">Rename saved view</h3>
+                  <p className="mt-1 text-sm text-[rgb(var(--cb-text-muted))]">Update the name for this view.</p>
+                </div>
+                <Input
+                  ref={renameViewRef}
+                  value={renameViewName}
+                  onChange={(e) => setRenameViewName(e.target.value)}
+                  placeholder="View name"
+                />
+                <div className="flex gap-3">
+                  <Button variant="secondary" className="flex-1" onClick={() => setShowRenameViewModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={() => {
+                      const id = renameViewId;
+                      if (!id) return;
+                      const sv = savedViews.find((x) => x.id === id);
+                      if (!sv) return;
+
+                      const trimmed = renameViewName.trim();
+                      if (!trimmed || trimmed === sv.name) {
+                        setShowRenameViewModal(false);
+                        return;
+                      }
+
+                      setSavedViews((prev) =>
+                        prev.map((x) => (x.id === id ? { ...x, name: trimmed } : x))
+                      );
+                      toast.success(`View renamed to "${trimmed}"`);
+                      setShowRenameViewModal(false);
+                    }}
+                  >
+                    Rename
+                  </Button>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showUpdateViewConfirm && createPortal(
+        <ConfirmModal
+          title="Update saved view"
+          message={`Update "${savedViews.find((x) => x.id === updateViewId)?.name ?? 'this view'}" with current filters?`}
+          confirmLabel="Update view"
+          variant="primary"
+          onConfirm={() => {
+            const id = updateViewId;
+            if (!id) return;
+            const sv = savedViews.find((x) => x.id === id);
+            if (!sv) return;
+
+            const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
+            setSavedViews((prev) =>
+              prev.map((x) => (x.id === id ? { ...x, filters } : x))
+            );
+            lastAppliedFiltersRef.current = filters;
+            setActiveSavedViewId(id);
+            toast.success(`View "${sv.name}" filters updated`);
+            setShowUpdateViewConfirm(false);
+          }}
+          onClose={() => setShowUpdateViewConfirm(false)}
+        />,
+        document.body
+      )}
+
+      {showDeleteViewConfirm && createPortal(
+        <ConfirmModal
+          title="Delete saved view"
+          message={`Delete "${savedViews.find((x) => x.id === deleteViewId)?.name ?? 'this view'}"? This cannot be undone.`}
+          confirmLabel="Delete view"
+          variant="danger"
+          onConfirm={() => {
+            const id = deleteViewId;
+            if (!id) return;
+            const sv = savedViews.find((x) => x.id === id);
+            if (!sv) return;
+
+            setSavedViews((prev) => prev.filter((x) => x.id !== id));
+            if (activeSavedViewId === id) {
+              setActiveSavedViewId(null);
+              lastAppliedFiltersRef.current = null;
+            }
+            toast.show(`View "${sv.name}" deleted`);
+            setShowDeleteViewConfirm(false);
+          }}
+          onClose={() => setShowDeleteViewConfirm(false)}
+        />,
         document.body
       )}
     </>
