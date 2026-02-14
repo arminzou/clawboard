@@ -1,5 +1,20 @@
 -- Clawboard Database Schema
 
+-- Projects table (workspace discovery + grouping)
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    path TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    color TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug);
+
 -- Tasks table (for Kanban board)
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
