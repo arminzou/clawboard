@@ -1,8 +1,9 @@
-import express, { type Request, type Response } from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import type { Database } from 'better-sqlite3';
 import { TaskRepository } from '../../../repositories/taskRepository';
 import { TaskService } from '../../../services/taskService';
 import type { TaskStatus } from '../../../domain/task';
+import { HttpError } from '../errors/httpError';
 
 export type BroadcastFn = (data: unknown) => void;
 
@@ -12,22 +13,17 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
   const repo = new TaskRepository(db);
   const service = new TaskService(repo);
 
-  function sendError(res: Response, err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+  function parseId(raw: unknown): number {
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof s !== 'string') throw new HttpError(400, 'Invalid id');
 
-    if (msg === 'Title is required' || msg === 'No fields to update' || msg === 'Invalid status') {
-      return res.status(400).json({ error: msg });
-    }
-
-    if (msg === 'Task not found') {
-      return res.status(404).json({ error: msg });
-    }
-
-    return res.status(500).json({ error: msg });
+    const id = Number(s);
+    if (!Number.isFinite(id)) throw new HttpError(400, 'Invalid id');
+    return id;
   }
 
   // GET /api/tasks
-  router.get('/', (req: Request, res: Response) => {
+  router.get('/', (req: Request, res: Response, next: NextFunction) => {
     const { status, assigned_to, include_archived, project_id, context_key, context_type } = req.query as Record<string, string | undefined>;
 
     try {
@@ -41,55 +37,53 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
       });
       res.json(tasks);
     } catch (err) {
-      sendError(res, err);
+      next(err);
     }
   });
 
   // GET /api/tasks/:id
-  router.get('/:id', (req: Request, res: Response) => {
+  router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = parseId(req.params.id);
       const task = service.getById(id);
       res.json(task);
     } catch (err) {
-      sendError(res, err);
+      next(err);
     }
   });
 
   // POST /api/tasks
-  router.post('/', (req: Request, res: Response) => {
+  router.post('/', (req: Request, res: Response, next: NextFunction) => {
     try {
       const task = service.create(req.body);
       broadcast?.({ type: 'task_created', data: task });
       res.status(201).json(task);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg === 'Title is required') return res.status(400).json({ error: msg });
-      sendError(res, err);
+      next(err);
     }
   });
 
   // PATCH /api/tasks/:id
-  router.patch('/:id', (req: Request, res: Response) => {
+  router.patch('/:id', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = parseId(req.params.id);
       const task = service.update(id, req.body);
       broadcast?.({ type: 'task_updated', data: task });
       res.json(task);
     } catch (err) {
-      sendError(res, err);
+      next(err);
     }
   });
 
   // DELETE /api/tasks/:id
-  router.delete('/:id', (req: Request, res: Response) => {
+  router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const id = Number(req.params.id);
+      const id = parseId(req.params.id);
       service.delete(id);
       broadcast?.({ type: 'task_deleted', data: { id } });
       res.status(204).send();
     } catch (err) {
-      sendError(res, err);
+      next(err);
     }
   });
 

@@ -32,6 +32,11 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - [x] **Extract TaskService (#77)**: Move business logic into a dedicated "Brain Layer."
 - [ ] **Add unit tests for TaskService (#84)**: Verify the "Brain" works correctly.
 - [x] **Refactor routes to thin handlers (#78)**: Make controllers focus only on HTTP.
+- [x] **Add centralized error handling middleware (#79)**: One place to format errors + map domain errors → HTTP.
+- [ ] **Extract WebSocket manager (#80)**: Separate real-time broadcast concerns from server wiring.
+- [ ] **Extract ProjectRepository + ProjectService (#81)**: Clean separation for project discovery + metadata.
+- [ ] **Extract ActivityRepository + ActivityService (#82)**: Clean separation for activity timeline.
+- [ ] **Slim down server.ts to pure wiring (#83)**: Server should just compose dependencies + register routes.
 
 ---
 

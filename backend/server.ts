@@ -12,6 +12,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Import routes (mixed legacy + new)
 import { createTasksRouter } from './src/presentation/http/routes/tasksRouter';
+import { errorHandler } from './src/presentation/http/middleware/errorHandler';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const tasksArchiveRouter = require('./routes/tasks.archive');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -73,6 +74,9 @@ app.use('/api/projects', projectsRouter);
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Centralized error handling (new TS router paths throw HttpError)
+app.use(errorHandler);
 
 // Frontend (production build)
 const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
