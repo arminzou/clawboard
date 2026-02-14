@@ -3,8 +3,8 @@ import cors from 'cors';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { WebSocketServer } from 'ws';
 import http from 'http';
+import { createWebSocketHub } from './src/infra/realtime/websocketHub';
 
 // Load environment variables from .env (one directory up from backend/)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -42,6 +42,11 @@ try {
 
 // Make db available to routes
 app.locals.db = db;
+
+// Broadcast is used by routes (e.g. tasks) to push real-time updates.
+// WebSocket hub is initialized later (after HTTP server is created), so we start with a no-op.
+let broadcastImpl: (data: unknown) => void = () => {};
+app.locals.broadcast = (data: unknown) => broadcastImpl(data);
 
 // Middleware
 app.use(cors());
@@ -111,38 +116,16 @@ if (HAS_FRONTEND) {
 // Create HTTP server for WebSocket upgrade
 const server = http.createServer(app);
 
-// WebSocket setup for real-time updates
-const wss = new WebSocketServer({ server, path: '/ws' });
-
-wss.on('connection', (ws: import('ws').WebSocket, req: http.IncomingMessage) => {
-    if (!isRequestAuthorized(req)) {
-        try {
-            ws.close(1008, 'Unauthorized');
-        } catch {
-            // ignore
-        }
-        return;
-    }
-
-    console.log('WebSocket client connected');
-
-    ws.on('message', (message: import('ws').RawData) => {
-        console.log('Received:', message.toString());
-    });
-
-    ws.on('close', () => {
-        console.log('WebSocket client disconnected');
-    });
+// WebSocket hub (real-time updates)
+const { wss, broadcast } = createWebSocketHub({
+    server,
+    path: '/ws',
+    isAuthorized: isRequestAuthorized,
+    log: console,
 });
 
-// Broadcast helper for routes to use
-app.locals.broadcast = (data: unknown) => {
-    wss.clients.forEach((client: import('ws').WebSocket) => {
-        if (client.readyState === 1) {
-            client.send(JSON.stringify(data));
-        }
-    });
-};
+// Now that the hub exists, route broadcasts will reach connected clients.
+broadcastImpl = broadcast;
 
 // Start server
 server.on('error', (err: NodeJS.ErrnoException) => {
