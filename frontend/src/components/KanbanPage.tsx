@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { api } from '../../lib/api';
-import type { Assignee, Task, TaskStatus } from '../../lib/api';
-import { toast } from '../../lib/toast';
+import { api } from '../lib/api';
+import type { Assignee, Task, TaskStatus } from '../lib/api';
+import { toast } from '../lib/toast';
 import { BulkActionBar } from './BulkActionBar';
-import { KanbanBoardV2 } from './KanbanBoardV2';
+import { KanbanBoard } from './KanbanBoard';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
-import { AppShellV2 } from './layout/AppShellV2';
-import { SidebarV2 } from './layout/SidebarV2';
-import { TopbarV2, type TopbarMode } from './layout/TopbarV2';
-import { TaskTableV2 } from './TaskTableV2';
-import { ToastContainer } from './ui/Toast';
-import { useProjects } from '../../hooks/useProjects';
+import { AppShell } from './layout/AppShell';
+import { Sidebar } from './layout/Sidebar';
+import { Topbar, type TopbarMode } from './layout/Topbar';
+import { TaskTable } from './TaskTable';
+import { useProjects } from '../hooks/useProjects';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -47,7 +46,7 @@ type SavedView = {
   };
 };
 
-export function KanbanPageV2({
+export function KanbanPage({
   wsSignal,
   openTaskId,
   onOpenTaskConsumed,
@@ -777,7 +776,7 @@ export function KanbanPageV2({
   );
 
   const sidebar = (
-    <SidebarV2
+    <Sidebar
       projectName={projectName}
       projects={projects}
       currentProjectId={currentProjectId}
@@ -852,7 +851,7 @@ export function KanbanPageV2({
   );
 
   const topbar = (
-    <TopbarV2
+    <Topbar
       boardName={boardName}
       mode={mode}
       onMode={setMode}
@@ -869,7 +868,7 @@ export function KanbanPageV2({
 
   return (
     <>
-      <AppShellV2 sidebar={sidebar} topbar={topbar}>
+      <AppShell sidebar={sidebar} topbar={topbar}>
         {overdueCount > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
             <div className="flex items-center gap-2">
@@ -915,14 +914,14 @@ export function KanbanPageV2({
 
         <div className={clsx((loading || error) && 'mt-3')}>
           {mode === 'table' ? (
-            <TaskTableV2
+            <TaskTable
               tasks={visibleTasks}
               onOpen={(t) => {
                 setEditTask(t);
               }}
             />
           ) : (
-            <KanbanBoardV2
+            <KanbanBoard
               tasks={visibleTasks}
               tasksAll={tasks}
               tasksRef={tasksRef}
@@ -957,7 +956,7 @@ export function KanbanPageV2({
             />
           )}
         </div>
-      </AppShellV2>
+      </AppShell>
 
       {editTask ? (
         <EditTaskModal
@@ -1027,8 +1026,6 @@ export function KanbanPageV2({
       {showKeyboardHelp ? (
         <KeyboardHelpModal onClose={() => setShowKeyboardHelp(false)} />
       ) : null}
-
-      <ToastContainer />
     </>
   );
 }

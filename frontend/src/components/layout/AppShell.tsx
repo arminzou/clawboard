@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Menu, X } from 'lucide-react';
 
-export function AppShellV2({
+export function AppShell({
   sidebar,
   topbar,
   children,

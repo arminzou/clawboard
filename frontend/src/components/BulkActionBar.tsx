@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { Copy, Trash2, UserCheck, X, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Assignee, TaskStatus } from '../../lib/api';
+import type { Assignee, TaskStatus } from '../lib/api';
 import { ConfirmModal } from './ui/ConfirmModal';
 
 type BulkActionBarProps = {

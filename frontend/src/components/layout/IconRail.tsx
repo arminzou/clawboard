@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '../ui/Button';
 
-export type AppTabV2 = 'kanban' | 'activity' | 'docs';
+export type AppTab = 'kanban' | 'activity' | 'docs';
 
-export function IconRailV2({
+export function IconRail({
   tab,
   onTab,
 }: {
-  tab: AppTabV2;
-  onTab: (t: AppTabV2) => void;
+  tab: AppTab;
+  onTab: (t: AppTab) => void;
 }) {
-  const items: Array<{ key: AppTabV2; label: string; icon: ReactNode }> = [
+  const items: Array<{ key: AppTab; label: string; icon: ReactNode }> = [
     { key: 'kanban', label: 'Projects', icon: <IconProjects /> },
     { key: 'activity', label: 'Activity', icon: <IconActivity /> },
     { key: 'docs', label: 'Docs', icon: <IconDocs /> },

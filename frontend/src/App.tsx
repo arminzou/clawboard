@@ -1,16 +1,17 @@
 import { Component, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { KanbanPageV2 } from './components/v2/KanbanPageV2';
-import { IconRailV2, type AppTabV2 } from './components/v2/layout/IconRailV2';
-import { AppShellV2 } from './components/v2/layout/AppShellV2';
-import { TopbarLiteV2 } from './components/v2/layout/TopbarLiteV2';
+import { KanbanPage } from './components/KanbanPage';
+import { IconRail, type AppTab } from './components/layout/IconRail';
+import { AppShell } from './components/layout/AppShell';
+import { TopbarLite } from './components/layout/TopbarLite';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { DocsView } from './components/DocsView';
+import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
-import { Toast } from './components/Toast';
+import { toast } from './lib/toast';
 import './index.css';
 
-type Tab = AppTabV2;
+type Tab = AppTab;
 
 export default function App() {
   const navigate = useNavigate();
@@ -23,11 +24,10 @@ export default function App() {
     return 'kanban';
   }, [location.pathname]);
 
-  const [toast, setToast] = useState<string | null>(null);
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
 
   const pushToast = useCallback((msg: string) => {
-    setToast(msg);
+    toast.show(msg);
   }, []);
 
   const { lastMessage } = useWebSocket({
@@ -48,17 +48,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="h-full bg-[rgb(var(--cb-bg))]">
-        {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
+        <ToastContainer />
 
         <div className="flex h-full">
-          <IconRailV2 tab={tab} onTab={setTab} />
+          <IconRail tab={tab} onTab={setTab} />
 
           <div className="min-w-0 flex-1">
             <Routes>
               <Route
                 path="/"
                 element={
-                  <KanbanPageV2
+                  <KanbanPage
                     wsSignal={wsSignal}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
@@ -68,7 +68,7 @@ export default function App() {
               <Route
                 path="/project/:projectId"
                 element={
-                  <KanbanPageV2
+                  <KanbanPage
                     wsSignal={wsSignal}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
@@ -78,7 +78,7 @@ export default function App() {
               <Route
                 path="/activity"
                 element={
-                  <AppShellV2 topbar={<TopbarLiteV2 title="Activity" subtitle="Timeline" />}>
+                  <AppShell topbar={<TopbarLite title="Activity" subtitle="Timeline" />}>
                     <ActivityTimeline
                       wsSignal={wsSignal}
                       onOpenTask={(id) => {
@@ -86,15 +86,15 @@ export default function App() {
                         navigate('/');
                       }}
                     />
-                  </AppShellV2>
+                  </AppShell>
                 }
               />
               <Route
                 path="/docs"
                 element={
-                  <AppShellV2 topbar={<TopbarLiteV2 title="Docs" subtitle="Workspace documents" />}>
+                  <AppShell topbar={<TopbarLite title="Docs" subtitle="Workspace documents" />}>
                     <DocsView wsSignal={wsSignal} />
-                  </AppShellV2>
+                  </AppShell>
                 }
               />
               <Route path="*" element={<Navigate to="/" replace />} />

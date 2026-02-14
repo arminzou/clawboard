@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import type { Activity } from '../lib/api';
-import { Button } from './v2/ui/Button';
-import { Input } from './v2/ui/Input';
-import { Panel } from './v2/ui/Panel';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Panel } from './ui/Panel';
 
 function when(ts: string) {
   const d = new Date(ts);

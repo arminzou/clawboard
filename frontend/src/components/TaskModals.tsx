@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import type { Assignee, Task, TaskPriority, TaskStatus } from '../lib/api';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Panel } from './ui/Panel';

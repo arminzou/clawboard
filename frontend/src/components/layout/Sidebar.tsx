@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { TaskStatus, Project } from '../../../lib/api';
+import type { TaskStatus, Project } from '../../lib/api';
 import { Chip } from '../ui/Chip';
 import { Select } from '../ui/Select';
 
@@ -17,7 +17,7 @@ type SavedView = {
   name: string;
 };
 
-export function SidebarV2({
+export function Sidebar({
   projectName,
   projects,
   currentProjectId,

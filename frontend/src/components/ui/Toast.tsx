@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
-import { toast, useToasts } from '../../../lib/toast';
+import { toast, useToasts } from '../../lib/toast';
 
 export function ToastContainer() {
   const toasts = useToasts();

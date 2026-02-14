@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { Task, TaskStatus } from '../../lib/api';
+import type { Task, TaskStatus } from '../lib/api';
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   backlog: 'Backlog',
@@ -52,7 +52,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   );
 }
 
-export function TaskTableV2({
+export function TaskTable({
   tasks,
   onOpen,
 }: {

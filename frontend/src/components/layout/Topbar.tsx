@@ -5,7 +5,7 @@ import { Input } from '../ui/Input';
 
 export type TopbarMode = 'board' | 'table';
 
-export function TopbarV2({
+export function Topbar({
   boardName,
   mode,
   onMode,

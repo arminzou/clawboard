@@ -1,6 +1,6 @@
 import { Button } from '../ui/Button';
 
-export function TopbarLiteV2({
+export function TopbarLite({
   title,
   subtitle,
   onRefresh,
