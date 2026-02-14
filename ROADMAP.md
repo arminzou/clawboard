@@ -25,13 +25,13 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 
 ### Milestone O — TypeScript, Testing & Core Abstractions (High Priority)
 
-- [ ] **Add TypeScript to backend (#74)**: Set up the compiler and type definitions.
+- [x] **Add TypeScript to backend (#74)**: Set up the compiler and type definitions.
 - [ ] **Setup Vitest framework (#85)**: Add the tools needed for automated testing.
-- [ ] **Extract models/types layer (#75)**: Define the "shape" of our data in code.
-- [ ] **Extract TaskRepository (#76)**: Move SQL queries into a dedicated "Data Layer."
-- [ ] **Extract TaskService (#77)**: Move business logic into a dedicated "Brain Layer."
+- [x] **Extract models/types layer (#75)**: Define the "shape" of our data in code.
+- [x] **Extract TaskRepository (#76)**: Move SQL queries into a dedicated "Data Layer."
+- [x] **Extract TaskService (#77)**: Move business logic into a dedicated "Brain Layer."
 - [ ] **Add unit tests for TaskService (#84)**: Verify the "Brain" works correctly.
-- [ ] **Refactor routes to thin handlers (#78)**: Make controllers focus only on HTTP.
+- [x] **Refactor routes to thin handlers (#78)**: Make controllers focus only on HTTP.
 
 ---
 

@@ -10,9 +10,8 @@ import http from 'http';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// Import routes (CommonJS modules)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const tasksRouter = require('./routes/tasks');
+// Import routes (mixed legacy + new)
+import { createTasksRouter } from './src/presentation/http/routes/tasksRouter';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const tasksArchiveRouter = require('./routes/tasks.archive');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -58,7 +57,13 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // API Routes
-app.use('/api/tasks', tasksRouter);
+app.use(
+    '/api/tasks',
+    createTasksRouter({
+        db,
+        broadcast: app.locals.broadcast,
+    }),
+);
 app.use('/api/tasks', tasksArchiveRouter);
 app.use('/api/activities', activitiesRouter);
 app.use('/api/docs', docsRouter);
