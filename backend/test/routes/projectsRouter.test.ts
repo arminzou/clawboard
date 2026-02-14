@@ -1,0 +1,60 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import request from 'supertest';
+import { createTestApp } from '../utils/testApp';
+
+describe('Projects API', () => {
+  let db: any;
+
+  beforeEach(() => {
+    process.env.CLAWBOARD_API_KEY = '';
+  });
+
+  afterEach(() => {
+    if (db) db.close();
+  });
+
+  it('lists, gets, updates, and deletes projects', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    db.prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)').run('Claw', 'claw', '/tmp/claw');
+    const project = db.prepare('SELECT * FROM projects WHERE slug = ?').get('claw');
+
+    const list = await request(appCtx.app).get('/api/projects').expect(200);
+    expect(list.body).toHaveLength(1);
+
+    const get = await request(appCtx.app).get(`/api/projects/${project.id}`).expect(200);
+    expect(get.body.name).toBe('Claw');
+
+    const update = await request(appCtx.app)
+      .patch(`/api/projects/${project.id}`)
+      .send({ description: 'Updated' })
+      .expect(200);
+    expect(update.body.description).toBe('Updated');
+
+    // delete without cleanup => tasks set to null
+    db.prepare('INSERT INTO tasks (title, status, project_id) VALUES (?, ?, ?)').run('Task', 'backlog', project.id);
+
+    await request(appCtx.app)
+      .delete(`/api/projects/${project.id}?cleanupTasks=false`)
+      .expect(200);
+
+    const task = db.prepare('SELECT * FROM tasks').get();
+    expect(task.project_id).toBeNull();
+  });
+
+  it('summary stats and project stats endpoints return data', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    db.prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)').run('Alpha', 'alpha', '/tmp/alpha');
+    const project = db.prepare('SELECT * FROM projects WHERE slug = ?').get('alpha');
+    db.prepare('INSERT INTO tasks (title, status, project_id) VALUES (?, ?, ?)').run('Task', 'backlog', project.id);
+
+    const summary = await request(appCtx.app).get('/api/projects/stats/summary').expect(200);
+    expect(summary.body.projects.total).toBe(1);
+
+    const stats = await request(appCtx.app).get(`/api/projects/${project.id}/stats`).expect(200);
+    expect(stats.body.project_id).toBe(project.id);
+  });
+});

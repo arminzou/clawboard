@@ -9,10 +9,33 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 - **Phase 3: UI Redesign** (New "Asana-ish" board design with Tailwind)
 - **Phase 4-7: UI Polish** (Bulk actions, keyboard shortcuts, saved views, responsive design)
 - **Phase 8: Multi-Project Hub** (Automatic project discovery, cross-project views)
+- **Phase 9: Backend Clean Architecture** (Completed refactor + TypeScript + testing foundation)
 
 ---
 
-## 🚧 Current Phase: Phase 10 — Backend Clean Architecture
+## 🚧 Current Phase: Phase 10 — Testing & Debugging Validation
+
+Make sure all current functionality works end-to-end before starting Phase 9.
+
+### Goals
+
+- Validate backend APIs + WebSocket flows
+- Run unit tests + smoke tests
+- Verify VS Code debugging works for backend + frontend
+- Manual UI regression checklist
+
+### Checklist
+
+- [ ] Expand backend unit tests (Vitest): tasks, projects, activities, docs, auth
+- [ ] Run backend smoke test + API health
+- [ ] Add Playwright E2E (drag/drop + key board flows)
+- [ ] Manual UI regression: board load, drag/drop, create/edit task, project switch, activity feed
+- [ ] Verify VS Code debugging configs (backend + frontend)
+- [ ] Fix any regressions found
+
+---
+
+## ✅ Phase 9 — Backend Clean Architecture (Completed)
 
 Refactor backend for maintainability as codebase grows. Enable unit testing, separate concerns, migrate to TypeScript.
 
@@ -42,7 +65,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 
 ## 🎯 Future Phases
 
-### Phase 9 — Real-time Collaboration (Planning)
+### Phase 11 — Real-time Collaboration (Planning)
 
 Enable multiple agents (Tee, Fay, Armin) to work on the same board with awareness of each other's activity.
 

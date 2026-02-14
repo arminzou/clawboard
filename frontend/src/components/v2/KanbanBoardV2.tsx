@@ -281,7 +281,10 @@ function KanbanColumnV2({
   }
 
   return (
-    <div className="flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm">
+    <div
+      className="flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm"
+      data-testid={`kanban-column-${id}`}
+    >
       <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
@@ -338,6 +341,7 @@ function KanbanColumnV2({
 
       <div
         ref={setNodeRef}
+        data-testid={`kanban-drop-${id}`}
         className={clsx(
           'relative flex-1 p-3',
           showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.20)]',
@@ -475,6 +479,7 @@ const TaskCardV2 = memo(
 
     return (
       <div
+        data-testid={`task-card-${task.id}`}
         className={clsx(
           'group w-full rounded-xl border bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
           dragging ? 'transition-none' : 'transition',
@@ -501,6 +506,7 @@ const TaskCardV2 = memo(
           
           <button
             type="button"
+            data-testid={`task-drag-handle-${task.id}`}
             className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))] outline-none text-left"
             onClick={onOpen}
             {...dragHandleProps}

@@ -12,9 +12,11 @@
     "start": "npm --prefix backend run start",
     "start:prod": "npm run build && npm run start",
     "sync-docs": "npm --prefix backend run sync-docs",
-    "ingest-sessions": "npm --prefix backend run ingest-sessions"
+    "ingest-sessions": "npm --prefix backend run ingest-sessions",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "concurrently": "^9.2.0"
   }
 }

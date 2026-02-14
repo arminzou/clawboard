@@ -76,7 +76,8 @@ router.post('/sync', (req, res) => {
 router.post('/resync', (req, res) => {
     try {
         const workspaceRoot = req.body?.workspace_root || process.env.WORKSPACE_ROOT || undefined;
-        const r = syncDocs({ workspaceRoot });
+        const syncDocsFn = req.app?.locals?.syncDocs || syncDocs;
+        const r = syncDocsFn({ workspaceRoot });
 
         req.app.locals.broadcast({ type: 'document_resynced', data: r });
         res.json(r);
