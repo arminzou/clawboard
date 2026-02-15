@@ -622,11 +622,7 @@ function SavedViewButton({
     >
       <button
         type="button"
-        className={
-          active
-            ? 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
-            : 'min-w-0 flex-1 truncate rounded-md px-1 py-1 text-left transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
-        }
+        className="min-w-0 flex-1 truncate px-1 py-1 text-left"
         onClick={onClick}
         title={label}
       >
