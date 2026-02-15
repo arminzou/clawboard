@@ -582,8 +582,8 @@ const TaskCard = memo(
             ) : null}
             {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
             {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
-            {task.completed_at ? <MetaRow icon={<CheckCircle2 size={14} />} label="Completed" value={completedLabel || '—'} title={task.completed_at} /> : null}
             <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
+            {task.completed_at ? <MetaRow icon={<CheckCircle2 size={14} />} label="Completed" value={completedLabel || '—'} title={task.completed_at} /> : null}
           </div>
         </button>
       </div>
