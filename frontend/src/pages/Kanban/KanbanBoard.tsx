@@ -11,11 +11,11 @@ import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { AlertTriangle, Calendar, Flag, GripVertical, Hash, User } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle2, Flag, GripVertical, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
-import { formatDate } from '../../lib/date';
+import { formatDate, formatDateSmart } from '../../lib/date';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -495,8 +495,9 @@ const TaskCard = memo(
     showCheckbox?: boolean;
     dragHandleProps?: DragHandleProps;
   }) {
-    const createdLabel = formatDate(task.created_at);
+    const createdLabel = formatDateSmart(task.created_at);
     const dueLabel = formatDate(task.due_date);
+    const completedLabel = formatDateSmart(task.completed_at);
 
     function handleCheckboxClick(e: React.MouseEvent) {
       e.preventDefault();
@@ -581,6 +582,7 @@ const TaskCard = memo(
             ) : null}
             {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
             {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
+            {task.completed_at ? <MetaRow icon={<CheckCircle2 size={14} />} label="Completed" value={completedLabel || '—'} title={task.completed_at} /> : null}
             <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
           </div>
         </button>

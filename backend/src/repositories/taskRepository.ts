@@ -169,15 +169,17 @@ export class TaskRepository {
             .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ? AND archived_at IS NULL')
             .get(status) as { next: number }).next;
 
+    const completedAt = status === 'done' ? new Date().toISOString() : null;
+
     const result = this.db
       .prepare(
         `
         INSERT INTO tasks (
           title, description, status, priority, due_date,
           tags, blocked_reason, assigned_to, position, project_id,
-          context_key, context_type
+          context_key, context_type, completed_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -193,6 +195,7 @@ export class TaskRepository {
         project_id,
         context_key,
         context_type,
+        completedAt,
       );
 
     const created = this.getById(Number(result.lastInsertRowid));
@@ -218,6 +221,9 @@ export class TaskRepository {
       if (patch.status === 'done') {
         updates.push('completed_at = ?');
         values.push(new Date().toISOString());
+      } else {
+        updates.push('completed_at = ?');
+        values.push(null);
       }
     }
     if (patch.priority !== undefined) {
