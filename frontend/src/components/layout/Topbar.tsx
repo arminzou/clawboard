@@ -98,7 +98,7 @@ export function Topbar({
             </Button>
           ) : null}
 
-          <Button variant="primary" onClick={onCreate}>
+          <Button variant="secondary" onClick={onCreate}>
             + Add
           </Button>
 
