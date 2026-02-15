@@ -68,3 +68,24 @@ export function parseSqliteDate(ts: string): Date {
   // Handle "2024-01-01 12:00:00" -> "2024-01-01T12:00:00Z"
   return new Date(ts.replace(' ', 'T') + 'Z');
 }
+
+/**
+ * Formats a date with local date + time.
+ * Output: "Jan 1, 2024 3:42 PM".
+ */
+export function formatDateTime(input: string | Date | null | undefined): string {
+  const d = parseDate(input);
+  if (!d) return '';
+
+  const date = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const time = d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return `${date} ${time}`;
+}

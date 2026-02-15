@@ -15,7 +15,7 @@ import { AlertTriangle, Calendar, CheckCircle2, Flag, GripVertical, Hash, User }
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
-import { formatDate, formatDateSmart } from '../../lib/date';
+import { formatDate, formatDateSmart, formatDateTime } from '../../lib/date';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -582,8 +582,20 @@ const TaskCard = memo(
             ) : null}
             {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
             {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
-            <MetaRow icon={<Calendar size={14} />} label="Created" value={createdLabel || '—'} title={task.created_at} />
-            {task.completed_at ? <MetaRow icon={<CheckCircle2 size={14} />} label="Completed" value={completedLabel || '—'} title={task.completed_at} /> : null}
+            <MetaRow
+              icon={<Calendar size={14} />}
+              label="Created"
+              value={createdLabel || '—'}
+              title={formatDateTime(task.created_at) || task.created_at}
+            />
+            {task.completed_at ? (
+              <MetaRow
+                icon={<CheckCircle2 size={14} />}
+                label="Completed"
+                value={completedLabel || '—'}
+                title={formatDateTime(task.completed_at) || task.completed_at}
+              />
+            ) : null}
           </div>
         </button>
       </div>
