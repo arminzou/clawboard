@@ -276,6 +276,25 @@ export function KanbanPage({
     requestAnimationFrame(() => renameViewRef.current?.focus());
   }, [showRenameViewModal]);
 
+  const handleRenameView = useCallback(() => {
+    const id = renameViewId;
+    if (!id) return;
+    const sv = savedViews.find((x) => x.id === id);
+    if (!sv) return;
+
+    const trimmed = renameViewName.trim();
+    if (!trimmed || trimmed === sv.name) {
+      setShowRenameViewModal(false);
+      return;
+    }
+
+    setSavedViews((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, name: trimmed } : x))
+    );
+    toast.success(`View renamed to "${trimmed}"`);
+    setShowRenameViewModal(false);
+  }, [renameViewId, renameViewName, savedViews]);
+
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
@@ -1010,61 +1029,13 @@ export function KanbanPage({
       )}
 
       {showRenameViewModal && createPortal(
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowRenameViewModal(false);
-          }}
-        >
-          <div
-            onMouseDown={(e) => e.stopPropagation()}
-            className="w-full max-w-sm cb-modal-pop"
-          >
-            <Panel className="p-6 shadow-xl">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h3 className="text-lg font-bold text-[rgb(var(--cb-text))]">Rename saved view</h3>
-                  <p className="mt-1 text-sm text-[rgb(var(--cb-text-muted))]">Update the name for this view.</p>
-                </div>
-                <Input
-                  ref={renameViewRef}
-                  value={renameViewName}
-                  onChange={(e) => setRenameViewName(e.target.value)}
-                  placeholder="View name"
-                />
-                <div className="flex gap-3">
-                  <Button variant="secondary" className="flex-1" onClick={() => setShowRenameViewModal(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1"
-                    onClick={() => {
-                      const id = renameViewId;
-                      if (!id) return;
-                      const sv = savedViews.find((x) => x.id === id);
-                      if (!sv) return;
-
-                      const trimmed = renameViewName.trim();
-                      if (!trimmed || trimmed === sv.name) {
-                        setShowRenameViewModal(false);
-                        return;
-                      }
-
-                      setSavedViews((prev) =>
-                        prev.map((x) => (x.id === id ? { ...x, name: trimmed } : x))
-                      );
-                      toast.success(`View renamed to "${trimmed}"`);
-                      setShowRenameViewModal(false);
-                    }}
-                  >
-                    Rename
-                  </Button>
-                </div>
-              </div>
-            </Panel>
-          </div>
-        </div>,
+        <RenameViewModal
+          name={renameViewName}
+          inputRef={renameViewRef}
+          onNameChange={setRenameViewName}
+          onClose={() => setShowRenameViewModal(false)}
+          onConfirm={handleRenameView}
+        />,
         document.body
       )}
 
@@ -1119,5 +1090,56 @@ export function KanbanPage({
         document.body
       )}
     </>
+  );
+}
+
+type RenameViewModalProps = {
+  name: string;
+  inputRef: { current: HTMLInputElement | null };
+  onNameChange: (value: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+};
+
+function RenameViewModal({ name, inputRef, onNameChange, onClose, onConfirm }: RenameViewModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        onMouseDown={(e) => e.stopPropagation()}
+        className="w-full max-w-sm cb-modal-pop"
+      >
+        <Panel className="p-6 shadow-xl">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-[rgb(var(--cb-text))]">Rename saved view</h3>
+              <p className="mt-1 text-sm text-[rgb(var(--cb-text-muted))]">Update the name for this view.</p>
+            </div>
+            <Input
+              ref={inputRef}
+              value={name}
+              onChange={(e) => onNameChange(e.target.value)}
+              placeholder="View name"
+            />
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={onConfirm}
+              >
+                Rename
+              </Button>
+            </div>
+          </div>
+        </Panel>
+      </div>
+    </div>
   );
 }

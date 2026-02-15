@@ -139,6 +139,9 @@ export function Sidebar({
 
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
 
+  const filterChipClass =
+    'inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner';
+
   // Collapsed state - show only toggle button
   if (collapsed) {
     return (
@@ -233,6 +236,7 @@ export function Sidebar({
                                 }
                               }}
                               title={`Delete project "${p.name}"`}
+                              aria-label={`Delete project "${p.name}"`}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -390,7 +394,7 @@ export function Sidebar({
                   {assignee !== 'all' && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onAssignee('all')}
                       title="Clear assignee filter"
                     >
@@ -400,7 +404,7 @@ export function Sidebar({
                   {hideDone && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onHideDone(false)}
                       title="Clear hide done"
                     >
@@ -410,7 +414,7 @@ export function Sidebar({
                   {blocked && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onBlocked(false)}
                       title="Clear blocked filter"
                     >
@@ -420,7 +424,7 @@ export function Sidebar({
                   {due !== 'any' && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onDue('any')}
                       title="Clear due filter"
                     >
@@ -430,7 +434,7 @@ export function Sidebar({
                   {tag !== 'all' && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onTag('all')}
                       title="Clear tag filter"
                     >
@@ -440,7 +444,7 @@ export function Sidebar({
                   {context !== 'all' && (
                     <button
                       type="button"
-                      className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                      className={filterChipClass}
                       onClick={() => onContext('all')}
                       title="Clear context filter"
                     >
@@ -638,6 +642,7 @@ function SavedViewButton({
           }
           onClick={() => setMenuOpen((v) => !v)}
           title="Options"
+          aria-label={`Options for ${label}`}
         >
           …
         </button>
