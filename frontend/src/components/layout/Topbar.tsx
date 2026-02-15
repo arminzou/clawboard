@@ -14,6 +14,9 @@ export function Topbar({
   searchRef,
   onCreate,
   onRefresh,
+  showSelectionToggle = false,
+  selectionActive = false,
+  onToggleSelection,
 }: {
   boardName: string;
   mode: TopbarMode;
@@ -23,6 +26,9 @@ export function Topbar({
   searchRef: RefObject<HTMLInputElement | null>;
   onCreate: () => void;
   onRefresh: () => void | Promise<void>;
+  showSelectionToggle?: boolean;
+  selectionActive?: boolean;
+  onToggleSelection?: () => void;
 }) {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -81,6 +87,16 @@ export function Topbar({
               </button>
             ) : null}
           </div>
+
+          {showSelectionToggle && onToggleSelection ? (
+            <Button
+              variant={selectionActive ? 'primary' : 'secondary'}
+              onClick={onToggleSelection}
+              title={selectionActive ? 'Exit selection mode' : 'Select multiple tasks'}
+            >
+              {selectionActive ? 'Selecting' : 'Select'}
+            </Button>
+          ) : null}
 
           <Button variant="primary" onClick={onCreate}>
             + Add

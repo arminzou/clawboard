@@ -42,6 +42,7 @@ export function KanbanBoard({
   onQuickCreate,
   selectedIds,
   onToggleSelection,
+  showCheckboxes,
 }: {
   tasks: Task[];
   tasksAll: Task[];
@@ -52,8 +53,8 @@ export function KanbanBoard({
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
   selectedIds?: Set<number>;
   onToggleSelection?: (id: number) => void;
+  showCheckboxes?: boolean;
 }) {
-  const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
   const lastOverColumnRef = useRef<{ activeId: string; overColumn: string } | null>(null);
@@ -250,7 +251,7 @@ export function KanbanBoard({
               onQuickCreate={onQuickCreate}
               selectedIds={selectedIds}
               onToggleSelection={onToggleSelection}
-              hasSelection={hasSelection}
+              showCheckboxes={showCheckboxes}
             />
           ))}
         </div>
@@ -277,7 +278,7 @@ function KanbanColumn({
   onQuickCreate,
   selectedIds,
   onToggleSelection,
-  hasSelection,
+  showCheckboxes,
 }: {
   id: TaskStatus;
   title: string;
@@ -288,7 +289,7 @@ function KanbanColumn({
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
   selectedIds?: Set<number>;
   onToggleSelection?: (id: number) => void;
-  hasSelection?: boolean;
+  showCheckboxes?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const showDropHint = !!activeTaskId && isOver;
@@ -423,7 +424,7 @@ function KanbanColumn({
                 onOpen={() => onOpenTask(t)}
                   isSelected={selectedIds?.has(t.id)}
                 onToggleSelection={onToggleSelection}
-                showCheckbox={hasSelection}
+                showCheckbox={showCheckboxes}
               />
             ))}
           </div>
@@ -515,16 +516,15 @@ const TaskCard = memo(
         )}
       >
         <div className="flex items-start gap-2">
-          <button
-            type="button"
-            className={clsx(
-              'shrink-0 pt-0.5 transition-opacity outline-none',
-              showCheckbox || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-            )}
-            onClick={handleCheckboxClick}
-          >
-            <Checkbox checked={isSelected} size="sm" readOnly tabIndex={-1} />
-          </button>
+          {showCheckbox || isSelected ? (
+            <button
+              type="button"
+              className="shrink-0 pt-0.5 outline-none"
+              onClick={handleCheckboxClick}
+            >
+              <Checkbox checked={isSelected} size="sm" readOnly tabIndex={-1} />
+            </button>
+          ) : null}
 
           <button
             type="button"

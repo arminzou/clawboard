@@ -248,6 +248,7 @@ export function KanbanPage({
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
 
   const overdueCount = useMemo(() => {
     const now = new Date();
@@ -298,6 +299,14 @@ export function KanbanPage({
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
+
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode((prev) => {
+      const next = !prev;
+      if (!next) clearSelection();
+      return next;
+    });
+  }, [clearSelection]);
 
   // Clear selection when tasks change significantly (e.g., after delete)
   useEffect(() => {
@@ -847,6 +856,9 @@ export function KanbanPage({
         setCreateOpen(true);
       }}
       onRefresh={refresh}
+      showSelectionToggle={mode === 'board'}
+      selectionActive={selectionMode}
+      onToggleSelection={toggleSelectionMode}
     />
   );
 
@@ -937,6 +949,7 @@ export function KanbanPage({
               }}
               selectedIds={selectedIds}
               onToggleSelection={toggleSelection}
+              showCheckboxes={selectionMode}
             />
           )}
         </div>
