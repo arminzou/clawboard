@@ -32,18 +32,6 @@ function statusLabel(s: TaskStatus) {
   return COLUMNS.find((c) => c.key === s)?.title ?? s;
 }
 
-function useIsTouch() {
-  const [isTouch, setIsTouch] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(pointer: coarse)');
-    const update = () => setIsTouch(mq.matches);
-    update();
-    mq.addEventListener?.('change', update);
-    return () => mq.removeEventListener?.('change', update);
-  }, []);
-  return isTouch;
-}
-
 export function KanbanBoard({
   tasks,
   tasksAll,
@@ -68,10 +56,7 @@ export function KanbanBoard({
   const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
-  const lastOverRef = useRef<{ activeId: string; overKey: string } | null>(null);
-
-  const isTouch = useIsTouch();
-  const dragEnabled = !isTouch;
+  const lastOverColumnRef = useRef<{ activeId: string; overColumn: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -96,13 +81,6 @@ export function KanbanBoard({
 
     return map;
   }, [tasks]);
-
-  function findContainerForTaskId(taskId: string, columns: Record<TaskStatus, Task[]>) {
-    for (const col of COLUMNS) {
-      if (columns[col.key].some((t) => String(t.id) === taskId)) return col.key;
-    }
-    return null;
-  }
 
   function findContainerInList(taskId: string, list: Task[]) {
     const match = list.find((t) => String(t.id) === taskId);
@@ -205,8 +183,8 @@ export function KanbanBoard({
     if (!activeContainer || !overContainer) return;
     if (activeContainer === overContainer) return;
 
-    if (lastOverRef.current?.activeId === activeId && lastOverRef.current?.overKey === overContainer) return;
-    lastOverRef.current = { activeId, overKey: overContainer };
+    if (lastOverColumnRef.current?.activeId === activeId && lastOverColumnRef.current?.overColumn === overContainer) return;
+    lastOverColumnRef.current = { activeId, overColumn: overContainer };
 
     onSetTasks((prev) => {
       const nextAll = buildNextAll(prev, activeId, overContainer);
@@ -220,7 +198,7 @@ export function KanbanBoard({
     const { active, over } = evt;
     setActiveTaskId(null);
     setActiveRect(null);
-    lastOverRef.current = null;
+    lastOverColumnRef.current = null;
     if (!over) return;
 
     const activeId = String(active.id);
@@ -242,12 +220,12 @@ export function KanbanBoard({
   return (
     <div className="h-full">
       <DndContext
-        sensors={dragEnabled ? sensors : []}
+        sensors={sensors}
         collisionDetection={rectIntersection}
         autoScroll
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
-          lastOverRef.current = null;
+          lastOverColumnRef.current = null;
           const rect = evt.active.rect.current?.initial ?? evt.active.rect.current?.translated;
           if (rect?.width && rect?.height) setActiveRect({ width: rect.width, height: rect.height });
         }}
@@ -256,7 +234,7 @@ export function KanbanBoard({
         onDragCancel={() => {
           setActiveTaskId(null);
           setActiveRect(null);
-          lastOverRef.current = null;
+          lastOverColumnRef.current = null;
         }}
       >
         <div className="grid h-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -268,7 +246,6 @@ export function KanbanBoard({
               count={byStatus[col.key].length}
               tasks={byStatus[col.key]}
               activeTaskId={activeTaskId}
-              dragEnabled={dragEnabled}
               onOpenTask={onEditTask}
               onQuickCreate={onQuickCreate}
               selectedIds={selectedIds}
@@ -296,7 +273,6 @@ function KanbanColumn({
   count,
   tasks,
   activeTaskId,
-  dragEnabled,
   onOpenTask,
   onQuickCreate,
   selectedIds,
@@ -308,7 +284,6 @@ function KanbanColumn({
   count: number;
   tasks: Task[];
   activeTaskId: string | null;
-  dragEnabled: boolean;
   onOpenTask: (t: Task) => void;
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
   selectedIds?: Set<number>;
@@ -346,7 +321,6 @@ function KanbanColumn({
     <div
       className={clsx(
         'flex min-h-[20rem] flex-col rounded-xl bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
-        showDropHint && 'bg-[rgb(var(--cb-accent)/0.00)]',
       )}
       data-testid={`kanban-column-${id}`}
     >
@@ -447,8 +421,7 @@ function KanbanColumn({
                 key={t.id}
                 task={t}
                 onOpen={() => onOpenTask(t)}
-                dragEnabled={dragEnabled}
-                isSelected={selectedIds?.has(t.id)}
+                  isSelected={selectedIds?.has(t.id)}
                 onToggleSelection={onToggleSelection}
                 showCheckbox={hasSelection}
               />
@@ -512,7 +485,6 @@ const TaskCard = memo(
     isSelected,
     onToggleSelection,
     showCheckbox,
-    dragEnabled,
     dragHandleProps,
   }: {
     task: Task;
@@ -521,7 +493,6 @@ const TaskCard = memo(
     isSelected?: boolean;
     onToggleSelection?: (id: number) => void;
     showCheckbox?: boolean;
-    dragEnabled?: boolean;
     dragHandleProps?: DragHandleProps;
   }) {
     const createdLabel = formatDate(task.created_at);
@@ -632,21 +603,18 @@ const TaskCard = memo(
 function DraggableTask({
   task,
   onOpen,
-  dragEnabled,
   isSelected,
   onToggleSelection,
   showCheckbox,
 }: {
   task: Task;
   onOpen: () => void;
-  dragEnabled: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: String(task.id),
-    disabled: !dragEnabled,
   });
 
   const style = {
@@ -668,8 +636,7 @@ function DraggableTask({
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}
         showCheckbox={showCheckbox}
-        dragEnabled={dragEnabled}
-        dragHandleProps={dragEnabled ? { ...attributes, ...listeners } : undefined}
+        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   );
