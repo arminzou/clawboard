@@ -244,15 +244,15 @@ function KanbanColumn({
   return (
     <div
       className={clsx(
-        'flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
-        showDropHint && 'ring-1 ring-[rgb(var(--cb-accent)/0.0)] bg-[rgb(var(--cb-accent)/0.00)]',
+        'flex min-h-[20rem] flex-col rounded-xl bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
+        showDropHint && 'bg-[rgb(var(--cb-accent)/0.00)]',
       )}
       data-testid={`kanban-column-${id}`}
     >
-      <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] px-3 py-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-2 py-1.5">
+        <div className="flex items-center gap-1.5">
           <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
-          <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--cb-text))]">{count}</div>
+          <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-1.5 py-0.5 text-[11px] font-medium text-[rgb(var(--cb-text))]">{count}</div>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -307,12 +307,11 @@ function KanbanColumn({
         ref={setNodeRef}
         data-testid={`kanban-drop-${id}`}
         className={clsx(
-          'relative flex-1 p-3',
-          showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.35)]',
+          'relative flex-1 p-2',
         )}
       >
         {showDropHint ? (
-          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-[rgb(var(--cb-accent)/0.25)] bg-[rgb(var(--cb-accent)/0.04)]" />
+          <div className="pointer-events-none absolute inset-2 rounded-xl bg-[rgb(var(--cb-accent)/0.04)]" />
         ) : null}
 
         {quickOpen ? (
@@ -340,7 +339,7 @@ function KanbanColumn({
           </div>
         ) : null}
 
-        <div className="flex min-h-[18rem] flex-col gap-2">
+        <div className="flex min-h-[18rem] flex-col gap-1.5">
           {tasks.map((t) => (
             <DraggableTask
               key={t.id}
@@ -435,14 +434,9 @@ const TaskCard = memo(
       <div
         data-testid={`task-card-${task.id}`}
         className={clsx(
-          'group w-full rounded-xl border bg-[rgb(var(--cb-surface))] p-3 text-left shadow-sm will-change-transform',
-          dragging ? 'transition-none' : 'transition',
-          !dragging && 'hover:-translate-y-px hover:shadow-md',
-          'active:translate-y-0 active:shadow-sm',
-          'focus-within:ring-2 focus-within:ring-[rgb(var(--cb-accent)/0.45)] focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--cb-surface))]',
-          isSelected
-            ? 'border-[rgb(var(--cb-accent))] ring-2 ring-[rgb(var(--cb-accent)/0.2)]'
-            : 'border-[rgb(var(--cb-border))] hover:border-[rgb(var(--cb-accent)/0.18)]',
+          'group w-full rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 text-left shadow-sm will-change-transform',
+          dragging ? 'transition-none shadow-lg ring-1 ring-[rgb(var(--cb-border))]' : 'transition',
+          isSelected ? 'ring-2 ring-[rgb(var(--cb-accent)/0.2)]' : '',
         )}
       >
         <div className="flex items-start gap-2">
@@ -469,8 +463,7 @@ const TaskCard = memo(
             type="button"
             data-testid={`task-drag-handle-${task.id}`}
             className={clsx(
-              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))] cursor-grab active:cursor-grabbing',
-              !dragEnabled && 'cursor-not-allowed opacity-50',
+              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))] cursor-grab active:cursor-grabbing'
             )}
             aria-label="Drag task"
             title="Drag task"
@@ -482,7 +475,7 @@ const TaskCard = memo(
 
         <button
           type="button"
-          className="w-full mt-2 outline-none text-left"
+          className="w-full mt-1.5 outline-none text-left"
           onClick={onOpen}
         >
           <div className="flex flex-wrap items-center gap-1.5">
@@ -502,7 +495,7 @@ const TaskCard = memo(
               : null}
           </div>
 
-          <div className="mt-3 flex flex-col gap-1.5">
+          <div className="mt-2 flex flex-col gap-1">
             <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
             <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
             {task.context_key ? (
