@@ -900,7 +900,6 @@ export function KanbanPage({
         setCreatePrefill(null);
         setCreateOpen(true);
       }}
-      onRefresh={refresh}
       showSelectionToggle={mode === 'board'}
       selectionActive={selectionMode}
       onToggleSelection={toggleSelectionMode}
@@ -908,7 +907,7 @@ export function KanbanPage({
       sortKey={sortKey}
       sortDir={sortDir}
       sortOptions={Object.entries(SORT_OPTIONS).map(([key, opt]) => ({ key, label: opt.label }))}
-      onSortKey={handleSortKey}
+      onSortKey={(key) => handleSortKey(key as KanbanSortKey)}
       onSortDir={setSortDir}
     />
   );
