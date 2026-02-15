@@ -73,7 +73,7 @@ export function KanbanBoard({
   const dragEnabled = !isTouch;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 120, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
   const byStatus = useMemo(() => {
@@ -469,12 +469,11 @@ const TaskCard = memo(
             type="button"
             data-testid={`task-drag-handle-${task.id}`}
             className={clsx(
-              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))]',
+              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))] cursor-grab active:cursor-grabbing',
               !dragEnabled && 'cursor-not-allowed opacity-50',
             )}
             aria-label="Drag task"
             title="Drag task"
-            style={dragEnabled ? { touchAction: 'none' } : undefined}
             {...dragHandleProps}
           >
             <GripVertical size={16} />
@@ -563,7 +562,7 @@ function DraggableTask({
     <div
       ref={setNodeRef}
       style={style}
-      className={clsx('select-none w-full', isDragging ? 'cursor-grabbing' : 'cursor-grab')}
+      className={clsx('select-none w-full')}
     >
       <TaskCard
         task={task}
