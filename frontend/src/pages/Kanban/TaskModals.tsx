@@ -94,10 +94,12 @@ function TagPicker({
       />
 
       {selected.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1">
           {selected.map((tag) => (
             <Chip key={tag} variant="soft" className="pr-1">
-              <span>{tag}</span>
+              <span className="max-w-[140px] truncate" title={tag}>
+                {tag}
+              </span>
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
