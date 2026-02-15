@@ -3,15 +3,15 @@ import {
   DragOverlay,
   PointerSensor,
   closestCorners,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
-import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { AlertTriangle, Calendar, Flag, Hash, User } from 'lucide-react';
+import { AlertTriangle, Calendar, Flag, GripVertical, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
@@ -67,12 +67,14 @@ export function KanbanBoard({
 }) {
   const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
+  const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
 
   const isTouch = useIsTouch();
   const dragEnabled = !isTouch;
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 120, tolerance: 5 } }),
+  );
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
@@ -106,65 +108,10 @@ export function KanbanBoard({
     return tasksAll.find((t) => String(t.id) === activeTaskId) ?? null;
   }, [activeTaskId, tasksAll]);
 
-  function onDragOver(evt: DragOverEvent) {
-    const { active, over } = evt;
-    if (!over) {
-      setOverId(null);
-      return;
-    }
-
-    const activeId = String(active.id);
-    const overKey = String(over.id);
-    setOverId(overKey);
-
-    const activeContainer = findContainerForTaskId(activeId, byStatus);
-    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerForTaskId(overKey, byStatus)) as
-      | TaskStatus
-      | null;
-
-    if (!activeContainer || !overContainer) return;
-    if (activeContainer === overContainer) return;
-
-    onSetTasks((prev) => {
-      const aTask = prev.find((t) => String(t.id) === activeId);
-      if (!aTask) return prev;
-      return prev.map((t) => (String(t.id) === activeId ? { ...t, status: overContainer } : t));
-    });
-  }
-
-  async function persistPositions(prevAll: Task[], nextAll: Task[]) {
-    const columns: Record<TaskStatus, Task[]> = {
-      backlog: [],
-      in_progress: [],
-      review: [],
-      done: [],
-    };
-    for (const t of nextAll) columns[t.status as TaskStatus]?.push(t);
-    for (const k of Object.keys(columns) as TaskStatus[]) {
-      columns[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-      columns[k] = columns[k].map((t, idx) => ({ ...t, position: idx }));
-    }
-
-    const desired = Object.values(columns).flat();
-    const prevById = new Map(prevAll.map((t) => [t.id, t]));
-    const updates = desired
-      .filter((t) => {
-        const p = prevById.get(t.id);
-        if (!p) return true;
-        return p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
-      })
-      .map((t) => api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position }));
-
-    if (!updates.length) return 0;
-
-    await Promise.allSettled(updates);
-    return updates.length;
-  }
-
   async function onDragEnd(evt: DragEndEvent) {
     const { active, over } = evt;
     setActiveTaskId(null);
-    setOverId(null);
+    setActiveRect(null);
     if (!over) return;
 
     const activeId = String(active.id);
@@ -176,8 +123,8 @@ export function KanbanBoard({
       | null;
 
     if (!activeContainer || !overContainer) return;
+    if (activeContainer === overContainer) return;
 
-    // Update in the full tasks array (source-of-truth) so filters don't lose the move.
     const prevAll = tasksRef.current;
     const nextAll = [...prevAll];
     const aIdx = nextAll.findIndex((t) => String(t.id) === activeId);
@@ -185,34 +132,10 @@ export function KanbanBoard({
 
     const aTask = nextAll[aIdx];
     nextAll[aIdx] = { ...aTask, status: overContainer };
-
-    // Reorder within destination column if dropping on another task.
-    if (overKey !== overContainer) {
-      const dest = nextAll
-        .filter((t) => t.status === overContainer)
-        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-      const fromIndex = dest.findIndex((t) => String(t.id) === activeId);
-      const overIndex = dest.findIndex((t) => String(t.id) === overKey);
-      if (fromIndex >= 0 && overIndex >= 0 && fromIndex !== overIndex) {
-        const reordered = arrayMove(dest, fromIndex, overIndex).map((t, i) => ({ ...t, position: i }));
-        for (const t of reordered) {
-          const idx = nextAll.findIndex((x) => x.id === t.id);
-          if (idx >= 0) nextAll[idx] = t;
-        }
-      }
-    }
-
-    const changed = nextAll.some((t) => {
-      const p = prevAll.find((x) => x.id === t.id);
-      return !p || p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
-    });
-    if (!changed) return;
-
     onSetTasks(nextAll);
 
     try {
-      const updates = await persistPositions(prevAll, nextAll);
-      if (!updates) return;
+      await api.updateTask(aTask.id, { status: overContainer });
     } finally {
       await onRefresh();
     }
@@ -223,15 +146,16 @@ export function KanbanBoard({
       <DndContext
         sensors={dragEnabled ? sensors : []}
         collisionDetection={closestCorners}
+        autoScroll
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
-          setOverId(null);
+          const rect = evt.active.rect.current?.initial ?? evt.active.rect.current?.translated;
+          if (rect?.width && rect?.height) setActiveRect({ width: rect.width, height: rect.height });
         }}
-        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         onDragCancel={() => {
           setActiveTaskId(null);
-          setOverId(null);
+          setActiveRect(null);
         }}
       >
         <div className="grid h-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -243,7 +167,6 @@ export function KanbanBoard({
               count={byStatus[col.key].length}
               tasks={byStatus[col.key]}
               activeTaskId={activeTaskId}
-              overId={overId}
               dragEnabled={dragEnabled}
               onOpenTask={onEditTask}
               onQuickCreate={onQuickCreate}
@@ -254,7 +177,13 @@ export function KanbanBoard({
           ))}
         </div>
 
-        <DragOverlay>{activeTask ? <div className="w-80"><TaskCard task={activeTask} dragging /></div> : null}</DragOverlay>
+        <DragOverlay adjustScale={false}>
+          {activeTask ? (
+            <div style={activeRect ? { width: activeRect.width, height: activeRect.height } : undefined}>
+              <TaskCard task={activeTask} dragging />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
@@ -266,7 +195,6 @@ function KanbanColumn({
   count,
   tasks,
   activeTaskId,
-  overId,
   dragEnabled,
   onOpenTask,
   onQuickCreate,
@@ -279,7 +207,6 @@ function KanbanColumn({
   count: number;
   tasks: Task[];
   activeTaskId: string | null;
-  overId: string | null;
   dragEnabled: boolean;
   onOpenTask: (t: Task) => void;
   onQuickCreate: (status: TaskStatus, title: string) => Promise<void> | void;
@@ -287,10 +214,8 @@ function KanbanColumn({
   onToggleSelection?: (id: number) => void;
   hasSelection?: boolean;
 }) {
-  const { setNodeRef } = useDroppable({ id });
-  const showDropHint =
-    !!activeTaskId &&
-    (overId === id || tasks.some((t) => String(t.id) === overId));
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const showDropHint = !!activeTaskId && isOver;
 
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickTitle, setQuickTitle] = useState('');
@@ -318,7 +243,10 @@ function KanbanColumn({
 
   return (
     <div
-      className="flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm"
+      className={clsx(
+        'flex min-h-[20rem] flex-col rounded-2xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
+        showDropHint && 'ring-1 ring-[rgb(var(--cb-accent)/0.0)] bg-[rgb(var(--cb-accent)/0.00)]',
+      )}
       data-testid={`kanban-column-${id}`}
     >
       <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] px-3 py-2">
@@ -380,11 +308,11 @@ function KanbanColumn({
         data-testid={`kanban-drop-${id}`}
         className={clsx(
           'relative flex-1 p-3',
-          showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.20)]',
+          showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.35)]',
         )}
       >
         {showDropHint ? (
-          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-[rgb(var(--cb-border))] bg-white/20" />
+          <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-[rgb(var(--cb-accent)/0.25)] bg-[rgb(var(--cb-accent)/0.04)]" />
         ) : null}
 
         {quickOpen ? (
@@ -412,35 +340,20 @@ function KanbanColumn({
           </div>
         ) : null}
 
-        <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
-          <div className="flex min-h-[18rem] flex-col gap-2">
-            {tasks.map((t) => (
-              <div key={t.id}>
-                {showDropHint && overId === String(t.id) && activeTaskId !== String(t.id) ? <InsertLine /> : null}
-                <SortableTask
-                  task={t}
-                  onOpen={() => onOpenTask(t)}
-                  boardDragging={!!activeTaskId}
-                  dragEnabled={dragEnabled}
-                  isSelected={selectedIds?.has(t.id)}
-                  onToggleSelection={onToggleSelection}
-                  showCheckbox={hasSelection}
-                />
-              </div>
-            ))}
-            {showDropHint && overId === id ? <InsertLine /> : null}
-          </div>
-        </SortableContext>
+        <div className="flex min-h-[18rem] flex-col gap-2">
+          {tasks.map((t) => (
+            <DraggableTask
+              key={t.id}
+              task={t}
+              onOpen={() => onOpenTask(t)}
+              dragEnabled={dragEnabled}
+              isSelected={selectedIds?.has(t.id)}
+              onToggleSelection={onToggleSelection}
+              showCheckbox={hasSelection}
+            />
+          ))}
+        </div>
       </div>
-    </div>
-  );
-}
-
-function InsertLine() {
-  // Render an insertion marker without increasing layout height (reduces "jump" while dragging).
-  return (
-    <div className="relative h-0">
-      <div className="pointer-events-none absolute -top-1 left-1 right-1 h-0.5 rounded bg-[rgb(var(--cb-accent)/0.35)]" />
     </div>
   );
 }
@@ -533,7 +446,6 @@ const TaskCard = memo(
         )}
       >
         <div className="flex items-start gap-2">
-          {/* Checkbox wrapper */}
           <button
             type="button"
             className={clsx(
@@ -544,25 +456,35 @@ const TaskCard = memo(
           >
             <Checkbox checked={isSelected} size="sm" readOnly tabIndex={-1} />
           </button>
-          
+
           <button
             type="button"
-            data-testid={`task-drag-handle-${task.id}`}
             className="min-w-0 flex-1 whitespace-normal line-clamp-2 text-sm font-semibold leading-snug text-[rgb(var(--cb-text))] outline-none text-left"
             onClick={onOpen}
-            style={dragEnabled ? { touchAction: 'none' } : undefined}
-            {...dragHandleProps}
           >
             {task.title}
           </button>
+
+          <button
+            type="button"
+            data-testid={`task-drag-handle-${task.id}`}
+            className={clsx(
+              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))]',
+              !dragEnabled && 'cursor-not-allowed opacity-50',
+            )}
+            aria-label="Drag task"
+            title="Drag task"
+            style={dragEnabled ? { touchAction: 'none' } : undefined}
+            {...dragHandleProps}
+          >
+            <GripVertical size={16} />
+          </button>
         </div>
 
-        <button 
-          type="button" 
-          className="w-full mt-2 outline-none text-left" 
+        <button
+          type="button"
+          className="w-full mt-2 outline-none text-left"
           onClick={onOpen}
-          style={dragEnabled ? { touchAction: 'none' } : undefined}
-          {...dragHandleProps}
         >
           <div className="flex flex-wrap items-center gap-1.5">
             <span className={statusChipClasses(task.status)}>{statusLabel(task.status)}</span>
@@ -585,10 +507,10 @@ const TaskCard = memo(
             <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
             <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
             {task.context_key ? (
-              <MetaRow 
-                icon={<span className="text-[10px] font-bold opacity-70">CTX</span>} 
-                label={task.context_type ?? 'context'} 
-                value={task.context_key} 
+              <MetaRow
+                icon={<span className="text-[10px] font-bold opacity-70">CTX</span>}
+                label={task.context_type ?? 'context'}
+                value={task.context_key}
               />
             ) : null}
             {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
@@ -612,10 +534,9 @@ const TaskCard = memo(
   }
 );
 
-function SortableTask({
+function DraggableTask({
   task,
   onOpen,
-  boardDragging,
   dragEnabled,
   isSelected,
   onToggleSelection,
@@ -623,36 +544,31 @@ function SortableTask({
 }: {
   task: Task;
   onOpen: () => void;
-  boardDragging?: boolean;
   dragEnabled: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: String(task.id),
     disabled: !dragEnabled,
   });
 
-  // Avoid animated layout jitter while dragging by disabling transitions on the active item.
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? undefined : transition,
+    transform: CSS.Transform.toString(transform ? { ...transform, scaleX: 1, scaleY: 1 } : null),
+    transition: isDragging ? 'none' : undefined,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={clsx(
-        'select-none',
-        isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab',
-      )}
+      className={clsx('select-none w-full', isDragging ? 'cursor-grabbing' : 'cursor-grab')}
     >
       <TaskCard
         task={task}
         onOpen={onOpen}
-        dragging={boardDragging}
+        dragging={isDragging}
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}
         showCheckbox={showCheckbox}
