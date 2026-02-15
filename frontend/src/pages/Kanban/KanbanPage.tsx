@@ -1018,21 +1018,8 @@ export function KanbanPage({
         >
           <div
             onMouseDown={(e) => e.stopPropagation()}
-            className="w-full max-w-sm"
-            style={{ animation: 'modal-pop 0.15s ease-out' }}
+            className="w-full max-w-sm cb-modal-pop"
           >
-            <style>{`
-              @keyframes modal-pop {
-                from {
-                  opacity: 0;
-                  transform: scale(0.95);
-                }
-                to {
-                  opacity: 1;
-                  transform: scale(1);
-                }
-              }
-            `}</style>
             <Panel className="p-6 shadow-xl">
               <div className="flex flex-col gap-4">
                 <div>
