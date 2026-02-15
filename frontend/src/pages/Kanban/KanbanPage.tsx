@@ -714,16 +714,22 @@ export function KanbanPage({
     });
   }, [assignee, tag, hideDone, blocked, q, tasks, due, context, currentContextKey]);
 
-  const tagOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of tasks) {
-      if (!Array.isArray(t.tags)) continue;
-      for (const raw of t.tags) {
-        const s = String(raw).trim();
-        if (s) set.add(s);
-      }
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .listTags()
+      .then((tags) => {
+        if (active) setTagOptions(tags);
+      })
+      .catch(() => {
+        // swallow tag load errors; tagging still works from task data
+      });
+
+    return () => {
+      active = false;
+    };
   }, [tasks]);
 
   const viewCounts = useMemo(() => {
@@ -958,6 +964,7 @@ export function KanbanPage({
       {editTask ? (
         <EditTaskModal
           task={editTask}
+          tagOptions={tagOptions}
           onClose={() => setEditTask(null)}
           onSave={async (patch) => {
             const normalizedTags =
@@ -982,6 +989,7 @@ export function KanbanPage({
       {createOpen ? (
         <CreateTaskModal
           initialStatus={createPrefill?.status}
+          tagOptions={tagOptions}
           onClose={() => {
             setCreateOpen(false);
             setCreatePrefill(null);

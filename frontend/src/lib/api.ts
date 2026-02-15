@@ -191,6 +191,10 @@ export const api = {
     });
   },
 
+  async listTags() {
+    return json<string[]>(await fetch(withBase('/api/tags'), { headers: authHeaders() }));
+  },
+
   async listActivities(params?: { agent?: string; limit?: number; offset?: number; since?: string }) {
     const usp = new URLSearchParams();
     if (params?.agent) usp.set('agent', params.agent);

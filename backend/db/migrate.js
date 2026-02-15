@@ -93,6 +93,53 @@ function migrate(db) {
     db.pragma('user_version = 6');
   }
 
+  // 6 -> 7: add tags table
+  if (v < 7) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const rows = db.prepare('SELECT tags FROM tasks WHERE tags IS NOT NULL').all();
+    const insert = db.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING');
+    const insertMany = db.transaction((names) => {
+      for (const name of names) insert.run(name);
+    });
+
+    const names = [];
+    for (const row of rows) {
+      const raw = row.tags;
+      if (typeof raw !== 'string') continue;
+      const trimmed = raw.trim();
+      if (!trimmed) continue;
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            for (const t of parsed) {
+              const s = String(t).trim();
+              if (s) names.push(s);
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
+      } else {
+        for (const t of trimmed.split(',')) {
+          const s = t.trim();
+          if (s) names.push(s);
+        }
+      }
+    }
+
+    if (names.length) insertMany(names);
+
+    db.pragma('user_version = 7');
+  }
+
   // Keep schema.sql aligned for fresh init
 }
 

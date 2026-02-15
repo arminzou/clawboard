@@ -3,6 +3,7 @@ import type { Database } from 'better-sqlite3';
 import { createTasksRouter } from './tasksRouter';
 import { createProjectsRouter } from './projectsRouter';
 import { createActivitiesRouter } from './activitiesRouter';
+import { createTagsRouter } from './tagsRouter';
 import { errorHandler } from '../middleware/errorHandler';
 
 export type BroadcastFn = (data: unknown) => void;
@@ -12,6 +13,7 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
   app.use('/api/tasks', createTasksRouter({ db, broadcast }));
   app.use('/api/projects', createProjectsRouter({ db }));
   app.use('/api/activities', createActivitiesRouter({ db, broadcast }));
+  app.use('/api/tags', createTagsRouter({ db }));
 
   // Legacy CommonJS routes (to be migrated)
   // eslint-disable-next-line @typescript-eslint/no-var-requires

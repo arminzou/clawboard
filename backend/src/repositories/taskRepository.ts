@@ -96,6 +96,15 @@ export type UpdateTaskBody = Partial<
 export class TaskRepository {
   constructor(private readonly db: Database) {}
 
+  private ensureTags(tags: string[]) {
+    if (!tags.length) return;
+    const insert = this.db.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING');
+    const insertMany = this.db.transaction((names: string[]) => {
+      for (const name of names) insert.run(name);
+    });
+    insertMany(tags);
+  }
+
   list(params: ListTasksParams = {}): Task[] {
     const {
       status,
@@ -155,6 +164,7 @@ export class TaskRepository {
     const due_date = typeof body.due_date === 'string' && body.due_date.trim() ? body.due_date.trim() : null;
     const normalizedTags = body.tags === undefined ? undefined : normalizeTags(body.tags);
     const tagsJson = normalizedTags === undefined ? null : JSON.stringify(normalizedTags);
+    if (normalizedTags) this.ensureTags(normalizedTags);
     const blocked_reason = typeof body.blocked_reason === 'string' && body.blocked_reason.trim() ? body.blocked_reason.trim() : null;
     const assigned_to = body.assigned_to ?? null;
     const project_id = body.project_id != null ? Number(body.project_id) : null;
@@ -238,6 +248,7 @@ export class TaskRepository {
       const normalized = normalizeTags(patch.tags);
       updates.push('tags = ?');
       values.push(JSON.stringify(normalized ?? []));
+      this.ensureTags(normalized);
     }
     if (patch.blocked_reason !== undefined) {
       updates.push('blocked_reason = ?');

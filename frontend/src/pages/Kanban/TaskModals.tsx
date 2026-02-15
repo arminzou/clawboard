@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
 import { Panel } from '../../components/ui/Panel';
 import { Select } from '../../components/ui/Select';
@@ -12,6 +13,120 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'review', title: 'Review' },
   { key: 'done', title: 'Done' },
 ];
+
+function normalizeTag(value: string): string {
+  return value.trim();
+}
+
+function mergeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const raw of tags) {
+    const t = normalizeTag(raw);
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    next.push(t);
+  }
+  return next;
+}
+
+function hasTag(tags: string[], tag: string): boolean {
+  const target = normalizeTag(tag).toLowerCase();
+  if (!target) return false;
+  return tags.some((t) => t.toLowerCase() === target);
+}
+
+// tag toggling handled by TagPicker
+
+function TagPicker({
+  availableTags,
+  value,
+  onChange,
+  placeholder = 'Search or add tag',
+}: {
+  availableTags: string[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState('');
+  const normalizedQuery = normalizeTag(query);
+  const selected = useMemo(() => mergeTags(value), [value]);
+  const options = useMemo(() => mergeTags(availableTags), [availableTags]);
+
+  const filteredOptions = useMemo(() => {
+    const needle = normalizedQuery.toLowerCase();
+    return options
+      .filter((tag) => !hasTag(selected, tag))
+      .filter((tag) => !needle || tag.toLowerCase().includes(needle))
+      .slice(0, 12);
+  }, [normalizedQuery, options, selected]);
+
+  const canCreate =
+    normalizedQuery.length > 0 && !hasTag(options, normalizedQuery) && !hasTag(selected, normalizedQuery);
+
+  function addTag(tag: string) {
+    const normalized = normalizeTag(tag);
+    if (!normalized) return;
+    onChange(mergeTags([...selected, normalized]));
+    setQuery('');
+  }
+
+  function removeTag(tag: string) {
+    onChange(selected.filter((t) => t.toLowerCase() !== tag.toLowerCase()));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} />
+
+      {selected.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((tag) => (
+            <Chip key={tag} variant="soft" className="pr-1">
+              <span>{tag}</span>
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                aria-label={`Remove tag ${tag}`}
+                className="rounded-full px-1 text-[10px] text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))]"
+              >
+                ×
+              </button>
+            </Chip>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-[rgb(var(--cb-text-muted))]">No tags selected.</div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        {filteredOptions.map((tag) => (
+          <button
+            key={tag}
+            type="button"
+            className="transition hover:scale-[1.02]"
+            onClick={() => addTag(tag)}
+            title={`Add tag ${tag}`}
+          >
+            <Chip variant="neutral">{tag}</Chip>
+          </button>
+        ))}
+        {canCreate ? (
+          <Button size="sm" variant="secondary" onClick={() => addTag(normalizedQuery)}>
+            Create “{normalizedQuery}”
+          </Button>
+        ) : null}
+      </div>
+
+      {filteredOptions.length === 0 && !canCreate ? (
+        <div className="text-xs text-[rgb(var(--cb-text-muted))]">No matches.</div>
+      ) : null}
+    </div>
+  );
+}
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -134,6 +249,7 @@ export function EditTaskModal({
   onClose,
   onSave,
   onDelete,
+  tagOptions = [],
 }: {
   task: Task;
   onClose: () => void;
@@ -148,6 +264,7 @@ export function EditTaskModal({
     blocked_reason?: string | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
+  tagOptions?: string[];
 }) {
   const [title, setTitle] = useState(task.title);
   const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
@@ -158,11 +275,15 @@ export function EditTaskModal({
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority ?? null);
   const [dueDate, setDueDate] = useState(task.due_date ?? '');
-  const [tags, setTags] = useState(Array.isArray(task.tags) ? task.tags.join(', ') : '');
+  const [tags, setTags] = useState<string[]>(Array.isArray(task.tags) ? task.tags : []);
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
+  const selectedTags = useMemo(() => mergeTags(tags), [tags]);
 
   const save = useCallback(async () => {
     if (saving || deleting) return;
@@ -176,7 +297,7 @@ export function EditTaskModal({
         status,
         priority,
         due_date: dueDate.trim() ? dueDate.trim() : null,
-        tags,
+        tags: selectedTags,
         assigned_to: assigned,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
       });
@@ -184,7 +305,7 @@ export function EditTaskModal({
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, deleting, description, dueDate, tags, onSave, priority, saving, status, task.title, title]);
+  }, [assigned, blockedReason, deleting, description, dueDate, onSave, priority, saving, selectedTags, status, task.title, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -275,7 +396,7 @@ export function EditTaskModal({
 
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Tags</div>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="comma-separated (e.g. ui, backend)" />
+            <TagPicker availableTags={availableTags} value={tags} onChange={setTags} />
           </label>
 
           <label className="text-sm">
@@ -376,6 +497,7 @@ export function CreateTaskModal({
   initialStatus,
   onClose,
   onCreate,
+  tagOptions = [],
 }: {
   initialStatus?: TaskStatus;
   onClose: () => void;
@@ -390,19 +512,23 @@ export function CreateTaskModal({
     assigned_to?: Assignee | null;
     position?: number;
   }) => Promise<void>;
+  tagOptions?: string[];
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(initialStatus ?? 'backlog');
   const [priority, setPriority] = useState<TaskPriority>(null);
   const [dueDate, setDueDate] = useState('');
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [blockedReason, setBlockedReason] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [saving, setSaving] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   useFocusTrap({ containerRef: modalRef, active: true, onEscape: onClose });
+
+  const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
+  const selectedTags = useMemo(() => mergeTags(tags), [tags]);
 
   const canCreate = title.trim().length > 0 && !saving;
 
@@ -416,14 +542,14 @@ export function CreateTaskModal({
         status,
         priority,
         due_date: dueDate.trim() ? dueDate.trim() : null,
-        tags,
+        tags: selectedTags,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
         assigned_to: assigned,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, description, dueDate, tags, onCreate, priority, saving, status, title]);
+  }, [assigned, blockedReason, description, dueDate, onCreate, priority, saving, selectedTags, status, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -482,7 +608,7 @@ export function CreateTaskModal({
 
           <label className="text-sm">
             <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Tags</div>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="comma-separated (e.g. ui, backend)" />
+            <TagPicker availableTags={availableTags} value={tags} onChange={setTags} />
           </label>
 
           <label className="text-sm">
