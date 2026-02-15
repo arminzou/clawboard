@@ -597,7 +597,9 @@ const TaskCard = memo(
       prev.task.id === next.task.id &&
       prev.task.updated_at === next.task.updated_at &&
       prev.task.status === next.task.status &&
-      prev.task.position === next.task.position
+      prev.task.position === next.task.position &&
+      prev.task.created_at === next.task.created_at &&
+      prev.task.completed_at === next.task.completed_at
     );
   }
 );

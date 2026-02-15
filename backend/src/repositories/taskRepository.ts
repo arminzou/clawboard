@@ -216,6 +216,7 @@ export class TaskRepository {
   update(id: number, patch: UpdateTaskBody): Task {
     const updates: string[] = [];
     const values: unknown[] = [];
+    const existing = this.getById(id);
 
     if (patch.title !== undefined) {
       updates.push('title = ?');
@@ -229,8 +230,9 @@ export class TaskRepository {
       updates.push('status = ?');
       values.push(patch.status);
       if (patch.status === 'done') {
+        const existingCompleted = existing?.status === 'done' ? existing.completed_at : null;
         updates.push('completed_at = ?');
-        values.push(new Date().toISOString());
+        values.push(existingCompleted ?? new Date().toISOString());
       } else {
         updates.push('completed_at = ?');
         values.push(null);
