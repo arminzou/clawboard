@@ -57,6 +57,7 @@ export function KanbanBoard({
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
+  const dragStartTasksRef = useRef<Task[] | null>(null);
   const lastOverColumnRef = useRef<{ activeId: string; overColumn: string } | null>(null);
 
   const sensors = useSensors(
@@ -200,14 +201,18 @@ export function KanbanBoard({
     setActiveTaskId(null);
     setActiveRect(null);
     lastOverColumnRef.current = null;
-    if (!over) return;
+    if (!over) {
+      dragStartTasksRef.current = null;
+      return;
+    }
 
     const activeId = String(active.id);
     const overKey = String(over.id);
 
-    const prevAll = tasksRef.current;
-    const nextAll = buildNextAll(prevAll, activeId, overKey);
-    if (!nextAll) return;
+    const prevAll = dragStartTasksRef.current ?? tasksRef.current;
+    const nextAll = buildNextAll(prevAll, activeId, overKey) ?? tasksRef.current;
+    dragStartTasksRef.current = null;
+    if (!nextAll || nextAll === prevAll) return;
 
     onSetTasks(nextAll);
 
@@ -227,6 +232,7 @@ export function KanbanBoard({
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
           lastOverColumnRef.current = null;
+          dragStartTasksRef.current = tasksRef.current;
           const rect = evt.active.rect.current?.initial ?? evt.active.rect.current?.translated;
           if (rect?.width && rect?.height) setActiveRect({ width: rect.width, height: rect.height });
         }}
@@ -235,6 +241,7 @@ export function KanbanBoard({
         onDragCancel={() => {
           setActiveTaskId(null);
           setActiveRect(null);
+          dragStartTasksRef.current = null;
           lastOverColumnRef.current = null;
         }}
       >
