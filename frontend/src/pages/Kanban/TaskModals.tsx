@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, CheckCircle2, Clock } from 'lucide-react';
 import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import { formatDateTimeFull } from '../../lib/date';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -469,6 +471,41 @@ export function EditTaskModal({
                 <option value="armin">armin</option>
               </Select>
             </label>
+          </div>
+
+          <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Timeline</div>
+            <div className="mt-2 flex flex-col gap-1.5 text-xs text-[rgb(var(--cb-text-muted))]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Calendar size={14} />
+                  <span>Created</span>
+                </div>
+                <span className="font-medium text-[rgb(var(--cb-text))]" title={task.created_at}>
+                  {formatDateTimeFull(task.created_at) || '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Clock size={14} />
+                  <span>Updated</span>
+                </div>
+                <span className="font-medium text-[rgb(var(--cb-text))]" title={task.updated_at ?? task.created_at}>
+                  {formatDateTimeFull(task.updated_at ?? task.created_at) || '—'}
+                </span>
+              </div>
+              {task.completed_at ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    <span>Completed</span>
+                  </div>
+                  <span className="font-medium text-[rgb(var(--cb-text))]" title={task.completed_at}>
+                    {formatDateTimeFull(task.completed_at) || '—'}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-2 border-t border-[rgb(var(--cb-border))] pt-4">

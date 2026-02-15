@@ -1,41 +1,60 @@
 /**
  * Formats a date string or object consistently across the app.
- * Output: "Jan 1, 2024" (MMM D, YYYY)
+ * Output: "Jan 1, 2024" (MMM D, YYYY) or "Jan 1" if current year.
  */
 export function formatDate(input: string | Date | null | undefined): string {
   const d = parseDate(input);
   if (!d) return '';
 
+  const now = new Date();
+  const includeYear = d.getFullYear() !== now.getFullYear();
+
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
   });
 }
 
 /**
- * Formats a date, but if it's today, show a timestamp instead.
- * Output: "Today 3:42 PM" or "Jan 1, 2024".
+ * Formats a date with date + time.
+ * Output: "Jan 1 16:42" or "Jan 1, 2024 16:42".
  */
-export function formatDateSmart(input: string | Date | null | undefined): string {
+export function formatDateTimeSmart(input: string | Date | null | undefined): string {
+  return formatDateTime(input);
+}
+
+export function formatRelativeTime(input: string | Date | null | undefined): string {
   const d = parseDate(input);
   if (!d) return '';
 
   const now = new Date();
-  const isToday =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
+  const diffMs = d.getTime() - now.getTime();
+  const diffSeconds = Math.round(diffMs / 1000);
+  const absSeconds = Math.abs(diffSeconds);
 
-  if (isToday) {
-    const time = d.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-    return `Today ${time}`;
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+  if (absSeconds < 60) {
+    return rtf.format(diffSeconds, 'second');
   }
 
-  return formatDate(d);
+  const diffMinutes = Math.round(diffSeconds / 60);
+  if (Math.abs(diffMinutes) < 60) {
+    return rtf.format(diffMinutes, 'minute');
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (Math.abs(diffHours) < 24) {
+    return rtf.format(diffHours, 'hour');
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  if (Math.abs(diffDays) < 1) {
+    return rtf.format(diffDays, 'day');
+  }
+
+  return formatDateTimeFull(d);
 }
 
 function parseDate(input: string | Date | null | undefined): Date | null {
@@ -71,20 +90,39 @@ export function parseSqliteDate(ts: string): Date {
 
 /**
  * Formats a date with local date + time.
- * Output: "Jan 1, 2024 3:42 PM".
+ * Output: "Jan 1, 2024 16:42" (omit year if current year).
  */
 export function formatDateTime(input: string | Date | null | undefined): string {
   const d = parseDate(input);
   if (!d) return '';
 
+  const now = new Date();
+  const includeYear = d.getFullYear() !== now.getFullYear();
+
+  return formatDateTimeWithYear(d, includeYear);
+}
+
+/**
+ * Formats a date with local date + time, always including year.
+ * Output: "Jan 1, 2024 16:42".
+ */
+export function formatDateTimeFull(input: string | Date | null | undefined): string {
+  const d = parseDate(input);
+  if (!d) return '';
+
+  return formatDateTimeWithYear(d, true);
+}
+
+function formatDateTimeWithYear(d: Date, includeYear: boolean): string {
   const date = d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
   });
   const time = d.toLocaleTimeString('en-US', {
-    hour: 'numeric',
+    hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 
   return `${date} ${time}`;

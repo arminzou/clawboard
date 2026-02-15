@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { formatDate, formatDateSmart, formatDateTime } from './date';
+import { formatDate, formatDateTime, formatDateTimeFull, formatDateTimeSmart, formatRelativeTime } from './date';
 
 describe('date formatting', () => {
   beforeEach(() => {
@@ -10,25 +10,36 @@ describe('date formatting', () => {
     vi.useRealTimers();
   });
 
-  it('formats today with time', () => {
+  it('formats today with date + time', () => {
     const now = new Date(2026, 1, 15, 12, 0, 0);
     vi.setSystemTime(now);
 
     const input = new Date(2026, 1, 15, 9, 30, 0);
-    const expectedTime = input.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-
-    expect(formatDateSmart(input)).toBe(`Today ${expectedTime}`);
+    expect(formatDateTimeSmart(input)).toBe(formatDateTime(input));
   });
 
-  it('formats non-today with date', () => {
+  it('formats non-today with date + time', () => {
     const now = new Date(2026, 1, 15, 12, 0, 0);
     vi.setSystemTime(now);
 
     const input = new Date(2026, 1, 14, 9, 30, 0);
-    expect(formatDateSmart(input)).toBe(formatDate(input));
+    expect(formatDateTimeSmart(input)).toBe(formatDateTime(input));
+  });
+
+  it('formats relative time for recent updates', () => {
+    const now = new Date(2026, 1, 15, 12, 0, 0);
+    vi.setSystemTime(now);
+
+    const input = new Date(2026, 1, 15, 11, 50, 0);
+    expect(formatRelativeTime(input)).toBe('10 minutes ago');
+  });
+
+  it('falls back to full absolute time after 24h', () => {
+    const now = new Date(2026, 1, 15, 12, 0, 0);
+    vi.setSystemTime(now);
+
+    const input = new Date(2026, 1, 14, 10, 0, 0);
+    expect(formatRelativeTime(input)).toBe(formatDateTimeFull(input));
   });
 
   it('formats sqlite timestamp with local date/time', () => {
@@ -40,18 +51,37 @@ describe('date formatting', () => {
     const expectedDate = parsed.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
     });
     const expectedTime = parsed.toLocaleTimeString('en-US', {
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     });
 
     expect(formatDateTime(input)).toBe(`${expectedDate} ${expectedTime}`);
   });
 
+  it('formats full date/time with year', () => {
+    const now = new Date(2026, 1, 15, 12, 0, 0);
+    vi.setSystemTime(now);
+
+    const input = new Date(2026, 1, 15, 9, 30, 0);
+    const expectedDate = input.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const expectedTime = input.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    expect(formatDateTimeFull(input)).toBe(`${expectedDate} ${expectedTime}`);
+  });
+
   it('returns empty string for invalid input', () => {
-    expect(formatDateSmart('nope')).toBe('');
+    expect(formatDateTimeSmart('nope')).toBe('');
     expect(formatDateTime(null)).toBe('');
   });
 });

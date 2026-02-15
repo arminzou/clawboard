@@ -11,11 +11,11 @@ import {
 import type { DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { AlertTriangle, Calendar, CheckCircle2, Flag, GripVertical, Hash, User } from 'lucide-react';
+import { AlertTriangle, Clock, Flag, GripVertical, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Task, TaskStatus } from '../../lib/api';
-import { formatDate, formatDateSmart, formatDateTime } from '../../lib/date';
+import { formatDate, formatDateTimeSmart, formatRelativeTime } from '../../lib/date';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -441,9 +441,9 @@ const TaskCard = memo(
     showCheckbox?: boolean;
     dragHandleProps?: DragHandleProps;
   }) {
-    const createdLabel = formatDateSmart(task.created_at);
     const dueLabel = formatDate(task.due_date);
-    const completedLabel = formatDateSmart(task.completed_at);
+    const updatedRelative = formatRelativeTime(task.updated_at ?? task.created_at);
+    const updatedTitle = formatDateTimeSmart(task.updated_at ?? task.created_at);
 
     function handleCheckboxClick(e: React.MouseEvent) {
       e.preventDefault();
@@ -527,20 +527,14 @@ const TaskCard = memo(
             ) : null}
             {task.blocked_reason ? <MetaRow icon={<AlertTriangle size={14} />} label="Blocked" value="Yes" title={task.blocked_reason} /> : null}
             {task.due_date ? <MetaRow icon={<Flag size={14} />} label="Due" value={dueLabel || '—'} title={task.due_date} /> : null}
-            <MetaRow
-              icon={<Calendar size={14} />}
-              label="Created"
-              value={createdLabel || '—'}
-              title={formatDateTime(task.created_at) || task.created_at}
-            />
-            {task.completed_at ? (
-              <MetaRow
-                icon={<CheckCircle2 size={14} />}
-                label="Completed"
-                value={completedLabel || '—'}
-                title={formatDateTime(task.completed_at) || task.completed_at}
-              />
-            ) : null}
+            <div
+              className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[rgb(var(--cb-text-muted))]"
+              title={updatedTitle || task.updated_at || task.created_at}
+            >
+              <Clock size={12} />
+              <span>Updated</span>
+              <span className="text-[rgb(var(--cb-text))]">{updatedRelative || '—'}</span>
+            </div>
           </div>
         </button>
       </div>
