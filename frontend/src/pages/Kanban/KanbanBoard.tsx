@@ -3,12 +3,12 @@ import {
   DragOverlay,
   PointerSensor,
   rectIntersection,
+  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
-import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { AlertTriangle, Calendar, CheckCircle2, Flag, GripVertical, Hash, User } from 'lucide-react';
@@ -28,6 +28,9 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'done', title: 'Done' },
 ];
 
+export type KanbanSortKey = 'updated' | 'created' | 'due' | 'priority';
+export type KanbanSortDir = 'asc' | 'desc';
+
 function statusLabel(s: TaskStatus) {
   return COLUMNS.find((c) => c.key === s)?.title ?? s;
 }
@@ -43,6 +46,8 @@ export function KanbanBoard({
   selectedIds,
   onToggleSelection,
   showCheckboxes,
+  sortKey,
+  sortDir,
 }: {
   tasks: Task[];
   tasksAll: Task[];
@@ -54,15 +59,28 @@ export function KanbanBoard({
   selectedIds?: Set<number>;
   onToggleSelection?: (id: number) => void;
   showCheckboxes?: boolean;
+  sortKey: KanbanSortKey;
+  sortDir: KanbanSortDir;
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
-  const dragStartTasksRef = useRef<Task[] | null>(null);
-  const lastOverColumnRef = useRef<{ activeId: string; overColumn: string } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+  function parseDateValue(raw: string | null | undefined): number {
+    if (!raw) return 0;
+    let d: Date;
+    if (raw.includes('T')) {
+      d = new Date(raw);
+    } else if (raw.includes(' ')) {
+      d = new Date(raw.replace(' ', 'T') + 'Z');
+    } else {
+      d = new Date(`${raw}T00:00:00`);
+    }
+    return Number.isFinite(d.getTime()) ? d.getTime() : 0;
+  }
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = {
@@ -77,151 +95,73 @@ export function KanbanBoard({
       if (bucket) bucket.push(t);
     }
 
+    const priorityOrder: Record<string, number> = {
+      urgent: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+      '': 4,
+    };
+
+    const compare = (a: Task, b: Task) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'created':
+          cmp = parseDateValue(a.created_at) - parseDateValue(b.created_at);
+          break;
+        case 'due': {
+          const aDue = a.due_date ? parseDateValue(a.due_date) : sortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+          const bDue = b.due_date ? parseDateValue(b.due_date) : sortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+          cmp = aDue - bDue;
+          break;
+        }
+        case 'priority': {
+          const aKey = priorityOrder[String(a.priority ?? '').trim()] ?? 99;
+          const bKey = priorityOrder[String(b.priority ?? '').trim()] ?? 99;
+          cmp = aKey - bKey;
+          break;
+        }
+        case 'updated':
+        default:
+          cmp = parseDateValue(a.updated_at ?? a.created_at) - parseDateValue(b.updated_at ?? b.created_at);
+          break;
+      }
+
+      if (cmp === 0) cmp = a.id - b.id;
+      return sortDir === 'asc' ? cmp : -cmp;
+    };
+
     for (const k of Object.keys(map) as TaskStatus[]) {
-      map[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      map[k].sort(compare);
     }
 
     return map;
-  }, [tasks]);
-
-  function findContainerInList(taskId: string, list: Task[]) {
-    const match = list.find((t) => String(t.id) === taskId);
-    return (match?.status as TaskStatus) ?? null;
-  }
+  }, [tasks, sortKey, sortDir]);
 
   const activeTask = useMemo(() => {
     if (!activeTaskId) return null;
     return tasksAll.find((t) => String(t.id) === activeTaskId) ?? null;
   }, [activeTaskId, tasksAll]);
 
-  async function persistPositions(prevAll: Task[], nextAll: Task[]) {
-    const prevById = new Map(prevAll.map((t) => [t.id, t]));
-    const updates = nextAll
-      .filter((t) => {
-        const p = prevById.get(t.id);
-        if (!p) return true;
-        return p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
-      })
-      .map((t) => ({
-        id: t.id,
-        status: t.status as TaskStatus,
-        position: t.position ?? 0,
-      }));
-
-    if (!updates.length) return 0;
-    await api.reorderTasks(updates);
-    return updates.length;
-  }
-
-  function buildNextAll(prevAll: Task[], activeId: string, overKey: string) {
-    const activeContainer = findContainerInList(activeId, prevAll);
-    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerInList(overKey, prevAll)) as
-      | TaskStatus
-      | null;
-
-    if (!activeContainer || !overContainer) return null;
-
-    const columns: Record<TaskStatus, Task[]> = {
-      backlog: [],
-      in_progress: [],
-      review: [],
-      done: [],
-    };
-
-    for (const t of prevAll) columns[t.status as TaskStatus]?.push(t);
-    for (const k of Object.keys(columns) as TaskStatus[]) {
-      columns[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    }
-
-    const source = [...columns[activeContainer]];
-    const dest = activeContainer === overContainer ? source : [...columns[overContainer]];
-
-    const activeIndex = source.findIndex((t) => String(t.id) === activeId);
-    if (activeIndex < 0) return null;
-
-    if (activeContainer === overContainer) {
-      const overIndex = overKey === overContainer
-        ? dest.length - 1
-        : dest.findIndex((t) => String(t.id) === overKey);
-      if (overIndex >= 0 && activeIndex !== overIndex) {
-        columns[activeContainer] = arrayMove(dest, activeIndex, overIndex);
-      } else {
-        return null;
-      }
-    } else {
-      const [moved] = source.splice(activeIndex, 1);
-      const overIndex = overKey === overContainer
-        ? dest.length
-        : dest.findIndex((t) => String(t.id) === overKey);
-      const insertIndex = overIndex < 0 ? dest.length : overIndex;
-      const updated = { ...moved, status: overContainer };
-      dest.splice(insertIndex, 0, updated);
-      columns[activeContainer] = source;
-      columns[overContainer] = dest;
-    }
-
-    const nextAll: Task[] = [];
-    for (const k of Object.keys(columns) as TaskStatus[]) {
-      columns[k] = columns[k].map((t, idx) => ({ ...t, position: idx }));
-      nextAll.push(...columns[k]);
-    }
-
-    const changed = nextAll.some((t) => {
-      const p = prevAll.find((x) => x.id === t.id);
-      return !p || p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
-    });
-
-    return changed ? nextAll : null;
-  }
-
-  function onDragOver(evt: DragOverEvent) {
-    const { active, over } = evt;
-    if (!over) return;
-    const activeId = String(active.id);
-    const overKey = String(over.id);
-    if (activeId === overKey) return;
-
-    const activeContainer = findContainerInList(activeId, tasksRef.current);
-    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerInList(overKey, tasksRef.current)) as
-      | TaskStatus
-      | null;
-
-    if (!activeContainer || !overContainer) return;
-    if (activeContainer === overContainer) return;
-
-    if (lastOverColumnRef.current?.activeId === activeId && lastOverColumnRef.current?.overColumn === overContainer) return;
-    lastOverColumnRef.current = { activeId, overColumn: overContainer };
-
-    onSetTasks((prev) => {
-      const nextAll = buildNextAll(prev, activeId, overContainer);
-      if (!nextAll) return prev;
-      tasksRef.current = nextAll;
-      return nextAll;
-    });
-  }
-
   async function onDragEnd(evt: DragEndEvent) {
     const { active, over } = evt;
     setActiveTaskId(null);
     setActiveRect(null);
-    lastOverColumnRef.current = null;
-    if (!over) {
-      dragStartTasksRef.current = null;
-      return;
-    }
+    if (!over) return;
 
     const activeId = String(active.id);
     const overKey = String(over.id);
 
-    const prevAll = dragStartTasksRef.current ?? tasksRef.current;
-    const nextAll = buildNextAll(prevAll, activeId, overKey) ?? tasksRef.current;
-    dragStartTasksRef.current = null;
-    if (!nextAll || nextAll === prevAll) return;
+    const targetStatus = COLUMNS.find((c) => c.key === overKey)?.key ?? null;
+    if (!targetStatus) return;
 
-    onSetTasks(nextAll);
+    const activeTask = tasksRef.current.find((t) => String(t.id) === activeId);
+    if (!activeTask || activeTask.status === targetStatus) return;
+
+    onSetTasks((prev) => prev.map((t) => (t.id === activeTask.id ? { ...t, status: targetStatus } : t)));
 
     try {
-      await persistPositions(prevAll, nextAll);
+      await api.updateTask(activeTask.id, { status: targetStatus });
     } finally {
       await onRefresh();
     }
@@ -235,18 +175,13 @@ export function KanbanBoard({
         autoScroll
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
-          lastOverColumnRef.current = null;
-          dragStartTasksRef.current = tasksRef.current;
           const rect = evt.active.rect.current?.initial ?? evt.active.rect.current?.translated;
           if (rect?.width && rect?.height) setActiveRect({ width: rect.width, height: rect.height });
         }}
-        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         onDragCancel={() => {
           setActiveTaskId(null);
           setActiveRect(null);
-          dragStartTasksRef.current = null;
-          lastOverColumnRef.current = null;
         }}
       >
         <div className="grid h-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -426,20 +361,18 @@ function KanbanColumn({
           </div>
         ) : null}
 
-        <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
-          <div className="flex min-h-[18rem] flex-col gap-1.5">
-            {tasks.map((t) => (
-              <DraggableTask
-                key={t.id}
-                task={t}
-                onOpen={() => onOpenTask(t)}
-                  isSelected={selectedIds?.has(t.id)}
-                onToggleSelection={onToggleSelection}
-                showCheckbox={showCheckboxes}
-              />
-            ))}
-          </div>
-        </SortableContext>
+        <div className="flex min-h-[18rem] flex-col gap-1.5">
+          {tasks.map((t) => (
+            <DraggableTask
+              key={t.id}
+              task={t}
+              onOpen={() => onOpenTask(t)}
+              isSelected={selectedIds?.has(t.id)}
+              onToggleSelection={onToggleSelection}
+              showCheckbox={showCheckboxes}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -640,13 +573,12 @@ function DraggableTask({
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: String(task.id),
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform ? { ...transform, scaleX: 1, scaleY: 1 } : null),
-    transition: isDragging ? 'none' : transition,
+    transform: transform ? CSS.Translate.toString(transform) : undefined,
     opacity: isDragging ? 0 : undefined,
   };
 

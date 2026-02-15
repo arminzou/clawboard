@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 import type { Assignee, Task, TaskStatus } from '../../lib/api';
 import { toast } from '../../lib/toast';
 import { BulkActionBar } from './BulkActionBar';
-import { KanbanBoard } from './KanbanBoard';
+import { KanbanBoard, type KanbanSortDir, type KanbanSortKey } from './KanbanBoard';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { CreateTaskModal, EditTaskModal } from './TaskModals';
 import { AppShell } from '../../components/layout/AppShell';
@@ -36,6 +36,13 @@ type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 type TagFilter = 'all' | (string & {});
 
 type ContextFilter = 'all' | 'current' | (string & {});
+
+const SORT_OPTIONS: Record<KanbanSortKey, { label: string; defaultDir: KanbanSortDir }> = {
+  updated: { label: 'Updated', defaultDir: 'desc' },
+  created: { label: 'Created', defaultDir: 'desc' },
+  due: { label: 'Due', defaultDir: 'asc' },
+  priority: { label: 'Priority', defaultDir: 'asc' },
+};
 
 type SavedView = {
   id: string;
@@ -100,6 +107,33 @@ export function KanbanPage({
       return 'all';
     }
   });
+
+  const [sortKey, setSortKey] = useState<KanbanSortKey>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.sortKey') ?? 'updated';
+      return (raw in SORT_OPTIONS ? raw : 'updated') as KanbanSortKey;
+    } catch {
+      return 'updated';
+    }
+  });
+
+  const [sortDir, setSortDir] = useState<KanbanSortDir>(() => {
+    try {
+      const raw = window.localStorage.getItem('cb.v2.kanban.sortDir') ?? 'desc';
+      return raw === 'asc' || raw === 'desc' ? raw : 'desc';
+    } catch {
+      return 'desc';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('cb.v2.kanban.sortKey', sortKey);
+      window.localStorage.setItem('cb.v2.kanban.sortDir', sortDir);
+    } catch {
+      // ignore
+    }
+  }, [sortKey, sortDir]);
 
   const [hideDone, setHideDone] = useState<boolean>(() => {
     try {
@@ -745,6 +779,11 @@ export function KanbanPage({
     return counts;
   }, [baseFiltered]);
 
+  const handleSortKey = useCallback((next: KanbanSortKey) => {
+    setSortKey(next);
+    setSortDir((prev) => (next === sortKey ? prev : SORT_OPTIONS[next].defaultDir));
+  }, [sortKey]);
+
   const visibleTasks = useMemo(() => {
     if (view === 'all') return baseFiltered;
     return baseFiltered.filter((t) => t.status === view);
@@ -865,6 +904,12 @@ export function KanbanPage({
       showSelectionToggle={mode === 'board'}
       selectionActive={selectionMode}
       onToggleSelection={toggleSelectionMode}
+      showSort={mode === 'board'}
+      sortKey={sortKey}
+      sortDir={sortDir}
+      sortOptions={Object.entries(SORT_OPTIONS).map(([key, opt]) => ({ key, label: opt.label }))}
+      onSortKey={handleSortKey}
+      onSortDir={setSortDir}
     />
   );
 
@@ -956,6 +1001,8 @@ export function KanbanPage({
               selectedIds={selectedIds}
               onToggleSelection={toggleSelection}
               showCheckboxes={selectionMode}
+              sortKey={sortKey}
+              sortDir={sortDir}
             />
           )}
         </div>

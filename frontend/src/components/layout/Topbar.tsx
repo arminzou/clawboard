@@ -2,8 +2,14 @@ import { RefreshCw } from 'lucide-react';
 import type { RefObject } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Menu } from '../ui/Menu';
 
 export type TopbarMode = 'board' | 'table';
+
+export type TopbarSortOption = {
+  key: string;
+  label: string;
+};
 
 export function Topbar({
   boardName,
@@ -17,6 +23,12 @@ export function Topbar({
   showSelectionToggle = false,
   selectionActive = false,
   onToggleSelection,
+  showSort = false,
+  sortKey,
+  sortDir,
+  sortOptions = [],
+  onSortKey,
+  onSortDir,
 }: {
   boardName: string;
   mode: TopbarMode;
@@ -29,6 +41,12 @@ export function Topbar({
   showSelectionToggle?: boolean;
   selectionActive?: boolean;
   onToggleSelection?: () => void;
+  showSort?: boolean;
+  sortKey?: string;
+  sortDir?: 'asc' | 'desc';
+  sortOptions?: TopbarSortOption[];
+  onSortKey?: (key: string) => void;
+  onSortDir?: (dir: 'asc' | 'desc') => void;
 }) {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -87,6 +105,29 @@ export function Topbar({
               </button>
             ) : null}
           </div>
+
+          {showSort && sortKey && sortDir && onSortKey && onSortDir ? (
+            <Menu
+              align="left"
+              items={[
+                ...sortOptions.map((opt) => ({
+                  key: opt.key,
+                  label: `${sortKey === opt.key ? '✓ ' : ''}${opt.label}`,
+                  onSelect: () => onSortKey(opt.key),
+                })),
+                {
+                  key: 'direction',
+                  label: `Direction: ${sortDir === 'asc' ? 'Ascending' : 'Descending'}`,
+                  onSelect: () => onSortDir(sortDir === 'asc' ? 'desc' : 'asc'),
+                },
+              ]}
+              trigger={({ toggle }) => (
+                <Button variant="secondary" onClick={toggle}>
+                  Sort: {sortOptions.find((opt) => opt.key === sortKey)?.label ?? 'Updated'} {sortDir === 'asc' ? '↑' : '↓'}
+                </Button>
+              )}
+            />
+          ) : null}
 
           {showSelectionToggle && onToggleSelection ? (
             <Button
