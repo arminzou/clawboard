@@ -2,13 +2,13 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  closestCorners,
-  useDraggable,
+  rectIntersection,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragOverEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { AlertTriangle, Calendar, Flag, GripVertical, Hash, User } from 'lucide-react';
@@ -68,6 +68,7 @@ export function KanbanBoard({
   const hasSelection = selectedIds && selectedIds.size > 0;
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
+  const lastOverRef = useRef<{ activeId: string; overKey: string } | null>(null);
 
   const isTouch = useIsTouch();
   const dragEnabled = !isTouch;
@@ -103,39 +104,136 @@ export function KanbanBoard({
     return null;
   }
 
+  function findContainerInList(taskId: string, list: Task[]) {
+    const match = list.find((t) => String(t.id) === taskId);
+    return (match?.status as TaskStatus) ?? null;
+  }
+
   const activeTask = useMemo(() => {
     if (!activeTaskId) return null;
     return tasksAll.find((t) => String(t.id) === activeTaskId) ?? null;
   }, [activeTaskId, tasksAll]);
 
-  async function onDragEnd(evt: DragEndEvent) {
-    const { active, over } = evt;
-    setActiveTaskId(null);
-    setActiveRect(null);
-    if (!over) return;
+  async function persistPositions(prevAll: Task[], nextAll: Task[]) {
+    const prevById = new Map(prevAll.map((t) => [t.id, t]));
+    const updates = nextAll
+      .filter((t) => {
+        const p = prevById.get(t.id);
+        if (!p) return true;
+        return p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
+      })
+      .map((t) => api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position }));
 
+    if (!updates.length) return 0;
+    await Promise.allSettled(updates);
+    return updates.length;
+  }
+
+  function buildNextAll(prevAll: Task[], activeId: string, overKey: string) {
+    const activeContainer = findContainerInList(activeId, prevAll);
+    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerInList(overKey, prevAll)) as
+      | TaskStatus
+      | null;
+
+    if (!activeContainer || !overContainer) return null;
+
+    const columns: Record<TaskStatus, Task[]> = {
+      backlog: [],
+      in_progress: [],
+      review: [],
+      done: [],
+    };
+
+    for (const t of prevAll) columns[t.status as TaskStatus]?.push(t);
+    for (const k of Object.keys(columns) as TaskStatus[]) {
+      columns[k].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    }
+
+    const source = [...columns[activeContainer]];
+    const dest = activeContainer === overContainer ? source : [...columns[overContainer]];
+
+    const activeIndex = source.findIndex((t) => String(t.id) === activeId);
+    if (activeIndex < 0) return null;
+
+    if (activeContainer === overContainer) {
+      const overIndex = overKey === overContainer
+        ? dest.length - 1
+        : dest.findIndex((t) => String(t.id) === overKey);
+      if (overIndex >= 0 && activeIndex !== overIndex) {
+        columns[activeContainer] = arrayMove(dest, activeIndex, overIndex);
+      } else {
+        return null;
+      }
+    } else {
+      const [moved] = source.splice(activeIndex, 1);
+      const overIndex = overKey === overContainer
+        ? dest.length
+        : dest.findIndex((t) => String(t.id) === overKey);
+      const insertIndex = overIndex < 0 ? dest.length : overIndex;
+      const updated = { ...moved, status: overContainer };
+      dest.splice(insertIndex, 0, updated);
+      columns[activeContainer] = source;
+      columns[overContainer] = dest;
+    }
+
+    const nextAll: Task[] = [];
+    for (const k of Object.keys(columns) as TaskStatus[]) {
+      columns[k] = columns[k].map((t, idx) => ({ ...t, position: idx }));
+      nextAll.push(...columns[k]);
+    }
+
+    const changed = nextAll.some((t) => {
+      const p = prevAll.find((x) => x.id === t.id);
+      return !p || p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
+    });
+
+    return changed ? nextAll : null;
+  }
+
+  function onDragOver(evt: DragOverEvent) {
+    const { active, over } = evt;
+    if (!over) return;
     const activeId = String(active.id);
     const overKey = String(over.id);
+    if (activeId === overKey) return;
 
-    const activeContainer = findContainerForTaskId(activeId, byStatus);
-    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerForTaskId(overKey, byStatus)) as
+    const activeContainer = findContainerInList(activeId, tasksRef.current);
+    const overContainer = (COLUMNS.find((c) => c.key === overKey)?.key ?? findContainerInList(overKey, tasksRef.current)) as
       | TaskStatus
       | null;
 
     if (!activeContainer || !overContainer) return;
     if (activeContainer === overContainer) return;
 
-    const prevAll = tasksRef.current;
-    const nextAll = [...prevAll];
-    const aIdx = nextAll.findIndex((t) => String(t.id) === activeId);
-    if (aIdx < 0) return;
+    if (lastOverRef.current?.activeId === activeId && lastOverRef.current?.overKey === overContainer) return;
+    lastOverRef.current = { activeId, overKey: overContainer };
 
-    const aTask = nextAll[aIdx];
-    nextAll[aIdx] = { ...aTask, status: overContainer };
+    onSetTasks((prev) => {
+      const nextAll = buildNextAll(prev, activeId, overContainer);
+      if (!nextAll) return prev;
+      tasksRef.current = nextAll;
+      return nextAll;
+    });
+  }
+
+  async function onDragEnd(evt: DragEndEvent) {
+    const { active, over } = evt;
+    setActiveTaskId(null);
+    setActiveRect(null);
+    lastOverRef.current = null;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overKey = String(over.id);
+
+    const prevAll = tasksRef.current;
+    const nextAll = buildNextAll(prevAll, activeId, overKey);
+    if (!nextAll) return;
+
     onSetTasks(nextAll);
 
     try {
-      await api.updateTask(aTask.id, { status: overContainer });
+      await persistPositions(prevAll, nextAll);
     } finally {
       await onRefresh();
     }
@@ -145,17 +243,20 @@ export function KanbanBoard({
     <div className="h-full">
       <DndContext
         sensors={dragEnabled ? sensors : []}
-        collisionDetection={closestCorners}
+        collisionDetection={rectIntersection}
         autoScroll
         onDragStart={(evt) => {
           setActiveTaskId(String(evt.active.id));
+          lastOverRef.current = null;
           const rect = evt.active.rect.current?.initial ?? evt.active.rect.current?.translated;
           if (rect?.width && rect?.height) setActiveRect({ width: rect.width, height: rect.height });
         }}
+        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
         onDragCancel={() => {
           setActiveTaskId(null);
           setActiveRect(null);
+          lastOverRef.current = null;
         }}
       >
         <div className="grid h-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -339,19 +440,21 @@ function KanbanColumn({
           </div>
         ) : null}
 
-        <div className="flex min-h-[18rem] flex-col gap-1.5">
-          {tasks.map((t) => (
-            <DraggableTask
-              key={t.id}
-              task={t}
-              onOpen={() => onOpenTask(t)}
-              dragEnabled={dragEnabled}
-              isSelected={selectedIds?.has(t.id)}
-              onToggleSelection={onToggleSelection}
-              showCheckbox={hasSelection}
-            />
-          ))}
-        </div>
+        <SortableContext items={tasks.map((t) => String(t.id))} strategy={verticalListSortingStrategy}>
+          <div className="flex min-h-[18rem] flex-col gap-1.5">
+            {tasks.map((t) => (
+              <DraggableTask
+                key={t.id}
+                task={t}
+                onOpen={() => onOpenTask(t)}
+                dragEnabled={dragEnabled}
+                isSelected={selectedIds?.has(t.id)}
+                onToggleSelection={onToggleSelection}
+                showCheckbox={hasSelection}
+              />
+            ))}
+          </div>
+        </SortableContext>
       </div>
     </div>
   );
@@ -541,14 +644,15 @@ function DraggableTask({
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: String(task.id),
     disabled: !dragEnabled,
   });
 
   const style = {
     transform: CSS.Transform.toString(transform ? { ...transform, scaleX: 1, scaleY: 1 } : null),
-    transition: isDragging ? 'none' : undefined,
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0 : undefined,
   };
 
   return (
