@@ -10,12 +10,17 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 - **Phase 4-7: UI Polish** (Bulk actions, keyboard shortcuts, saved views, responsive design)
 - **Phase 8: Multi-Project Hub** (Automatic project discovery, cross-project views)
 - **Phase 9: Backend Clean Architecture** (Completed refactor + TypeScript + testing foundation)
+- **Phase 10: Frontend Clean Architecture** (Completed page-centered refactor)
 
 ---
 
-## 🚧 Current Phase: Phase 10 — Testing & Debugging Validation
+## 🚧 Current Phase: TBD
 
-Make sure all current functionality works end-to-end before starting Phase 9.
+---
+
+## 🧪 Validation Track — Testing & Debugging (Deferred)
+
+Make sure all current functionality works end-to-end before real-time collaboration.
 
 ### Goals
 
@@ -35,36 +40,6 @@ Make sure all current functionality works end-to-end before starting Phase 9.
 
 ---
 
-## 🧭 Frontend Clean Architecture — Option A (Planned)
-
-Page-centered structure with shared UI and cross-page hooks.
-
-### Target Structure
-```
-src/
-  pages/
-    Kanban/
-    Activity/
-    Docs/
-  components/
-    layout/
-    ui/
-  lib/
-  hooks/
-```
-
-### Steps
-- [ ] Move Kanban page modules into `pages/Kanban/`
-- [ ] Move Activity page modules into `pages/Activity/`
-- [ ] Move Docs page modules into `pages/Docs/`
-- [ ] Keep shared UI primitives in `components/ui/`
-- [ ] Keep layout components in `components/layout/`
-- [ ] Keep cross-page hooks in `hooks/`
-- [ ] Normalize imports after moves
-- [ ] Run TypeScript + Playwright smoke checks
-
----
-
 ## ✅ Phase 9 — Backend Clean Architecture (Completed)
 
 Refactor backend for maintainability as codebase grows. Enable unit testing, separate concerns, migrate to TypeScript.
@@ -74,7 +49,7 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - **Explain as we go**: Document architectural decisions and fundamentals in `docs/learning/`.
 - **Pragmatic layering**: Clear separation without over-engineering.
 - **Incremental migration**: `.js` and `.ts` can coexist during the move.
-- **Legacy layout note**: backend currently has `routes/`, `utils/`, `db/` at the top-level (pre-migration). As part of Phase 10, we will progressively move HTTP wiring/controllers under `backend/src/` (keeping `src/domain`, `src/repositories`, `src/services`, etc.) and delete the legacy folders once fully migrated.
+- **Legacy layout note**: backend currently has `routes/`, `utils/`, `db/` at the top-level (pre-migration). As part of Phase 9, we will progressively move HTTP wiring/controllers under `backend/src/` (keeping `src/domain`, `src/repositories`, `src/services`, etc.) and delete the legacy folders once fully migrated.
 
 ### Milestone O — TypeScript, Testing & Core Abstractions (High Priority)
 
@@ -90,6 +65,12 @@ Refactor backend for maintainability as codebase grows. Enable unit testing, sep
 - [x] **Extract ProjectRepository + ProjectService (#81)**: Clean separation for project discovery + metadata.
 - [x] **Extract ActivityRepository + ActivityService (#82)**: Clean separation for activity timeline.
 - [x] **Slim down server.ts to pure wiring (#83)**: Server should just compose dependencies + register routes.
+
+---
+
+## ✅ Phase 10 — Frontend Clean Architecture (Completed)
+
+Page-centered structure with shared UI and cross-page hooks.
 
 ---
 
