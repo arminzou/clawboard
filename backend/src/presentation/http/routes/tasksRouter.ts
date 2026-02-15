@@ -63,6 +63,19 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
     }
   });
 
+  // POST /api/tasks/reorder
+  router.post('/reorder', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const payload = req.body as { updates?: unknown } | unknown;
+      const updates = Array.isArray(payload) ? payload : (payload as { updates?: unknown })?.updates;
+      const result = service.reorder(updates as any);
+      broadcast?.({ type: 'tasks_reordered', data: { updated: result.updated } });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // PATCH /api/tasks/:id
   router.patch('/:id', (req: Request, res: Response, next: NextFunction) => {
     try {

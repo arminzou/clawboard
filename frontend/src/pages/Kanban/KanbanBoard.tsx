@@ -102,10 +102,14 @@ export function KanbanBoard({
         if (!p) return true;
         return p.status !== t.status || (p.position ?? 0) !== (t.position ?? 0);
       })
-      .map((t) => api.updateTask(t.id, { status: t.status as TaskStatus, position: t.position }));
+      .map((t) => ({
+        id: t.id,
+        status: t.status as TaskStatus,
+        position: t.position ?? 0,
+      }));
 
     if (!updates.length) return 0;
-    await Promise.allSettled(updates);
+    await api.reorderTasks(updates);
     return updates.length;
   }
 

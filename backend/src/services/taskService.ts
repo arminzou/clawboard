@@ -1,5 +1,5 @@
 import type { Task, TaskStatus } from '../domain/task';
-import type { CreateTaskBody, ListTasksParams, TaskRepository, UpdateTaskBody } from '../repositories/taskRepository';
+import type { CreateTaskBody, ListTasksParams, TaskRepository, UpdateTaskBody, ReorderTaskInput } from '../repositories/taskRepository';
 import { HttpError } from '../presentation/http/errors/httpError';
 
 export class TaskService {
@@ -40,6 +40,32 @@ export class TaskService {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'Task not found') throw new HttpError(404, 'Task not found');
       if (msg === 'No fields to update') throw new HttpError(400, 'No fields to update');
+      throw err;
+    }
+  }
+
+  reorder(updates: ReorderTaskInput[]): { updated: number } {
+    if (!Array.isArray(updates) || updates.length === 0) throw new HttpError(400, 'No reorder updates');
+
+    const allowed: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
+    const normalized = updates.map((item) => {
+      if (!item || typeof item !== 'object') throw new HttpError(400, 'Invalid reorder payload');
+      const id = Number((item as ReorderTaskInput).id);
+      const status = (item as ReorderTaskInput).status as TaskStatus;
+      const position = (item as ReorderTaskInput).position;
+
+      if (!Number.isFinite(id)) throw new HttpError(400, 'Invalid task id');
+      if (!allowed.includes(status)) throw new HttpError(400, 'Invalid status');
+      if (position !== null && !Number.isFinite(Number(position))) throw new HttpError(400, 'Invalid position');
+
+      return { id, status, position: position === null ? null : Number(position) };
+    });
+
+    try {
+      return this.repo.reorder(normalized);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'Task not found') throw new HttpError(404, 'Task not found');
       throw err;
     }
   }

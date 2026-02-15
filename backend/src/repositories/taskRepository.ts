@@ -93,6 +93,12 @@ export type UpdateTaskBody = Partial<
   tags?: string[] | string | null;
 };
 
+export type ReorderTaskInput = {
+  id: number;
+  status: TaskStatus;
+  position: number | null;
+};
+
 export class TaskRepository {
   constructor(private readonly db: Database) {}
 
@@ -292,6 +298,31 @@ export class TaskRepository {
     const updated = this.getById(id);
     if (!updated) throw new Error('Task not found');
     return updated;
+  }
+
+  reorder(updates: ReorderTaskInput[]): { updated: number } {
+    if (!updates.length) return { updated: 0 };
+
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(
+      'UPDATE tasks SET status = ?, position = ?, completed_at = ?, updated_at = ? WHERE id = ?'
+    );
+
+    const tx = this.db.transaction((items: ReorderTaskInput[]) => {
+      let updated = 0;
+      for (const item of items) {
+        const existing = this.getById(item.id);
+        if (!existing) throw new Error('Task not found');
+        const completedAt = item.status === 'done'
+          ? (existing.status === 'done' ? existing.completed_at : now)
+          : null;
+        stmt.run(item.status, item.position ?? 0, completedAt, now, item.id);
+        updated += 1;
+      }
+      return updated;
+    });
+
+    return { updated: tx(updates) };
   }
 
   delete(id: number): { changes: number } {

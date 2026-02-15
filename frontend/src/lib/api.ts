@@ -169,6 +169,16 @@ export const api = {
     );
   },
 
+  async reorderTasks(updates: Array<Pick<Task, 'id' | 'status' | 'position'>>) {
+    return json<{ updated: number }>(
+      await fetch(withBase('/api/tasks/reorder'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ updates }),
+      }),
+    );
+  },
+
   async deleteTask(id: number) {
     const res = await fetch(withBase(`/api/tasks/${id}`), { method: 'DELETE', headers: authHeaders() });
     if (!(res.status === 204 || res.ok)) throw new Error(`${res.status} ${res.statusText}`);

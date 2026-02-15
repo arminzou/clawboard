@@ -72,6 +72,45 @@ describe('Tasks API', () => {
     expect(broadcast).toHaveBeenCalledWith({ type: 'tasks_bulk_updated', data: { archived_done: 1 } });
   });
 
+  it('reorders tasks in bulk', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const taskA = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'A', status: 'backlog', position: 0 })
+      .expect(201);
+    const taskB = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'B', status: 'backlog', position: 1 })
+      .expect(201);
+    const taskC = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'C', status: 'review', position: 0 })
+      .expect(201);
+
+    const reorder = await request(appCtx.app)
+      .post('/api/tasks/reorder')
+      .send({
+        updates: [
+          { id: taskA.body.id, status: 'review', position: 1 },
+          { id: taskC.body.id, status: 'review', position: 0 },
+          { id: taskB.body.id, status: 'backlog', position: 0 },
+        ],
+      })
+      .expect(200);
+
+    expect(reorder.body.updated).toBe(3);
+    expect(broadcast).toHaveBeenCalledWith({ type: 'tasks_reordered', data: { updated: 3 } });
+
+    const review = await request(appCtx.app).get('/api/tasks?status=review').expect(200);
+    expect(review.body.map((t: any) => t.id)).toEqual([taskC.body.id, taskA.body.id]);
+
+    const backlog = await request(appCtx.app).get('/api/tasks?status=backlog').expect(200);
+    expect(backlog.body.map((t: any) => t.id)).toEqual([taskB.body.id]);
+  });
+
   it('returns 400 for invalid id', async () => {
     const appCtx = createTestApp();
     db = appCtx.db;
