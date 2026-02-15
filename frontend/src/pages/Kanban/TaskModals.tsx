@@ -80,7 +80,18 @@ function TagPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} />
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={placeholder}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return;
+          if (!normalizedQuery) return;
+          if (!canCreate) return;
+          e.preventDefault();
+          addTag(normalizedQuery);
+        }}
+      />
 
       {selected.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
