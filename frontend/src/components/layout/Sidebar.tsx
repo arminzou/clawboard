@@ -1,10 +1,10 @@
-import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2, Pencil, Save, Sliders } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus, Project } from '../../lib/api';
 import { Chip } from '../ui/Chip';
 import { Select } from '../ui/Select';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { PromptModal } from '../ui/PromptModal';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
@@ -38,7 +38,6 @@ export function Sidebar({
   activeSavedViewId,
   onApplySavedView,
   onSaveCurrentView,
-  saveViewName,
   onSaveViewName,
   onDeleteSavedView,
   onRenameSavedView,
@@ -87,7 +86,6 @@ export function Sidebar({
   activeSavedViewId: string | null;
   onApplySavedView: (id: string) => void;
   onSaveCurrentView: () => void;
-  saveViewName: string;
   onSaveViewName: (v: string) => void;
   onDeleteSavedView: (id: string) => void;
   onRenameSavedView?: (id: string) => void;
@@ -135,9 +133,26 @@ export function Sidebar({
 
   const activeSavedView = activeSavedViewId ? savedViews.find((x) => x.id === activeSavedViewId) : null;
   const currentViewLabel = activeSavedView?.name ?? viewItems.find((it) => it.key === view)?.label ?? 'All';
-  const currentViewKind = activeSavedView ? 'Saved view' : 'View';
 
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [showSaveViewModal, setShowSaveViewModal] = useState(false);
+  const [confirmDeleteView, setConfirmDeleteView] = useState<{ id: string; name: string } | null>(null);
+  const savedViewsRef = useRef<HTMLDivElement | null>(null);
+  const currentViewRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!viewsOpen) return;
+
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (savedViewsRef.current?.contains(target)) return;
+      if (currentViewRef.current?.contains(target)) return;
+      onToggleViewsOpen();
+    }
+
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [viewsOpen, onToggleViewsOpen]);
 
   const filterChipClass =
     'inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner';
@@ -282,97 +297,99 @@ export function Sidebar({
           </button>
         )}
 
+        {showSaveViewModal && (
+          <PromptModal
+            title="Save view"
+            message="Name this view so you can reuse it later."
+            placeholder="View name"
+            confirmLabel="Save"
+            onClose={() => setShowSaveViewModal(false)}
+            onConfirm={(value) => {
+              onSaveViewName(value);
+              queueMicrotask(() => onSaveCurrentView());
+              setShowSaveViewModal(false);
+            }}
+          />
+        )}
+
+        {confirmDeleteView && (
+          <ConfirmModal
+            title="Delete saved view?"
+            message={`This will remove "${confirmDeleteView.name}". You can save it again later.`}
+            confirmLabel="Delete"
+            onClose={() => setConfirmDeleteView(null)}
+            onConfirm={() => {
+              onDeleteSavedView(confirmDeleteView.id);
+              setConfirmDeleteView(null);
+            }}
+          />
+        )}
+
         <div className="mt-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-2">
+          <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span>Views</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 active:bg-slate-100"
+                onClick={() => setShowSaveViewModal(true)}
+              >
+                <Save size={12} className="shrink-0" />
+                <span className="leading-none">Save as</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="relative">
             <button
+              ref={currentViewRef}
               type="button"
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+              className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
               onClick={onToggleViewsOpen}
             >
-              <span>Views</span>
-              <span className="text-slate-400">
-                <IconChevron open={viewsOpen} />
-              </span>
+              <span className="truncate">{currentViewLabel}</span>
+              <ChevronDown size={14} className={`shrink-0 text-slate-400 transition ${viewsOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {viewsOpen ? (
-              <div className="mt-1 flex flex-col gap-2">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-2">
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Save view</div>
-                  <div className="flex gap-2">
-                    <Input
-                      value={saveViewName}
-                      onChange={(e) => onSaveViewName(e.target.value)}
-                      placeholder="View name"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          onSaveCurrentView();
-                        }
+            {viewsOpen && savedViews.length ? (
+              <div
+                ref={savedViewsRef}
+                className="absolute left-0 right-0 z-30 mt-1 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+              >
+                <div className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Saved views</div>
+                <div className="flex flex-col gap-1">
+                  {savedViews.map((sv) => (
+                    <SavedViewButton
+                      key={sv.id}
+                      active={activeSavedViewId === sv.id}
+                      label={sv.name}
+                      onClick={() => {
+                        onApplySavedView(sv.id);
+                        onToggleViewsOpen();
                       }}
+                      onDelete={() => setConfirmDeleteView({ id: sv.id, name: sv.name })}
+                      onRename={onRenameSavedView ? () => onRenameSavedView(sv.id) : undefined}
+                      onUpdateFilters={onUpdateSavedViewFilters ? () => onUpdateSavedViewFilters(sv.id) : undefined}
                     />
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={onSaveCurrentView}
-                      disabled={!saveViewName.trim()}
-                    >
-                      Save
-                    </Button>
-                  </div>
-
-                  {savedViews.length ? (
-                    <>
-                      <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved</div>
-                      <div className="mt-1 flex flex-col gap-1">
-                        {savedViews.map((sv) => (
-                          <SavedViewButton
-                            key={sv.id}
-                            active={activeSavedViewId === sv.id}
-                            label={sv.name}
-                            onClick={() => onApplySavedView(sv.id)}
-                            onDelete={() => onDeleteSavedView(sv.id)}
-                            onRename={onRenameSavedView ? () => onRenameSavedView(sv.id) : undefined}
-                            onUpdateFilters={onUpdateSavedViewFilters ? () => onUpdateSavedViewFilters(sv.id) : undefined}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
+                  ))}
                 </div>
               </div>
             ) : null}
-
-            <div className="mt-2 rounded-xl bg-white/60 p-2">
-              {!viewsOpen ? (
-                <button
-                  type="button"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
-                  onClick={onToggleViewsOpen}
-                >
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Current {currentViewKind}</div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="truncate">{currentViewLabel}</span>
-                    <ChevronDown size={14} className="text-slate-400" />
-                  </div>
-                </button>
-              ) : null}
-              <div className={viewsOpen ? 'flex flex-col gap-1' : 'mt-2 flex flex-col gap-1'}>
-                {viewItems.map((it) => (
-                  <ViewButton
-                    key={String(it.key)}
-                    active={view === it.key}
-                    label={it.label}
-                    count={it.count}
-                    onClick={() => onView(it.key)}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
-        </div>
 
+          <div className="mt-2 flex flex-col gap-1">
+            {viewItems.map((it) => (
+              <ViewButton
+                key={String(it.key)}
+                active={view === it.key}
+                label={it.label}
+                count={it.count}
+                onClick={() => onView(it.key)}
+              />
+            ))}
+          </div>
+
+        </div>
         <div className="mt-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-2">
             <button
@@ -623,8 +640,6 @@ function SavedViewButton({
   onRename?: () => void;
   onUpdateFilters?: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <div
       className={
@@ -641,7 +656,37 @@ function SavedViewButton({
       >
         {label}
       </button>
-      <div className="relative">
+      <div className="flex items-center gap-1">
+        {onUpdateFilters && (
+          <button
+            type="button"
+            className={
+              active
+                ? 'rounded-lg border border-indigo-200 bg-white px-2 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
+                : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
+            }
+            onClick={onUpdateFilters}
+            title="Update filters"
+            aria-label={`Update filters for ${label}`}
+          >
+            <Sliders size={12} />
+          </button>
+        )}
+        {onRename && (
+          <button
+            type="button"
+            className={
+              active
+                ? 'rounded-lg border border-indigo-200 bg-white px-2 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
+                : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
+            }
+            onClick={onRename}
+            title="Rename"
+            aria-label={`Rename ${label}`}
+          >
+            <Pencil size={12} />
+          </button>
+        )}
         <button
           type="button"
           className={
@@ -649,53 +694,12 @@ function SavedViewButton({
               ? 'rounded-lg border border-indigo-200 bg-white px-2 py-1 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:bg-indigo-200 active:translate-y-px active:shadow-inner'
               : 'rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner'
           }
-          onClick={() => setMenuOpen((v) => !v)}
-          title="Options"
-          aria-label={`Options for ${label}`}
+          onClick={onDelete}
+          title="Delete"
+          aria-label={`Delete ${label}`}
         >
-          …
+          <Trash2 size={12} />
         </button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 top-full z-20 mt-1 w-32 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-              {onRename && (
-                <button
-                  type="button"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onRename();
-                  }}
-                >
-                  Rename
-                </button>
-              )}
-              {onUpdateFilters && (
-                <button
-                  type="button"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onUpdateFilters();
-                  }}
-                >
-                  Update filters
-                </button>
-              )}
-              <button
-                type="button"
-                className="block w-full px-3 py-1.5 text-left text-xs text-red-600 transition hover:bg-red-50 active:bg-red-100 active:translate-y-px active:shadow-inner"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete();
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
