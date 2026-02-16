@@ -2,7 +2,8 @@
 FROM node:20 AS build-frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+# ensure dev deps (vite types) are installed for the build
+RUN npm install --include=dev
 COPY frontend/ ./
 # Pass frontend env vars during build so they're baked into the static JS
 ARG CLAWBOARD_API_KEY
