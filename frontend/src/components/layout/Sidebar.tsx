@@ -56,6 +56,7 @@ export function Sidebar({
   showArchived,
   onShowArchived,
   onArchiveDone,
+  onAssignUnassignedTasks,
   context,
   onContext,
   currentContextKey,
@@ -111,6 +112,7 @@ export function Sidebar({
   onShowArchived: (v: boolean) => void;
 
   onArchiveDone: () => void | Promise<void>;
+  onAssignUnassignedTasks?: (projectId: number) => void | Promise<void>;
 
   context: ContextFilter;
   onContext: (v: ContextFilter) => void;
@@ -137,6 +139,7 @@ export function Sidebar({
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [showSaveViewModal, setShowSaveViewModal] = useState(false);
   const [confirmDeleteView, setConfirmDeleteView] = useState<{ id: string; name: string } | null>(null);
+  const [confirmAssignProject, setConfirmAssignProject] = useState<{ id: number; name: string } | null>(null);
   const savedViewsRef = useRef<HTMLDivElement | null>(null);
   const currentViewRef = useRef<HTMLButtonElement | null>(null);
 
@@ -180,7 +183,7 @@ export function Sidebar({
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Project</div>
-            {projects && projects.length > 1 && onProjectChange ? (
+            {projects && projects.length >= 1 && onProjectChange ? (
               <div className="relative mt-1">
                 <button
                   type="button"
@@ -258,6 +261,22 @@ export function Sidebar({
                           )}
                         </div>
                       ))}
+                      {currentProjectId !== null && onAssignUnassignedTasks ? (
+                        <>
+                          <div className="my-1 border-t border-slate-100" />
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                            onClick={() => {
+                              if (currentProjectId == null) return;
+                              setConfirmAssignProject({ id: currentProjectId, name: projectName });
+                              setProjectMenuOpen(false);
+                            }}
+                          >
+                            Assign unassigned tasks
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                   </>
                 )}
@@ -324,6 +343,20 @@ export function Sidebar({
             }}
           />
         )}
+
+        {confirmAssignProject && onAssignUnassignedTasks ? (
+          <ConfirmModal
+            title="Assign unassigned tasks?"
+            message={`Assign tasks without a project to "${confirmAssignProject.name}".`}
+            confirmLabel="Assign"
+            variant="primary"
+            onClose={() => setConfirmAssignProject(null)}
+            onConfirm={() => {
+              onAssignUnassignedTasks(confirmAssignProject.id);
+              setConfirmAssignProject(null);
+            }}
+          />
+        ) : null}
 
         <div className="mt-4">
           <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">

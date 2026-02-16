@@ -270,6 +270,15 @@ export const api = {
     );
   },
 
+  async assignUnassignedTasks(projectId: number) {
+    return json<{ updated: number }>(
+      await fetch(withBase(`/api/projects/${projectId}/assign-unassigned`), {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    );
+  },
+
   async getProject(id: number) {
     return json<Project>(await fetch(withBase(`/api/projects/${id}`), { headers: authHeaders() }));
   },

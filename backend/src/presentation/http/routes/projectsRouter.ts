@@ -80,6 +80,16 @@ export function createProjectsRouter({ db }: { db: Database }) {
     }
   });
 
+  // POST /api/projects/:id/assign-unassigned
+  router.post('/:id/assign-unassigned', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseId(req.params.id);
+      res.json(service.assignUnassignedTasks(id));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // GET /api/projects/:id/stats
   router.get('/:id/stats', (req: Request, res: Response, next: NextFunction) => {
     try {

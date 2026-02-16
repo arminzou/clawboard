@@ -38,6 +38,11 @@ export class ProjectService {
     }
   }
 
+  assignUnassignedTasks(id: number) {
+    this.getById(id);
+    return this.repo.assignUnassignedTasks(id);
+  }
+
   discover() {
     // Interop with legacy JS utility
     // eslint-disable-next-line @typescript-eslint/no-var-requires

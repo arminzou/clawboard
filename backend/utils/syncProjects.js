@@ -9,6 +9,7 @@ function syncProjects(db, broadcast = null) {
   // Use environment variable or fall back to home-based default
   const projectsPath =
     process.env.CLAWBOARD_PROJECTS_DIR ||
+    process.env.PROJECTS_ROOT ||
     path.join(require('os').homedir(), 'projects');
 
   if (!fs.existsSync(projectsPath)) {

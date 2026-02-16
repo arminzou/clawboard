@@ -12,9 +12,9 @@ export function useProjects() {
     try {
       const raw = window.localStorage.getItem('cb.v2.currentProjectId');
       if (raw === 'null' || raw === '') return null;
-      return raw ? parseInt(raw, 10) : 1; // Default to project 1 (Clawboard)
+      return raw ? parseInt(raw, 10) : null;
     } catch {
-      return 1;
+      return null;
     }
   });
 
@@ -38,6 +38,13 @@ export function useProjects() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!projects.length) return;
+    if (currentProjectId === null) return;
+    const exists = projects.some((p) => p.id === currentProjectId);
+    if (!exists) setCurrentProjectIdState(null);
+  }, [projects, currentProjectId]);
 
   // Listen for WebSocket updates
   useWebSocket({

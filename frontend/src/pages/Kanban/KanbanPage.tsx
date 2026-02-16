@@ -82,9 +82,9 @@ export function KanbanPage({
       if (!Number.isNaN(id) && id !== currentProjectId) {
         setCurrentProjectId(id);
       }
-    } else if (currentProjectId !== null && urlProjectId === undefined) {
-      // On root path, show all projects
-      // Don't change state on initial load
+    } else if (urlProjectId === undefined && currentProjectId !== null) {
+      // On root path, always show all projects
+      setCurrentProjectId(null);
     }
   }, [urlProjectId, currentProjectId, setCurrentProjectId]);
 
@@ -806,6 +806,17 @@ export function KanbanPage({
     }
   }, [currentProjectId, setCurrentProjectId, navigate, refreshProjects]);
 
+  const handleAssignUnassignedTasks = useCallback(async (projectId: number) => {
+    try {
+      const { updated } = await api.assignUnassignedTasks(projectId);
+      await refresh();
+      toast.success(`Assigned ${updated} task${updated === 1 ? '' : 's'} to this project`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to assign tasks: ${msg}`);
+    }
+  }, [refresh]);
+
   const projectName = currentProject?.name ?? (currentProjectId === null ? 'All Projects' : 'Clawboard');
   const boardName = 'Tasks';
 
@@ -837,8 +848,8 @@ export function KanbanPage({
       activeSavedViewId={activeSavedViewId}
       onApplySavedView={applySavedView}
       onSaveCurrentView={saveCurrentView}
-      saveViewName={saveViewName}
       onSaveViewName={setSaveViewName}
+      onAssignUnassignedTasks={handleAssignUnassignedTasks}
       onDeleteSavedView={deleteSavedView}
       onRenameSavedView={renameSavedView}
       onUpdateSavedViewFilters={updateSavedViewFilters}
