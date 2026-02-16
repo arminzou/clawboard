@@ -621,7 +621,7 @@ function SavedViewButton({
       className={
         active
           ? 'flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-900 shadow-sm'
-          : 'flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50'
+          : 'flex w-full items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm'
       }
     >
       <button
