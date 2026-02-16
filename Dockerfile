@@ -16,15 +16,17 @@ WORKDIR /app
 # Copy ONLY package files first
 COPY backend/package*.json ./backend/
 
-# FORCE a fresh compile by ensuring node_modules is clean inside the container
-# and skipping the build context's node_modules if it exists.
-RUN cd backend && rm -rf node_modules && npm install --omit=dev
+# Install deps (include devDeps for build)
+RUN cd backend && rm -rf node_modules && npm install
 
 # Copy backend source
 COPY backend/ ./backend/
 
 # Build backend (TypeScript -> dist)
 RUN cd backend && npm run build
+
+# Remove dev deps for smaller runtime image
+RUN cd backend && npm prune --omit=dev
 
 # Copy frontend build from Stage 1
 RUN mkdir -p frontend/dist
