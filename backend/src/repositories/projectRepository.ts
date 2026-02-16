@@ -88,7 +88,7 @@ export class ProjectRepository {
   }
 
   assignUnassignedTasks(id: number): { updated: number } {
-    const result = this.db.prepare('UPDATE tasks SET project_id = ? WHERE project_id IS NULL').run(id);
+    const result = this.db.prepare('UPDATE tasks SET project_id = ? WHERE project_id IS NULL AND archived_at IS NULL').run(id);
     return { updated: result.changes };
   }
 
