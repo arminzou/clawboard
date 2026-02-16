@@ -7,74 +7,86 @@ const path = require('path');
  */
 function syncProjects(db, broadcast = null) {
   // Use environment variable or fall back to home-based default
-  const projectsPath =
+  const projectsRoots = (
     process.env.CLAWBOARD_PROJECTS_DIR ||
     process.env.PROJECTS_ROOT ||
-    path.join(require('os').homedir(), 'projects');
+    path.join(require('os').homedir(), 'projects')
+  ).split(path.delimiter);
 
-  if (!fs.existsSync(projectsPath)) {
-    console.warn(`[syncProjects] Directory not found: ${projectsPath}`);
-    return { discovered: 0 };
+  const discoveredProjects = new Map(); // Use a map to handle potential duplicates across roots
+
+  for (const projectsPath of projectsRoots) {
+    if (!fs.existsSync(projectsPath)) {
+      console.warn(`[syncProjects] Directory not found: ${projectsPath}`);
+      continue;
+    }
+
+    const entries = fs.readdirSync(projectsPath, { withFileTypes: true });
+    const dirs = entries.filter((e) => {
+      const fullPath = path.join(projectsPath, e.name);
+      const isDirectory = e.isDirectory() || (e.isSymbolicLink() && fs.statSync(fullPath).isDirectory());
+      return (
+        isDirectory &&
+        !e.name.startsWith('.') &&
+        // Smart discovery: ignore worktrees (folders with a .git file)
+        !(
+          fs.existsSync(path.join(fullPath, '.git')) &&
+          fs.lstatSync(path.join(fullPath, '.git')).isFile()
+        )
+      );
+    });
+
+    for (const dir of dirs) {
+      const slug = dir.name;
+      if (discoveredProjects.has(slug)) continue; // Already found in a higher priority root
+
+      const dirPath = path.resolve(path.join(projectsPath, slug)); // Use resolved absolute path
+      const name = slug
+        .split(/[-_]/)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+
+      // Check for README to get description
+      let description = '';
+      const readmePath = path.join(dirPath, 'README.md');
+      if (fs.existsSync(readmePath)) {
+        try {
+          const content = fs.readFileSync(readmePath, 'utf8');
+          const firstLine = content.split('\n').find((l) => l.trim() && !l.startsWith('#'));
+          if (firstLine) description = firstLine.trim().slice(0, 200);
+        } catch {
+          // ignore
+        }
+      }
+      
+      discoveredProjects.set(slug, { name, slug, path: dirPath, description });
+    }
   }
 
   // Read existing projects from DB
   const existing = db.prepare('SELECT slug FROM projects').all();
   const existingSlugs = new Set(existing.map((p) => p.slug));
 
-  const entries = fs.readdirSync(projectsPath, { withFileTypes: true });
-  const dirs = entries.filter((e) => {
-    return (
-      e.isDirectory() &&
-      !e.name.startsWith('.') &&
-      // Smart discovery: ignore worktrees (folders with a .git file)
-      !(
-        fs.existsSync(path.join(projectsPath, e.name, '.git')) &&
-        fs.lstatSync(path.join(projectsPath, e.name, '.git')).isFile()
-      )
-    );
-  });
-
   const insertStmt = db.prepare(`
     INSERT INTO projects (name, slug, path, description, icon, color)
     VALUES (?, ?, ?, ?, 'folder', '#6366f1')
   `);
 
-  let discovered = 0;
-  for (const dir of dirs) {
-    const slug = dir.name;
+  let newlyDiscovered = 0;
+  for (const [slug, project] of discoveredProjects.entries()) {
     if (existingSlugs.has(slug)) continue;
 
-    // Use absolute path for robustness
-    const dirPath = path.join(projectsPath, slug);
-    const name = slug
-      .split(/[-_]/)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-
-    // Check for README to get description
-    let description = '';
-    const readmePath = path.join(projectsPath, slug, 'README.md');
-    if (fs.existsSync(readmePath)) {
-      try {
-        const content = fs.readFileSync(readmePath, 'utf8');
-        const firstLine = content.split('\n').find((l) => l.trim() && !l.startsWith('#'));
-        if (firstLine) description = firstLine.trim().slice(0, 200);
-      } catch {
-        // ignore
-      }
-    }
-
-    insertStmt.run(name, slug, dirPath, description);
-    discovered++;
+    insertStmt.run(project.name, project.slug, project.path, project.description);
+    newlyDiscovered++;
   }
 
   // Notify clients if new projects were discovered
-  if (discovered > 0 && broadcast) {
-    console.log(`[syncProjects] Broadcasting projects_updated (discovered: ${discovered})`);
-    broadcast({ type: 'projects_updated', data: { discovered } });
+  if (newlyDiscovered > 0 && broadcast) {
+    console.log(`[syncProjects] Broadcasting projects_updated (discovered: ${newlyDiscovered})`);
+    broadcast({ type: 'projects_updated', data: { discovered: newlyDiscovered } });
   }
 
-  return { discovered };
+  return { discovered: newlyDiscovered };
 }
 
 module.exports = { syncProjects };
