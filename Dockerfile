@@ -1,5 +1,5 @@
 # --- Stage 1: Build Frontend ---
-FROM node:22 AS build-frontend
+FROM node:20 AS build-frontend
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
@@ -10,8 +10,12 @@ ENV VITE_CLAWBOARD_API_KEY=$VITE_CLAWBOARD_API_KEY
 RUN npm run build
 
 # --- Stage 2: Final Image ---
-FROM node:22
+FROM node:20
 WORKDIR /app
+
+# Build tooling for native deps (e.g., better-sqlite3)
+RUN apt-get update && apt-get install -y python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy ONLY package files first
 COPY backend/package*.json ./backend/
