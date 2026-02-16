@@ -99,6 +99,20 @@ export function KanbanPage({
   }, [setCurrentProjectId, navigate]);
 
 
+  
+  // Auto-ingest sessions on initial load
+  useEffect(() => {
+    api.ingestSessions().then(res => {
+      if (res.inserted > 0) {
+        toast.success(`Ingested ${res.inserted} new activities`);
+        // We don't auto-refresh the main task board, but the activity feed will be updated.
+      }
+    }).catch(err => {
+      console.error('Failed to auto-ingest sessions:', err);
+      // Silently fail, this isn't a critical user-facing error.
+    });
+  }, []);
+
   const [view, setView] = useState<ViewFilter>(() => {
     try {
       const raw = window.localStorage.getItem('cb.v2.kanban.view') ?? 'all';
