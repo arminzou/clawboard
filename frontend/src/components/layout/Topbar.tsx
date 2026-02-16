@@ -193,10 +193,10 @@ export function Topbar({
             </Button>
           </div>
 
-          <div className="flex w-full items-center gap-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-2 shadow-sm transition hover:border-slate-300 hover:bg-white focus-within:border-indigo-300 focus-within:bg-white focus-within:shadow-md focus-within:ring-2 focus-within:ring-indigo-100/70 sm:ml-auto sm:w-auto">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-1 shadow-sm transition hover:border-slate-300 hover:bg-white focus-within:border-indigo-300 focus-within:bg-white focus-within:shadow-md focus-within:hover:border-indigo-300 focus-within:hover:bg-white sm:ml-auto sm:w-72">
             <Input
               ref={searchRef}
-              className="w-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 sm:w-64"
+              className="w-full border-0 bg-transparent p-0 shadow-none focus-visible:border-slate-300 focus-visible:ring-0 focus-visible:outline-none"
               placeholder="Search… (/)"
               value={q}
               onChange={(e) => onQ(e.target.value)}
