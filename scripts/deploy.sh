@@ -9,6 +9,6 @@ cd ~/homelab/docker/clawboard
 git pull origin main
 
 # Rebuild and restart the services with Docker Compose
-docker-compose up -d --build
+docker compose up -d --build
 
 echo "Deployment successful!"

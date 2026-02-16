@@ -23,6 +23,9 @@ RUN cd backend && rm -rf node_modules && npm install --omit=dev
 # Copy backend source
 COPY backend/ ./backend/
 
+# Build backend (TypeScript -> dist)
+RUN cd backend && npm run build
+
 # Copy frontend build from Stage 1
 RUN mkdir -p frontend/dist
 COPY --from=build-frontend /app/frontend/dist ./frontend/dist
@@ -35,4 +38,4 @@ ENV PORT=3001
 ENV HOST=0.0.0.0
 
 EXPOSE 3001
-CMD ["node", "backend/server.js"]
+CMD ["node", "backend/dist/server.js"]
