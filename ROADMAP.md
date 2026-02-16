@@ -26,6 +26,13 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 ---
 
+## 🚧 Current Phase: CI/CD (In Progress)
+
+- [x] Create initial CI workflow for Forgejo Actions (builds and tests on push)
+- [ ] Configure CD to deploy the application to the homelab Docker environment
+
+---
+
 ## 🧪 Validation Track — Testing & Debugging (Deferred)
 
 Make sure all current functionality works end-to-end before real-time collaboration.
