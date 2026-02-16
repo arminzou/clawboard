@@ -352,7 +352,7 @@ export function EditTaskModal({
           role="dialog"
           aria-modal="true"
           aria-label={`Edit task ${task.id}`}
-          className="w-full p-4 shadow-[var(--cb-shadow-md)]"
+          className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto p-4 shadow-[var(--cb-shadow-md)]"
         >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
@@ -617,7 +617,7 @@ export function CreateTaskModal({
   return (
     <ModalOverlay onClose={onClose}>
       <div ref={modalRef} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-lg">
-        <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full p-4 shadow-[var(--cb-shadow-md)]">
+        <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto p-4 shadow-[var(--cb-shadow-md)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
