@@ -11,7 +11,7 @@ export type BroadcastFn = (data: unknown) => void;
 export function registerRoutes(app: Express, db: Database, broadcast: BroadcastFn): void {
   // New TypeScript routes
   app.use('/api/tasks', createTasksRouter({ db, broadcast }));
-  app.use('/api/projects', createProjectsRouter({ db }));
+  app.use('/api/projects', createProjectsRouter({ db, broadcast }));
   app.use('/api/activities', createActivitiesRouter({ db, broadcast }));
   app.use('/api/tags', createTagsRouter({ db }));
 

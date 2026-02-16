@@ -4,7 +4,10 @@ import type { ProjectRepository } from '../repositories/projectRepository';
 import type { Project } from '../domain/project';
 
 export class ProjectService {
-  constructor(private readonly repo: ProjectRepository) {}
+  constructor(
+    private readonly repo: ProjectRepository,
+    private readonly broadcast?: (data: unknown) => void
+  ) {}
 
   list(): Project[] {
     return this.repo.list();
@@ -49,7 +52,7 @@ export class ProjectService {
     const { syncProjects } = require('../../utils/syncProjects');
     // We need the raw db from the repo to pass to the utility
     const db = this.repo.db;
-    const result = syncProjects(db);
+    const result = syncProjects(db, this.broadcast);
     const total = (db.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number }).count;
     return { ...result, total };
   }

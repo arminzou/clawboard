@@ -4,11 +4,11 @@ import { ProjectRepository } from '../../../repositories/projectRepository';
 import { ProjectService } from '../../../services/projectService';
 import { HttpError } from '../errors/httpError';
 
-export function createProjectsRouter({ db }: { db: Database }) {
+export function createProjectsRouter({ db, broadcast }: { db: Database; broadcast?: (data: unknown) => void }) {
   const router = express.Router();
 
   const repo = new ProjectRepository(db);
-  const service = new ProjectService(repo);
+  const service = new ProjectService(repo, broadcast);
 
   function parseId(raw: unknown): number {
     const s = Array.isArray(raw) ? raw[0] : raw;
