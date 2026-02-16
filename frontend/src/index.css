@@ -85,6 +85,12 @@
     min-height: 2.25rem; /* ~36px, ensures consistent height with Select on iOS */
   }
 
+  @media (max-width: 640px) {
+    .cb-input {
+      font-size: 16px; /* prevent iOS Safari input zoom */
+    }
+  }
+
   .cb-input::placeholder {
     color: rgb(var(--cb-text-muted));
     opacity: 0.75;
