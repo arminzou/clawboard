@@ -283,114 +283,121 @@ export function Sidebar({
         )}
 
         <div className="mt-4">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
-            onClick={onToggleViewsOpen}
-          >
-            <span>Views</span>
-            <span className="text-slate-400">
-              <IconChevron open={viewsOpen} />
-            </span>
-          </button>
-
-          {viewsOpen ? (
-            <div className="mt-1 flex flex-col gap-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-2">
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Save view</div>
-                <div className="flex gap-2">
-                  <Input
-                    value={saveViewName}
-                    onChange={(e) => onSaveViewName(e.target.value)}
-                    placeholder="View name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        onSaveCurrentView();
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={onSaveCurrentView}
-                    disabled={!saveViewName.trim()}
-                  >
-                    Save
-                  </Button>
-                </div>
-
-                {savedViews.length ? (
-                  <>
-                    <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved</div>
-                    <div className="mt-1 flex flex-col gap-1">
-                      {savedViews.map((sv) => (
-                        <SavedViewButton
-                          key={sv.id}
-                          active={activeSavedViewId === sv.id}
-                          label={sv.name}
-                          onClick={() => onApplySavedView(sv.id)}
-                          onDelete={() => onDeleteSavedView(sv.id)}
-                          onRename={onRenameSavedView ? () => onRenameSavedView(sv.id) : undefined}
-                          onUpdateFilters={onUpdateSavedViewFilters ? () => onUpdateSavedViewFilters(sv.id) : undefined}
-                        />
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ) : (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-2">
             <button
               type="button"
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
               onClick={onToggleViewsOpen}
             >
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Current {currentViewKind}</div>
-              <div className="mt-1 flex items-center justify-between">
-                <span className="truncate">{currentViewLabel}</span>
-                <ChevronDown size={14} className="text-slate-400" />
-              </div>
+              <span>Views</span>
+              <span className="text-slate-400">
+                <IconChevron open={viewsOpen} />
+              </span>
             </button>
-          )}
 
-          <div className="mt-2 flex flex-col gap-1">
-            {viewItems.map((it) => (
-              <ViewButton
-                key={String(it.key)}
-                active={view === it.key}
-                label={it.label}
-                count={it.count}
-                onClick={() => onView(it.key)}
-              />
-            ))}
+            {viewsOpen ? (
+              <div className="mt-1 flex flex-col gap-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-2">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Save view</div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={saveViewName}
+                      onChange={(e) => onSaveViewName(e.target.value)}
+                      placeholder="View name"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          onSaveCurrentView();
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={onSaveCurrentView}
+                      disabled={!saveViewName.trim()}
+                    >
+                      Save
+                    </Button>
+                  </div>
+
+                  {savedViews.length ? (
+                    <>
+                      <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Saved</div>
+                      <div className="mt-1 flex flex-col gap-1">
+                        {savedViews.map((sv) => (
+                          <SavedViewButton
+                            key={sv.id}
+                            active={activeSavedViewId === sv.id}
+                            label={sv.name}
+                            onClick={() => onApplySavedView(sv.id)}
+                            onDelete={() => onDeleteSavedView(sv.id)}
+                            onRename={onRenameSavedView ? () => onRenameSavedView(sv.id) : undefined}
+                            onUpdateFilters={onUpdateSavedViewFilters ? () => onUpdateSavedViewFilters(sv.id) : undefined}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-2 rounded-xl bg-white/60 p-2">
+              {!viewsOpen ? (
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+                  onClick={onToggleViewsOpen}
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Current {currentViewKind}</div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="truncate">{currentViewLabel}</span>
+                    <ChevronDown size={14} className="text-slate-400" />
+                  </div>
+                </button>
+              ) : null}
+              <div className={viewsOpen ? 'flex flex-col gap-1' : 'mt-2 flex flex-col gap-1'}>
+                {viewItems.map((it) => (
+                  <ViewButton
+                    key={String(it.key)}
+                    active={view === it.key}
+                    label={it.label}
+                    count={it.count}
+                    onClick={() => onView(it.key)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
-            onClick={onToggleFiltersOpen}
-          >
-            <span className="flex items-center gap-2">
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                  {activeFilterCount}
-                </span>
-              )}
-            </span>
-            <span className="text-slate-400">
-              <IconChevron open={filtersOpen} />
-            </span>
-          </button>
+        <div className="mt-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-2">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
+              onClick={onToggleFiltersOpen}
+            >
+              <span className="flex items-center gap-2">
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+              <span className="text-slate-400">
+                <IconChevron open={filtersOpen} />
+              </span>
+            </button>
 
-          {filtersOpen ? (
-            <>
-              {activeFilterCount > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+            {filtersOpen ? (
+              <div className="mt-1 rounded-xl bg-white/60 p-2">
+                <div className="flex flex-col gap-2 px-1">
+                {activeFilterCount > 0 && (
+                  <div className="flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
                   {assignee !== 'all' && (
                     <button
                       type="button"
@@ -453,7 +460,7 @@ export function Sidebar({
                   )}
                 </div>
               )}
-              <label className="mt-2 text-sm">
+              <label className="text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
                 <Select
                   value={assignee}
@@ -467,7 +474,7 @@ export function Sidebar({
                 </Select>
               </label>
 
-              <label className="mt-2 text-sm">
+              <label className="text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Due</div>
                 <Select
                   value={due}
@@ -481,7 +488,7 @@ export function Sidebar({
                 </Select>
               </label>
 
-              <label className="mt-2 text-sm">
+              <label className="text-sm">
                 <div className="mb-1 text-xs font-medium text-slate-600">Tag</div>
                 <Select
                   value={tag}
@@ -497,7 +504,7 @@ export function Sidebar({
               </label>
 
               {currentContextKey && (
-                <label className="mt-2 text-sm">
+                <label className="text-sm">
                   <div className="mb-1 text-xs font-medium text-slate-600">Context (branch/worktree)</div>
                   <Select
                     value={context}
@@ -509,24 +516,24 @@ export function Sidebar({
                 </label>
               )}
 
-              <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
                 <span>Hide done</span>
                 <input type="checkbox" checked={hideDone} onChange={(e) => onHideDone(e.target.checked)} />
               </label>
 
-              <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
                 <span>Blocked only</span>
                 <input type="checkbox" checked={blocked} onChange={(e) => onBlocked(e.target.checked)} />
               </label>
 
-              <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
                 <span>Show archived</span>
                 <input type="checkbox" checked={showArchived} onChange={(e) => onShowArchived(e.target.checked)} />
               </label>
 
               <button
                 type="button"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                 onClick={() => void onArchiveDone()}
               >
                 Archive done
@@ -534,12 +541,13 @@ export function Sidebar({
 
               <button
                 type="button"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
                 onClick={onReset}
               >
                 Reset
               </button>
-            </>
+              </div>
+            </div>
           ) : (
             <button
               type="button"
@@ -549,6 +557,7 @@ export function Sidebar({
               Reset
             </button>
           )}
+          </div>
         </div>
       </div>
     </aside>
@@ -620,8 +629,8 @@ function SavedViewButton({
     <div
       className={
         active
-          ? 'flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-900 shadow-sm'
-          : 'flex w-full items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm'
+          ? 'flex w-full items-center justify-between gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 shadow-sm'
+          : 'flex w-full items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-1.5 text-xs font-medium text-slate-800 transition hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm'
       }
     >
       <button
