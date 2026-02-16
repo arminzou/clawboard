@@ -18,7 +18,7 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 - [x] Standardize modal shell (PromptModal/ConfirmModal via ModalShell)
 - [x] Views UI refresh (current view dropdown + saved views menu + Save As modal)
-- [x] Project discovery: honor PROJECTS_ROOT + always show project dropdown
+- [x] Project discovery: honor CLAWBOARD_PROJECTS_DIR + always show project dropdown
 - [x] Add “Assign unassigned tasks” action (API + UI)
 - [x] Make All Projects selection deterministic (URL → project state sync)
 - [ ] Define project assignment strategy for legacy tasks (auto-assign vs manual)

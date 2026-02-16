@@ -4,9 +4,13 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
-# Pass the API key to Vite during build so it's baked into the static JS
-ARG VITE_CLAWBOARD_API_KEY
-ENV VITE_CLAWBOARD_API_KEY=$VITE_CLAWBOARD_API_KEY
+# Pass frontend env vars during build so they're baked into the static JS
+ARG CLAWBOARD_API_KEY
+ARG API_BASE
+ARG WS_BASE
+ENV CLAWBOARD_API_KEY=$CLAWBOARD_API_KEY
+ENV API_BASE=$API_BASE
+ENV WS_BASE=$WS_BASE
 RUN npm run build
 
 # --- Stage 2: Final Image ---

@@ -6,7 +6,7 @@ const path = require('path');
  * Returns { discovered: number }
  */
 function syncProjects(db, broadcast = null) {
-  // Use environment variable or fall back to home-based default
+  // Prefer CLAWBOARD_PROJECTS_DIR, but keep PROJECTS_ROOT as legacy fallback
   const projectsRoots = (
     process.env.CLAWBOARD_PROJECTS_DIR ||
     process.env.PROJECTS_ROOT ||

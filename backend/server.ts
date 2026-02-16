@@ -13,7 +13,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = String(process.env.HOST ?? '127.0.0.1');
-const DB_PATH = path.join(__dirname, '../data/clawboard.db');
+const DB_PATH = String(process.env.CLAWBOARD_DB_PATH || path.join(__dirname, '../data/clawboard.db'));
+
+// Ensure DB directory exists (container may mount /app/data)
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 // Initialize core dependencies
 const app = express();
