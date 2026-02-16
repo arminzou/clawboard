@@ -29,7 +29,8 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 ## 🚧 Current Phase: CI/CD (In Progress)
 
 - [x] Create initial CI workflow for Forgejo Actions (builds and tests on push)
-- [ ] Configure CD to deploy the application to the homelab Docker environment
+- [x] Configure CD to deploy the application to the homelab Docker environment
+- [ ] Add Forgejo secret `TEE_SSH_KEY` to enable SSH access for deployment
 
 ---
 
