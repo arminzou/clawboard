@@ -1,15 +1,17 @@
 import clsx from 'clsx';
-import { Copy, Trash2, UserCheck, X, Workflow } from 'lucide-react';
+import { Copy, Folder, Trash2, UserCheck, X, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Assignee, TaskStatus } from '../../lib/api';
+import type { Assignee, Project, TaskStatus } from '../../lib/api';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 type BulkActionBarProps = {
   count: number;
+  projects?: Project[];
   onClearSelection: () => void;
   onBulkAssign: (assignee: Assignee | null) => Promise<void>;
   onBulkStatus: (status: TaskStatus) => Promise<void>;
+  onBulkProject?: (projectId: number | null) => Promise<void>;
   onBulkDelete: () => Promise<void>;
   onBulkDuplicate?: () => Promise<void>;
 };
@@ -30,15 +32,18 @@ const ASSIGNEE_OPTIONS: { value: string; label: string }[] = [
 
 export function BulkActionBar({
   count,
+  projects = [],
   onClearSelection,
   onBulkAssign,
   onBulkStatus,
+  onBulkProject,
   onBulkDelete,
   onBulkDuplicate,
 }: BulkActionBarProps) {
   const [busy, setBusy] = useState(false);
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleAssign(value: string) {
@@ -56,6 +61,17 @@ export function BulkActionBar({
     setBusy(true);
     try {
       await onBulkStatus(value as TaskStatus);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleProject(value: string) {
+    if (!onBulkProject) return;
+    setShowProjectMenu(false);
+    setBusy(true);
+    try {
+      await onBulkProject(value === '' ? null : Number(value));
     } finally {
       setBusy(false);
     }
@@ -113,6 +129,7 @@ export function BulkActionBar({
           onClick={() => {
             setShowAssignMenu((v) => !v);
             setShowStatusMenu(false);
+            setShowProjectMenu(false);
           }}
         >
           <UserCheck size={16} />
@@ -142,6 +159,7 @@ export function BulkActionBar({
           onClick={() => {
             setShowStatusMenu((v) => !v);
             setShowAssignMenu(false);
+            setShowProjectMenu(false);
           }}
         >
           <Workflow size={16} />
@@ -162,6 +180,47 @@ export function BulkActionBar({
           </div>
         ) : null}
       </div>
+
+      {onBulkProject ? (
+        <div className="relative">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-1.5 text-sm font-medium text-[rgb(var(--cb-text))] transition hover:bg-[rgb(var(--cb-accent-soft))]"
+            onClick={() => {
+              setShowProjectMenu((v) => !v);
+              setShowAssignMenu(false);
+              setShowStatusMenu(false);
+            }}
+          >
+            <Folder size={16} />
+            Project
+          </button>
+          {showProjectMenu ? (
+            <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] py-1 shadow-lg">
+              <button
+                type="button"
+                className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                onClick={() => handleProject('')}
+              >
+                (unassigned)
+              </button>
+              {projects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                  onClick={() => handleProject(String(p.id))}
+                >
+                  {p.name}
+                </button>
+              ))}
+              {projects.length === 0 ? (
+                <div className="px-3 py-1.5 text-xs text-[rgb(var(--cb-text-muted))]">No projects found.</div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Duplicate button (optional) */}
       {onBulkDuplicate ? (

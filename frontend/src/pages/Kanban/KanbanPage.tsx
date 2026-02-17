@@ -375,6 +375,13 @@ export function KanbanPage({
     await refresh();
   }
 
+  async function handleBulkProject(projectId: number | null) {
+    const ids = Array.from(selectedIds);
+    await Promise.all(ids.map((id) => api.updateTask(id, { project_id: projectId })));
+    clearSelection();
+    await refresh();
+  }
+
   async function handleBulkStatus(status: TaskStatus) {
     const ids = Array.from(selectedIds);
     await Promise.all(ids.map((id) => api.updateTask(id, { status })));
@@ -1036,6 +1043,7 @@ export function KanbanPage({
         <EditTaskModal
           task={editTask}
           tagOptions={tagOptions}
+          projects={projects}
           onClose={() => setEditTask(null)}
           onSave={async (patch) => {
             const normalizedTags =
@@ -1060,7 +1068,9 @@ export function KanbanPage({
       {createOpen ? (
         <CreateTaskModal
           initialStatus={createPrefill?.status}
+          initialProjectId={currentProjectId}
           tagOptions={tagOptions}
+          projects={projects}
           onClose={() => {
             setCreateOpen(false);
             setCreatePrefill(null);
@@ -1074,7 +1084,7 @@ export function KanbanPage({
                     .filter(Boolean)
                 : body.tags;
 
-            await api.createTask({ ...body, tags: normalizedTags, project_id: currentProjectId ?? undefined });
+            await api.createTask({ ...body, tags: normalizedTags });
             setCreateOpen(false);
             setCreatePrefill(null);
             await refresh();
@@ -1085,9 +1095,11 @@ export function KanbanPage({
       {selectedIds.size > 0 ? (
         <BulkActionBar
           count={selectedIds.size}
+          projects={projects}
           onClearSelection={clearSelection}
           onBulkAssign={handleBulkAssign}
           onBulkStatus={handleBulkStatus}
+          onBulkProject={handleBulkProject}
           onBulkDelete={handleBulkDelete}
           onBulkDuplicate={handleBulkDuplicate}
         />

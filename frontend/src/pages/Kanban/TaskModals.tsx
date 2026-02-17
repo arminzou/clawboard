@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, CheckCircle2, Clock } from 'lucide-react';
-import type { Assignee, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import type { Assignee, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { formatDateTimeFull } from '../../lib/date';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
@@ -265,6 +265,7 @@ export function EditTaskModal({
   onSave,
   onDelete,
   tagOptions = [],
+  projects = [],
 }: {
   task: Task;
   onClose: () => void;
@@ -277,9 +278,11 @@ export function EditTaskModal({
     tags?: string[] | string;
     assigned_to?: Assignee | null;
     blocked_reason?: string | null;
+    project_id?: number | null;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
   tagOptions?: string[];
+  projects?: Project[];
 }) {
   const [title, setTitle] = useState(task.title);
   const [activeField, setActiveField] = useState<'title' | 'description' | null>(null);
@@ -293,6 +296,7 @@ export function EditTaskModal({
   const [tags, setTags] = useState<string[]>(Array.isArray(task.tags) ? task.tags : []);
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
+  const [projectId, setProjectId] = useState<number | null>(task.project_id ?? null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -315,12 +319,13 @@ export function EditTaskModal({
         tags: selectedTags,
         assigned_to: assigned,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
+        project_id: projectId,
       });
       queueMicrotask(() => prev?.focus());
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, deleting, description, dueDate, onSave, priority, saving, selectedTags, status, task.title, title]);
+  }, [assigned, blockedReason, deleting, description, dueDate, onSave, priority, projectId, saving, selectedTags, status, task.title, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -426,6 +431,21 @@ export function EditTaskModal({
           </label>
 
           <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
+              <Select
+                value={projectId ?? ''}
+                onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">(unassigned)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
               <Select
@@ -545,11 +565,14 @@ export function EditTaskModal({
 
 export function CreateTaskModal({
   initialStatus,
+  initialProjectId,
   onClose,
   onCreate,
   tagOptions = [],
+  projects = [],
 }: {
   initialStatus?: TaskStatus;
+  initialProjectId?: number | null;
   onClose: () => void;
   onCreate: (body: {
     title: string;
@@ -561,8 +584,10 @@ export function CreateTaskModal({
     blocked_reason?: string | null;
     assigned_to?: Assignee | null;
     position?: number;
+    project_id?: number | null;
   }) => Promise<void>;
   tagOptions?: string[];
+  projects?: Project[];
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -572,10 +597,15 @@ export function CreateTaskModal({
   const [tags, setTags] = useState<string[]>([]);
   const [blockedReason, setBlockedReason] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
+  const [projectId, setProjectId] = useState<number | null>(initialProjectId ?? null);
   const [saving, setSaving] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   useFocusTrap({ containerRef: modalRef, active: true, onEscape: onClose });
+
+  useEffect(() => {
+    setProjectId(initialProjectId ?? null);
+  }, [initialProjectId]);
 
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
   const selectedTags = useMemo(() => mergeTags(tags), [tags]);
@@ -595,11 +625,12 @@ export function CreateTaskModal({
         tags: selectedTags,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
         assigned_to: assigned,
+        project_id: projectId,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, description, dueDate, onCreate, priority, saving, selectedTags, status, title]);
+  }, [assigned, blockedReason, description, dueDate, onCreate, priority, projectId, saving, selectedTags, status, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -673,6 +704,21 @@ export function CreateTaskModal({
           </label>
 
           <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
+              <Select
+                value={projectId ?? ''}
+                onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">(unassigned)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
               <Select
