@@ -28,10 +28,8 @@ function inferAgentFromPath(p) {
 }
 
 function ingestSessions({ agents = DEFAULT_AGENTS } = {}) {
-  const isDist = path.basename(path.dirname(__dirname)) === 'dist';
-  const defaultDbPath = isDist
-    ? path.join(__dirname, '../../../data/clawboard.db')
-    : path.join(__dirname, '../../data/clawboard.db');
+  const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+  const defaultDbPath = path.join(dataHome, 'clawboard', 'clawboard.db');
   const dbPath = process.env.CLAWBOARD_DB_PATH || defaultDbPath;
 
   // Ensure DB directory exists
