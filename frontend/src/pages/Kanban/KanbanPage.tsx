@@ -998,8 +998,34 @@ export function KanbanPage({
         ) : null}
 
         {!loading && visibleTasks.length === 0 ? (
-          <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-3 text-sm text-[rgb(var(--cb-text-muted))]">
-            No tasks match your filters.
+          <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-8 text-center">
+            {currentProjectId !== null && tasks.length === 0 ? (
+              <div className="mx-auto max-w-md">
+                <div className="mb-3 text-4xl">📂</div>
+                <div className="mb-2 text-lg font-semibold text-[rgb(var(--cb-text))]">
+                  {currentProject?.name ? `No tasks in ${currentProject.name}` : 'No tasks in this project'}
+                </div>
+                <div className="mb-4 text-sm text-[rgb(var(--cb-text-muted))]">
+                  Get started by creating your first task
+                </div>
+                <Button variant="primary" onClick={() => setCreateOpen(true)}>
+                  Create First Task
+                </Button>
+              </div>
+            ) : currentProjectId === null && tasks.length === 0 ? (
+              <div className="mx-auto max-w-md">
+                <div className="mb-3 text-4xl">🎯</div>
+                <div className="mb-2 text-lg font-semibold text-[rgb(var(--cb-text))]">No tasks yet</div>
+                <div className="mb-4 text-sm text-[rgb(var(--cb-text-muted))]">
+                  Create your first task to get started
+                </div>
+                <Button variant="primary" onClick={() => setCreateOpen(true)}>
+                  Create Task
+                </Button>
+              </div>
+            ) : (
+              <div className="text-sm text-[rgb(var(--cb-text-muted))]">No tasks match your filters.</div>
+            )}
           </div>
         ) : null}
 
