@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus, Project } from '../../lib/api';
 import { Chip } from '../ui/Chip';
 import { Select } from '../ui/Select';
+import { Button } from '../ui/Button';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ModalShell } from '../ui/ModalShell';
 import { PromptModal } from '../ui/PromptModal';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
@@ -139,7 +141,8 @@ export function Sidebar({
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [showSaveViewModal, setShowSaveViewModal] = useState(false);
   const [confirmDeleteView, setConfirmDeleteView] = useState<{ id: string; name: string } | null>(null);
-  const [confirmAssignProject, setConfirmAssignProject] = useState<{ id: number; name: string } | null>(null);
+  const [assignProjectModalOpen, setAssignProjectModalOpen] = useState(false);
+  const [assignProjectId, setAssignProjectId] = useState<number | null>(null);
   const savedViewsRef = useRef<HTMLDivElement | null>(null);
   const currentViewRef = useRef<HTMLButtonElement | null>(null);
 
@@ -261,15 +264,18 @@ export function Sidebar({
                           )}
                         </div>
                       ))}
-                      {currentProjectId !== null && onAssignUnassignedTasks ? (
+                      {onAssignUnassignedTasks && projects?.length ? (
                         <>
                           <div className="my-1 border-t border-slate-100" />
                           <button
                             type="button"
                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner"
                             onClick={() => {
-                              if (currentProjectId == null) return;
-                              setConfirmAssignProject({ id: currentProjectId, name: projectName });
+                              const projectList = projects ?? [];
+                              const fallbackProjectId =
+                                currentProjectId ?? (projectList.length === 1 ? projectList[0].id : null);
+                              setAssignProjectId(fallbackProjectId);
+                              setAssignProjectModalOpen(true);
                               setProjectMenuOpen(false);
                             }}
                           >
@@ -344,18 +350,50 @@ export function Sidebar({
           />
         )}
 
-        {confirmAssignProject && onAssignUnassignedTasks ? (
-          <ConfirmModal
-            title="Assign unassigned tasks?"
-            message={`Assign tasks without a project to "${confirmAssignProject.name}".`}
-            confirmLabel="Assign"
-            variant="primary"
-            onClose={() => setConfirmAssignProject(null)}
-            onConfirm={() => {
-              onAssignUnassignedTasks(confirmAssignProject.id);
-              setConfirmAssignProject(null);
-            }}
-          />
+        {assignProjectModalOpen && onAssignUnassignedTasks ? (
+          <ModalShell onClose={() => setAssignProjectModalOpen(false)}>
+            <div className="flex flex-col gap-4 text-left">
+              <div>
+                <div className="text-lg font-semibold text-[rgb(var(--cb-text))]">Assign unassigned tasks</div>
+                <div className="mt-1 text-sm text-[rgb(var(--cb-text-muted))]">
+                  Choose which project should receive tasks without a project.
+                </div>
+              </div>
+
+              <label className="text-sm">
+                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Target project</div>
+                <Select
+                  value={assignProjectId ?? ''}
+                  onChange={(e) => setAssignProjectId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">(select a project)</option>
+                  {projects?.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+
+              <div className="mt-2 flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => setAssignProjectModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={!assignProjectId}
+                  onClick={() => {
+                    if (!assignProjectId) return;
+                    onAssignUnassignedTasks(assignProjectId);
+                    setAssignProjectModalOpen(false);
+                  }}
+                >
+                  Assign
+                </Button>
+              </div>
+            </div>
+          </ModalShell>
         ) : null}
 
         <div className="mt-4">

@@ -22,8 +22,8 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 - [x] Project discovery: honor CLAWBOARD_PROJECTS_DIR + always show project dropdown
 - [x] Add “Assign unassigned tasks” action (API + UI)
 - [x] Make All Projects selection deterministic (URL → project state sync)
-- [ ] Define project assignment strategy for legacy tasks (auto-assign vs manual)
-- [ ] Decide default project behavior when only one exists
+- [x] Define project assignment strategy for legacy tasks (auto-assign vs manual)
+- [x] Decide default project behavior when only one exists
 - [x] Add project selector in task create/edit modals (manual assignment)
 - [x] Add bulk project assignment action
 
