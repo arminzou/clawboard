@@ -3,20 +3,12 @@ import { api, type Project } from '../lib/api';
 import { useWebSocket } from './useWebSocket';
 import { toast } from '../lib/toast';
 
-export function useProjects() {
+export function useProjects(initialProjectId?: number | null) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [currentProjectId, setCurrentProjectIdState] = useState<number | null>(() => {
-    try {
-      const raw = window.localStorage.getItem('cb.v2.currentProjectId');
-      if (raw === 'null' || raw === '') return null;
-      return raw ? parseInt(raw, 10) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [currentProjectId, setCurrentProjectIdState] = useState<number | null>(initialProjectId ?? null);
 
   const setCurrentProjectId = useCallback((id: number | null) => {
     setCurrentProjectIdState(id);

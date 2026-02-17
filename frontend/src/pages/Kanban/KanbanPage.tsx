@@ -72,19 +72,32 @@ export function KanbanPage({
   const { projectId: urlProjectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
 
-  // Project management
-  const { projects, currentProjectId, currentProject, setCurrentProjectId, refresh: refreshProjects } = useProjects();
-
-  // Sync URL with project state
-  useEffect(() => {
+  // Compute initial project ID from URL first, then localStorage fallback
+  const initialProjectId = useMemo(() => {
     if (urlProjectId) {
       const id = parseInt(urlProjectId, 10);
-      if (!Number.isNaN(id) && id !== currentProjectId) {
-        setCurrentProjectId(id);
-      }
-    } else if (urlProjectId === undefined && currentProjectId !== null) {
-      // On root path, always show all projects
-      setCurrentProjectId(null);
+      if (!Number.isNaN(id)) return id;
+    }
+    // Fallback to localStorage only if no URL param
+    try {
+      const raw = window.localStorage.getItem('cb.v2.currentProjectId');
+      if (raw === 'null' || raw === '') return null;
+      return raw ? parseInt(raw, 10) : null;
+    } catch {
+      return null;
+    }
+  }, [urlProjectId]);
+
+  // Project management
+  const { projects, currentProjectId, currentProject, setCurrentProjectId, refresh: refreshProjects } = useProjects(initialProjectId);
+
+  // Sync URL changes with project state (URL is source of truth)
+  useEffect(() => {
+    const urlId = urlProjectId ? parseInt(urlProjectId, 10) : null;
+    const targetId = urlId && !Number.isNaN(urlId) ? urlId : null;
+    
+    if (targetId !== currentProjectId) {
+      setCurrentProjectId(targetId);
     }
   }, [urlProjectId, currentProjectId, setCurrentProjectId]);
 

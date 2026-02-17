@@ -158,7 +158,7 @@ export const api = {
 
   async updateTask(
     id: number,
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'archived_at' | 'context_key' | 'context_type'>>,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'archived_at' | 'context_key' | 'context_type' | 'project_id'>>,
   ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
