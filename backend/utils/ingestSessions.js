@@ -28,7 +28,15 @@ function inferAgentFromPath(p) {
 }
 
 function ingestSessions({ agents = DEFAULT_AGENTS } = {}) {
-  const dbPath = path.join(__dirname, '../../data/clawboard.db');
+  const isDist = path.basename(path.dirname(__dirname)) === 'dist';
+  const defaultDbPath = isDist
+    ? path.join(__dirname, '../../../data/clawboard.db')
+    : path.join(__dirname, '../../data/clawboard.db');
+  const dbPath = process.env.CLAWBOARD_DB_PATH || defaultDbPath;
+
+  // Ensure DB directory exists
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
   const db = new Database(dbPath);
 
   // Ensure schema migrations applied
