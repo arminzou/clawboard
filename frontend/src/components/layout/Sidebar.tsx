@@ -2,11 +2,12 @@ import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2, Pencil, S
 import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus, Project } from '../../lib/api';
 import { Chip } from '../ui/Chip';
-import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { Menu } from '../ui/Menu';
 import { ModalShell } from '../ui/ModalShell';
 import { PromptModal } from '../ui/PromptModal';
+import { Select } from '../ui/Select';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
@@ -548,60 +549,52 @@ export function Sidebar({
                   )}
                 </div>
               )}
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-slate-600">Assignee</div>
-                <Select
-                  value={assignee}
-                  onChange={(e) => onAssignee(e.target.value as AssigneeFilter)}
-                >
-                  <option value="all">All</option>
-                  <option value="tee">tee</option>
-                  <option value="fay">fay</option>
-                  <option value="armin">armin</option>
-                  <option value="">(unassigned)</option>
-                </Select>
-              </label>
+              <FilterMenu
+                label="Assignee"
+                value={assignee}
+                onChange={(value) => onAssignee(value as AssigneeFilter)}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'tee', label: 'tee' },
+                  { value: 'fay', label: 'fay' },
+                  { value: 'armin', label: 'armin' },
+                  { value: '', label: '(unassigned)' },
+                ]}
+              />
 
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-slate-600">Due</div>
-                <Select
-                  value={due}
-                  onChange={(e) => onDue(e.target.value as DueFilter)}
-                >
-                  <option value="any">Any</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="soon">Due soon (7d)</option>
-                  <option value="has">Has due date</option>
-                  <option value="none">No due date</option>
-                </Select>
-              </label>
+              <FilterMenu
+                label="Due"
+                value={due}
+                onChange={(value) => onDue(value as DueFilter)}
+                options={[
+                  { value: 'any', label: 'Any' },
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'soon', label: 'Due soon (7d)' },
+                  { value: 'has', label: 'Has due date' },
+                  { value: 'none', label: 'No due date' },
+                ]}
+              />
 
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-slate-600">Tag</div>
-                <Select
-                  value={tag}
-                  onChange={(e) => onTag((e.target.value || 'all') as TagFilter)}
-                >
-                  <option value="all">All</option>
-                  {tagOptions.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </Select>
-              </label>
+              <FilterMenu
+                label="Tag"
+                value={tag === 'all' ? 'all' : String(tag)}
+                onChange={(value) => onTag((value || 'all') as TagFilter)}
+                options={[
+                  { value: 'all', label: 'All' },
+                  ...tagOptions.map((t) => ({ value: t, label: t })),
+                ]}
+              />
 
               {currentContextKey && (
-                <label className="text-sm">
-                  <div className="mb-1 text-xs font-medium text-slate-600">Context (branch/worktree)</div>
-                  <Select
-                    value={context}
-                    onChange={(e) => onContext((e.target.value || 'all') as ContextFilter)}
-                  >
-                    <option value="all">All contexts</option>
-                    <option value="current">Current: {currentContextKey}</option>
-                  </Select>
-                </label>
+                <FilterMenu
+                  label="Context (branch/worktree)"
+                  value={context}
+                  onChange={(value) => onContext((value || 'all') as ContextFilter)}
+                  options={[
+                    { value: 'all', label: 'All contexts' },
+                    { value: 'current', label: `Current: ${currentContextKey}` },
+                  ]}
+                />
               )}
 
               <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
@@ -693,6 +686,50 @@ function ViewButton({
         {count}
       </Chip>
     </button>
+  );
+}
+
+type FilterOption = {
+  value: string;
+  label: string;
+};
+
+function FilterMenu({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: FilterOption[];
+  onChange: (value: string) => void;
+}) {
+  const current = options.find((opt) => opt.value === value) ?? options[0];
+
+  return (
+    <label className="text-sm">
+      <div className="mb-1 text-xs font-medium text-slate-600">{label}</div>
+      <Menu
+        align="left"
+        trigger={({ open, toggle }) => (
+          <button
+            type="button"
+            className="cb-input flex w-full items-center justify-between gap-2 text-left"
+            onClick={toggle}
+          >
+            <span className="truncate">{current?.label ?? value}</span>
+            <ChevronDown size={14} className={`shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+        items={options.map((opt, idx) => ({
+          key: `${opt.value || 'empty'}:${idx}`,
+          label: opt.label,
+          checked: opt.value === value,
+          onSelect: () => onChange(opt.value),
+        }))}
+      />
+    </label>
   );
 }
 
