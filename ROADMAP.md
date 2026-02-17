@@ -16,6 +16,7 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 ## 🚧 Current Phase: Project & Views UX Polish (In Progress)
 
+- Tracked by **Task #72** (Project functionality improvements/refactor)
 - [x] Standardize modal shell (PromptModal/ConfirmModal via ModalShell)
 - [x] Views UI refresh (current view dropdown + saved views menu + Save As modal)
 - [x] Project discovery: honor CLAWBOARD_PROJECTS_DIR + always show project dropdown
@@ -26,11 +27,11 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 ---
 
-## 🚧 Current Phase: CI/CD (In Progress)
+## ✅ CI/CD (Completed)
 
 - [x] Create initial CI workflow for Forgejo Actions (builds and tests on push)
 - [x] Configure CD to deploy the application to the homelab Docker environment
-- [ ] Add Forgejo secret `TEE_SSH_KEY` to enable SSH access for deployment
+- [x] Deploy runs on homelab runner (no SSH secret required)
 
 ---
 
@@ -122,3 +123,4 @@ If you're new to these terms, here's the "Quick & Dirty" explanation:
 - Component strategy: shadcn/ui deferred; revisit if local UI kit slows down
 - Pagination: not needed yet, but will matter at 1000+ tasks
 - Advanced search operators: `assignee:tee status:done` syntax for power users
+- Deploy sync strategy: `git pull` vs `reset --hard origin/main` to avoid diverged branch failures
