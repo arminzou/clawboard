@@ -270,25 +270,27 @@ export function Sidebar({
   const filterChipClass =
     'inline-flex items-center rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 active:bg-slate-100 active:translate-y-px active:shadow-inner';
 
-  // Collapsed state - show only toggle button
-  if (collapsed) {
-    return (
-      <aside className="hidden h-full w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 active:translate-y-px active:shadow-inner"
-          onClick={onToggleCollapsed}
-          title="Expand sidebar"
-          aria-label="Expand sidebar"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </aside>
-    );
-  }
+  // Collapsed state - show only toggle button on desktop
+  const collapsedToggle = (
+    <aside className="hidden h-full w-10 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col lg:items-center lg:py-3">
+      <button
+        type="button"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 active:translate-y-px active:shadow-inner"
+        onClick={onToggleCollapsed}
+        title="Expand sidebar"
+        aria-label="Expand sidebar"
+      >
+        <ChevronRight size={18} />
+      </button>
+    </aside>
+  );
 
   return (
-    <aside className="h-full w-full border-slate-200 bg-white lg:w-72 lg:border-r">
+    <>
+      {collapsed ? collapsedToggle : null}
+      <aside
+        className={`h-full w-full border-slate-200 bg-white lg:w-72 lg:border-r${collapsed ? ' lg:hidden' : ''}`}
+      >
       <div className="px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
@@ -695,6 +697,7 @@ export function Sidebar({
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
