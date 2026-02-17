@@ -526,7 +526,7 @@ export function Sidebar({
           <PromptModal
             title="Rename project"
             message="Enter a new name for this project"
-            initialValue={projects.find((p) => p.id === renameProjectId)?.name ?? ''}
+            defaultValue={projects.find((p) => p.id === renameProjectId)?.name ?? ''}
             confirmLabel="Rename"
             variant="primary"
             onClose={() => setRenameProjectId(null)}

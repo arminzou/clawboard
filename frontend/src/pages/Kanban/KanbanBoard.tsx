@@ -11,10 +11,10 @@ import {
 import type { DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { AlertTriangle, Clock, Flag, GripVertical, Hash, User } from 'lucide-react';
+import { AlertTriangle, Clock, Flag, FolderOpen, GripVertical, Hash, User } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
-import type { Task, TaskStatus } from '../../lib/api';
+import type { Project, Task, TaskStatus } from '../../lib/api';
 import { formatDate, formatDateTimeSmart, formatRelativeTime } from '../../lib/date';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
@@ -48,6 +48,8 @@ export function KanbanBoard({
   showCheckboxes,
   sortKey,
   sortDir,
+  projects,
+  currentProjectId,
 }: {
   tasks: Task[];
   tasksAll: Task[];
@@ -61,6 +63,8 @@ export function KanbanBoard({
   showCheckboxes?: boolean;
   sortKey: KanbanSortKey;
   sortDir: KanbanSortDir;
+  projects?: Project[];
+  currentProjectId?: number | null;
 }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<{ width: number; height: number } | null>(null);
@@ -68,6 +72,8 @@ export function KanbanBoard({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+
 
   function parseDateValue(raw: string | null | undefined): number {
     if (!raw) return 0;
@@ -198,6 +204,8 @@ export function KanbanBoard({
               selectedIds={selectedIds}
               onToggleSelection={onToggleSelection}
               showCheckboxes={showCheckboxes}
+              projects={projects}
+              currentProjectId={currentProjectId}
             />
           ))}
         </div>
@@ -205,7 +213,7 @@ export function KanbanBoard({
         <DragOverlay adjustScale={false}>
           {activeTask ? (
             <div style={activeRect ? { width: activeRect.width, height: activeRect.height } : undefined}>
-              <TaskCard task={activeTask} dragging />
+              <TaskCard task={activeTask} dragging projects={projects} currentProjectId={currentProjectId} />
             </div>
           ) : null}
         </DragOverlay>
@@ -225,6 +233,8 @@ function KanbanColumn({
   selectedIds,
   onToggleSelection,
   showCheckboxes,
+  projects,
+  currentProjectId,
 }: {
   id: TaskStatus;
   title: string;
@@ -236,6 +246,8 @@ function KanbanColumn({
   selectedIds?: Set<number>;
   onToggleSelection?: (id: number) => void;
   showCheckboxes?: boolean;
+  projects?: Project[];
+  currentProjectId?: number | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const showDropHint = !!activeTaskId && isOver;
@@ -371,6 +383,8 @@ function KanbanColumn({
               isSelected={selectedIds?.has(t.id)}
               onToggleSelection={onToggleSelection}
               showCheckbox={showCheckboxes}
+              projects={projects}
+              currentProjectId={currentProjectId}
             />
           ))}
         </div>
@@ -432,6 +446,8 @@ const TaskCard = memo(
     onToggleSelection,
     showCheckbox,
     dragHandleProps,
+    projects,
+    currentProjectId,
   }: {
     task: Task;
     onOpen?: () => void;
@@ -440,7 +456,17 @@ const TaskCard = memo(
     onToggleSelection?: (id: number) => void;
     showCheckbox?: boolean;
     dragHandleProps?: DragHandleProps;
+    projects?: Project[];
+    currentProjectId?: number | null;
   }) {
+    // Compute project label: show only in "All Projects" view (currentProjectId === null)
+    const projectLabel = (() => {
+      if (currentProjectId !== null) return null; // Viewing specific project
+      if (task.project_id == null) return null; // Task has no project
+      const projectName = (projects || []).find(p => p.id === task.project_id)?.name;
+      return projectName || `Project #${task.project_id}`;
+    })();
+
     const dueLabel = formatDate(task.due_date);
     const updatedRelative = formatRelativeTime(task.updated_at ?? task.created_at);
     const updatedTitle = formatDateTimeSmart(task.updated_at ?? task.created_at);
@@ -518,6 +544,7 @@ const TaskCard = memo(
           <div className="mt-2 flex flex-col gap-1">
             <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
             <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
+            {projectLabel ? <MetaRow icon={<FolderOpen size={14} />} label="Project" value={projectLabel} /> : null}
             {task.context_key ? (
               <MetaRow
                 icon={<span className="text-[10px] font-bold opacity-70">CTX</span>}
@@ -550,7 +577,10 @@ const TaskCard = memo(
       prev.task.status === next.task.status &&
       prev.task.position === next.task.position &&
       prev.task.created_at === next.task.created_at &&
-      prev.task.completed_at === next.task.completed_at
+      prev.task.completed_at === next.task.completed_at &&
+      prev.task.project_id === next.task.project_id &&
+      prev.currentProjectId === next.currentProjectId &&
+      prev.projects === next.projects
     );
   }
 );
@@ -561,12 +591,16 @@ function DraggableTask({
   isSelected,
   onToggleSelection,
   showCheckbox,
+  projects,
+  currentProjectId,
 }: {
   task: Task;
   onOpen: () => void;
   isSelected?: boolean;
   onToggleSelection?: (id: number) => void;
   showCheckbox?: boolean;
+  projects?: Project[];
+  currentProjectId?: number | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: String(task.id),
@@ -591,6 +625,8 @@ function DraggableTask({
         onToggleSelection={onToggleSelection}
         showCheckbox={showCheckbox}
         dragHandleProps={{ ...attributes, ...listeners }}
+        projects={projects}
+        currentProjectId={currentProjectId}
       />
     </div>
   );

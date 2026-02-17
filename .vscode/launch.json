@@ -2,50 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "pwa-node",
-      "request": "launch",
-      "name": "Backend Dev (ts-node)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "PORT": "3001",
-        "NODE_OPTIONS": "--inspect"
-      },
-      "autoAttachChildProcesses": true,
-      "skipFiles": ["<node_internals>/**"],
-      "console": "integratedTerminal",
-      "restart": true
-    },
-    {
-      "type": "pwa-node",
-      "request": "launch",
-      "name": "Frontend Dev Server (Vite)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
-    },
-    {
+      "name": "Attach to Chrome (Vite)",
       "type": "pwa-chrome",
-      "request": "launch",
-      "name": "Frontend Debug (Chrome)",
-      "url": "http://localhost:5173",
+      "request": "attach",
+      "port": 9222,
       "webRoot": "${workspaceFolder}/frontend",
-      "sourceMaps": true
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Frontend (Vite + Chrome)",
-      "configurations": ["Frontend Dev Server (Vite)", "Frontend Debug (Chrome)"],
-      "stopAll": true
-    },
-    {
-      "name": "Full Stack + UI Debug",
-      "configurations": ["Backend Dev (ts-node)", "Frontend Dev Server (Vite)", "Frontend Debug (Chrome)"],
-      "stopAll": true
+      "sourceMaps": true,
+      "url": "http://192.168.20.10:5173"
     }
   ]
 }

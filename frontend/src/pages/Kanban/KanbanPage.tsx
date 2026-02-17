@@ -872,6 +872,7 @@ export function KanbanPage({
   const projectName = currentProject?.name ?? (currentProjectId === null ? 'All Projects' : 'Clawboard');
   const boardName = 'Tasks';
 
+
   const viewItems = useMemo(
     () => [
       { key: 'all' as const, label: 'All', count: baseFiltered.length },
@@ -1092,6 +1093,8 @@ export function KanbanPage({
               showCheckboxes={selectionMode}
               sortKey={sortKey}
               sortDir={sortDir}
+              projects={projects}
+              currentProjectId={currentProjectId}
             />
           )}
         </div>
