@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 
 function ensureSchema(db: Database.Database) {
   const hasTasks = db
@@ -17,7 +18,14 @@ function ensureSchema(db: Database.Database) {
   }
 }
 
-export function createDatabase(dbPath: string = path.join(__dirname, '../../../data/clawboard.db')): Database.Database {
+export function createDatabase(
+  dbPath: string = path.join(
+    process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share'),
+    'clawboard',
+    'clawboard.db',
+  ),
+): Database.Database {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL'); // Better performance for concurrent reads/writes
 

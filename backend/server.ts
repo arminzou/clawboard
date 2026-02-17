@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import http from 'http';
 import { createDatabase } from './src/infra/database/dbConnection';
 import { createWebSocketHub } from './src/infra/realtime/websocketHub';
@@ -13,7 +14,9 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = String(process.env.HOST ?? '127.0.0.1');
-const DB_PATH = String(process.env.CLAWBOARD_DB_PATH || path.join(__dirname, '../data/clawboard.db'));
+const dataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share');
+const defaultDbPath = path.join(dataHome, 'clawboard', 'clawboard.db');
+const DB_PATH = String(process.env.CLAWBOARD_DB_PATH || defaultDbPath);
 
 // Ensure DB directory exists (container may mount /app/data)
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

@@ -1,10 +1,12 @@
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const Database = require('better-sqlite3');
 const { getGitStatusMap } = require('./gitStatus');
 
 const WORKSPACE_ROOT = process.env.WORKSPACE_ROOT || path.resolve(__dirname, '../../..');
-const DB_PATH = path.join(__dirname, '../../data/clawboard.db');
+const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+const DB_PATH = process.env.CLAWBOARD_DB_PATH || path.join(dataHome, 'clawboard', 'clawboard.db');
 
 function walk(dir, fileList = []) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -23,6 +25,7 @@ function fileType(p) {
 }
 
 function syncDocs({ workspaceRoot = WORKSPACE_ROOT } = {}) {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   const db = new Database(DB_PATH);
   const gitStatus = getGitStatusMap(workspaceRoot);
 

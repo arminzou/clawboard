@@ -1,8 +1,10 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
-const DB_PATH = path.join(__dirname, '../../data/clawboard.db');
+const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+const DB_PATH = process.env.CLAWBOARD_DB_PATH || path.join(dataHome, 'clawboard', 'clawboard.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 // Ensure data directory exists
