@@ -36,7 +36,13 @@ applyCommonMiddleware(app);
 registerRoutes(app, db, app.locals.broadcast);
 
 // Frontend SPA fallback (production build)
-const FRONTEND_DIST = path.join(__dirname, '../frontend/dist');
+const DEFAULT_FRONTEND_DIST = path.resolve(
+    __dirname,
+    path.basename(__dirname) === 'dist' ? '../../frontend/dist' : '../frontend/dist',
+);
+const FRONTEND_DIST = process.env.FRONTEND_DIST
+    ? path.resolve(process.env.FRONTEND_DIST)
+    : DEFAULT_FRONTEND_DIST;
 const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 const HAS_FRONTEND = fs.existsSync(FRONTEND_INDEX);
 
