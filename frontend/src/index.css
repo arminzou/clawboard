@@ -104,6 +104,16 @@
     animation: cb-modal-pop 0.15s ease-out;
   }
 
+  .cb-scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .cb-scrollbar-hidden::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
   .cb-menu {
     border-radius: var(--cb-radius-lg);
     border: 1px solid rgb(var(--cb-border));

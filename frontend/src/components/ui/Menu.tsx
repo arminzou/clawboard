@@ -27,14 +27,30 @@ export function Menu({
   items,
   align = 'right',
   className,
+  menuClassName,
+  density = 'default',
 }: {
   trigger: (opts: { open: boolean; toggle: () => void }) => ReactNode;
   items: MenuItem[];
   align?: 'left' | 'right';
   className?: string;
+  menuClassName?: string;
+  density?: 'default' | 'compact';
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const hasIcons = items.some((it) => 'icon' in it && Boolean(it.icon));
+  const itemGapClass = density === 'compact'
+    ? hasIcons
+      ? 'gap-1.5'
+      : 'gap-1'
+    : hasIcons
+      ? 'gap-2'
+      : 'gap-1.5';
+  const checkmarkClass = clsx(
+    'flex h-4 w-4 shrink-0 items-center justify-center text-[rgb(var(--cb-accent))] text-xs font-bold',
+    !hasIcons && 'mr-1',
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +89,7 @@ export function Menu({
           className={clsx(
             'absolute z-50 mt-2 min-w-48 cb-menu',
             align === 'right' ? 'right-0' : 'left-0',
+            menuClassName,
           )}
         >
           {items.map((it) => {
@@ -93,6 +110,7 @@ export function Menu({
                 key={it.key}
                 type="button"
                 role="menuitem"
+                title={it.label}
                 className={clsx(
                   'w-full text-left cb-menu-item',
                   it.disabled
@@ -105,13 +123,15 @@ export function Menu({
                   it.onSelect?.();
                 }}
               >
-                <div className="flex items-center gap-2">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center text-[rgb(var(--cb-accent))] text-xs font-bold">
+                <div className={clsx('flex items-center', itemGapClass)}>
+                  <span className={checkmarkClass}>
                     {it.checked ? '✓' : null}
                   </span>
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[rgb(var(--cb-text-muted))]">
-                    {it.icon ?? null}
-                  </span>
+                  {hasIcons ? (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[rgb(var(--cb-text-muted))]">
+                      {it.icon ?? null}
+                    </span>
+                  ) : null}
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate">{it.label}</span>
                     {it.description ? (

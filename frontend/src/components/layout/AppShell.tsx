@@ -42,7 +42,7 @@ export function AppShell({
               <X size={20} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto">{sidebar}</div>
+          <div className="flex-1 overflow-y-auto cb-scrollbar-hidden">{sidebar}</div>
         </div>
       </div>
 

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { Calendar, CheckCircle2, ChevronDown, Clock } from 'lucide-react';
 import type { Assignee, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { formatDateTimeFull } from '../../lib/date';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
 import { Panel } from '../../components/ui/Panel';
-import { Select } from '../../components/ui/Select';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { Menu } from '../../components/ui/Menu';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -140,6 +140,53 @@ function TagPicker({
         <div className="text-xs text-[rgb(var(--cb-text-muted))]">No matches.</div>
       ) : null}
     </div>
+  );
+}
+
+type MenuOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
+
+function MenuSelect({
+  value,
+  options,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  options: MenuOption[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const current = options.find((opt) => opt.value === value)
+    ?? (placeholder ? { value: '', label: placeholder } : options[0]);
+
+  return (
+    <Menu
+      align="left"
+      density="compact"
+      menuClassName="w-full max-w-full"
+      trigger={({ open, toggle }) => (
+        <button
+          type="button"
+          className="cb-input flex w-full items-center justify-between gap-2 text-left"
+          onClick={toggle}
+          title={current?.label ?? value}
+        >
+          <span className="truncate">{current?.label ?? value}</span>
+          <ChevronDown size={14} className={`shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+      items={options.map((opt, idx) => ({
+        key: `${opt.value || 'empty'}:${idx}`,
+        label: opt.label,
+        checked: opt.value === value,
+        disabled: opt.disabled,
+        onSelect: () => onChange(opt.value),
+      }))}
+    />
   );
 }
 
@@ -357,7 +404,7 @@ export function EditTaskModal({
           role="dialog"
           aria-modal="true"
           aria-label={`Edit task ${task.id}`}
-          className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto p-4 shadow-[var(--cb-shadow-md)]"
+          className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto cb-scrollbar-hidden p-4 shadow-[var(--cb-shadow-md)]"
         >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
@@ -433,45 +480,38 @@ export function EditTaskModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
-              <Select
-                value={projectId ?? ''}
-                onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">(unassigned)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
+              <MenuSelect
+                value={projectId ? String(projectId) : ''}
+                onChange={(value) => setProjectId(value ? Number(value) : null)}
+                options={[
+                  { value: '', label: '(unassigned)' },
+                  ...projects.map((p) => ({ value: String(p.id), label: p.name })),
+                ]}
+              />
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
-              <Select
+              <MenuSelect
                 value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              >
-                {COLUMNS.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.title}
-                  </option>
-                ))}
-              </Select>
+                onChange={(value) => setStatus(value as TaskStatus)}
+                options={COLUMNS.map((c) => ({ value: c.key, label: c.title }))}
+              />
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-              <Select
+              <MenuSelect
                 value={priority ?? ''}
-                onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
-              >
-                <option value="">(none)</option>
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-                <option value="urgent">urgent</option>
-              </Select>
+                onChange={(value) => setPriority((value || null) as TaskPriority)}
+                options={[
+                  { value: '', label: '(none)' },
+                  { value: 'low', label: 'low' },
+                  { value: 'medium', label: 'medium' },
+                  { value: 'high', label: 'high' },
+                  { value: 'urgent', label: 'urgent' },
+                ]}
+              />
             </label>
 
             <label className="text-sm">
@@ -481,15 +521,16 @@ export function EditTaskModal({
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
-              <Select
+              <MenuSelect
                 value={assigned ?? ''}
-                onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
-              >
-                <option value="">(unassigned)</option>
-                <option value="tee">tee</option>
-                <option value="fay">fay</option>
-                <option value="armin">armin</option>
-              </Select>
+                onChange={(value) => setAssigned((value || null) as Assignee)}
+                options={[
+                  { value: '', label: '(unassigned)' },
+                  { value: 'tee', label: 'tee' },
+                  { value: 'fay', label: 'fay' },
+                  { value: 'armin', label: 'armin' },
+                ]}
+              />
             </label>
           </div>
 
@@ -648,7 +689,7 @@ export function CreateTaskModal({
   return (
     <ModalOverlay onClose={onClose}>
       <div ref={modalRef} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()} className="w-full max-w-lg">
-        <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto p-4 shadow-[var(--cb-shadow-md)]">
+        <Panel role="dialog" aria-modal="true" aria-label="Create task" className="w-full max-h-[calc(100vh-2rem)] overflow-y-auto cb-scrollbar-hidden p-4 shadow-[var(--cb-shadow-md)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
@@ -706,45 +747,38 @@ export function CreateTaskModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
-              <Select
-                value={projectId ?? ''}
-                onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">(unassigned)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
+              <MenuSelect
+                value={projectId ? String(projectId) : ''}
+                onChange={(value) => setProjectId(value ? Number(value) : null)}
+                options={[
+                  { value: '', label: '(unassigned)' },
+                  ...projects.map((p) => ({ value: String(p.id), label: p.name })),
+                ]}
+              />
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
-              <Select
+              <MenuSelect
                 value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              >
-                {COLUMNS.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.title}
-                  </option>
-                ))}
-              </Select>
+                onChange={(value) => setStatus(value as TaskStatus)}
+                options={COLUMNS.map((c) => ({ value: c.key, label: c.title }))}
+              />
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-              <Select
+              <MenuSelect
                 value={priority ?? ''}
-                onChange={(e) => setPriority((e.target.value || null) as TaskPriority)}
-              >
-                <option value="">(none)</option>
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-                <option value="urgent">urgent</option>
-              </Select>
+                onChange={(value) => setPriority((value || null) as TaskPriority)}
+                options={[
+                  { value: '', label: '(none)' },
+                  { value: 'low', label: 'low' },
+                  { value: 'medium', label: 'medium' },
+                  { value: 'high', label: 'high' },
+                  { value: 'urgent', label: 'urgent' },
+                ]}
+              />
             </label>
 
             <label className="text-sm">
@@ -754,15 +788,16 @@ export function CreateTaskModal({
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
-              <Select
+              <MenuSelect
                 value={assigned ?? ''}
-                onChange={(e) => setAssigned((e.target.value || null) as Assignee)}
-              >
-                <option value="">(unassigned)</option>
-                <option value="tee">tee</option>
-                <option value="fay">fay</option>
-                <option value="armin">armin</option>
-              </Select>
+                onChange={(value) => setAssigned((value || null) as Assignee)}
+                options={[
+                  { value: '', label: '(unassigned)' },
+                  { value: 'tee', label: 'tee' },
+                  { value: 'fay', label: 'fay' },
+                  { value: 'armin', label: 'armin' },
+                ]}
+              />
             </label>
           </div>
 

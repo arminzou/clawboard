@@ -136,6 +136,111 @@ export function Sidebar({
     tag !== 'all',
   ].filter(Boolean).length;
 
+  const filterChips = [
+    {
+      key: 'assignee',
+      show: assignee !== 'all',
+      label: assignee === '' ? 'Unassigned' : assignee,
+      title: 'Clear assignee filter',
+      onClear: () => onAssignee('all'),
+    },
+    {
+      key: 'hide-done',
+      show: hideDone,
+      label: 'Hide done',
+      title: 'Clear hide done',
+      onClear: () => onHideDone(false),
+    },
+    {
+      key: 'blocked',
+      show: blocked,
+      label: 'Blocked only',
+      title: 'Clear blocked filter',
+      onClear: () => onBlocked(false),
+    },
+    {
+      key: 'due',
+      show: due !== 'any',
+      label: `Due: ${due}`,
+      title: 'Clear due filter',
+      onClear: () => onDue('any'),
+    },
+    {
+      key: 'tag',
+      show: tag !== 'all',
+      label: `#${tag}`,
+      title: 'Clear tag filter',
+      onClear: () => onTag('all'),
+    },
+    {
+      key: 'context',
+      show: context !== 'all',
+      label: `Context: ${context === 'current' ? currentContextKey || 'current' : context}`,
+      title: 'Clear context filter',
+      onClear: () => onContext('all'),
+    },
+  ].filter((chip) => chip.show);
+
+  const filterMenus: Array<{
+    key: string;
+    label: string;
+    value: string;
+    options: FilterOption[];
+    onChange: (value: string) => void;
+    enabled?: boolean;
+  }> = [
+    {
+      key: 'assignee',
+      label: 'Assignee',
+      value: assignee,
+      onChange: (value) => onAssignee(value as AssigneeFilter),
+      options: [
+        { value: 'all', label: 'All' },
+        { value: 'tee', label: 'tee' },
+        { value: 'fay', label: 'fay' },
+        { value: 'armin', label: 'armin' },
+        { value: '', label: '(unassigned)' },
+      ],
+    },
+    {
+      key: 'due',
+      label: 'Due',
+      value: due,
+      onChange: (value) => onDue(value as DueFilter),
+      options: [
+        { value: 'any', label: 'Any' },
+        { value: 'overdue', label: 'Overdue' },
+        { value: 'soon', label: 'Due soon (7d)' },
+        { value: 'has', label: 'Has due date' },
+        { value: 'none', label: 'No due date' },
+      ],
+    },
+    {
+      key: 'tag',
+      label: 'Tag',
+      value: tag === 'all' ? 'all' : String(tag),
+      onChange: (value) => onTag((value || 'all') as TagFilter),
+      options: [{ value: 'all', label: 'All' }, ...tagOptions.map((t) => ({ value: t, label: t }))],
+    },
+    {
+      key: 'context',
+      label: 'Context (branch/worktree)',
+      value: context,
+      onChange: (value) => onContext((value || 'all') as ContextFilter),
+      enabled: Boolean(currentContextKey),
+      options: [
+        { value: 'all', label: 'All contexts' },
+        { value: 'current', label: `Current: ${currentContextKey}` },
+      ],
+    },
+  ];
+
+  const filterToggles = [
+    { key: 'hide-done', label: 'Hide done', checked: hideDone, onChange: (value: boolean) => onHideDone(value) },
+    { key: 'blocked', label: 'Blocked only', checked: blocked, onChange: (value: boolean) => onBlocked(value) },
+    { key: 'archived', label: 'Show archived', checked: showArchived, onChange: (value: boolean) => onShowArchived(value) },
+  ];
+
   const activeSavedView = activeSavedViewId ? savedViews.find((x) => x.id === activeSavedViewId) : null;
   const currentViewLabel = activeSavedView?.name ?? viewItems.find((it) => it.key === view)?.label ?? 'All';
 
@@ -144,6 +249,7 @@ export function Sidebar({
   const [confirmDeleteView, setConfirmDeleteView] = useState<{ id: string; name: string } | null>(null);
   const [assignProjectModalOpen, setAssignProjectModalOpen] = useState(false);
   const [assignProjectId, setAssignProjectId] = useState<number | null>(null);
+  const [renameProjectId, setRenameProjectId] = useState<number | null>(null);
   const savedViewsRef = useRef<HTMLDivElement | null>(null);
   const currentViewRef = useRef<HTMLButtonElement | null>(null);
 
@@ -245,24 +351,39 @@ export function Sidebar({
                             </span>
                             <span className="truncate">{p.name}</span>
                           </button>
-                          {onDeleteProject && (
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-100 active:translate-y-px active:shadow-inner"
+                              className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:bg-slate-200 active:translate-y-px active:shadow-inner"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const ok = window.confirm(`Delete project "${p.name}"? This will unlink all associated tasks.`);
-                                if (ok) {
-                                  onDeleteProject(p.id);
-                                  setProjectMenuOpen(false);
-                                }
+                                setRenameProjectId(p.id);
+                                setProjectMenuOpen(false);
                               }}
-                              title={`Delete project "${p.name}"`}
-                              aria-label={`Delete project "${p.name}"`}
+                              title={`Rename project "${p.name}"`}
+                              aria-label={`Rename project "${p.name}"`}
                             >
-                              <Trash2 size={14} />
+                              <Pencil size={14} />
                             </button>
-                          )}
+                            {onDeleteProject && (
+                              <button
+                                type="button"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-100 active:translate-y-px active:shadow-inner"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const ok = window.confirm(`Delete project "${p.name}"? This will unlink all associated tasks.`);
+                                  if (ok) {
+                                    onDeleteProject(p.id);
+                                    setProjectMenuOpen(false);
+                                  }
+                                }}
+                                title={`Delete project "${p.name}"`}
+                                aria-label={`Delete project "${p.name}"`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {onAssignUnassignedTasks && projects?.length ? (
@@ -397,6 +518,23 @@ export function Sidebar({
           </ModalShell>
         ) : null}
 
+        {renameProjectId !== null && projects ? (
+          <PromptModal
+            title="Rename project"
+            message="Enter a new name for this project"
+            initialValue={projects.find((p) => p.id === renameProjectId)?.name ?? ''}
+            confirmLabel="Rename"
+            variant="primary"
+            onClose={() => setRenameProjectId(null)}
+            onConfirm={async (newName) => {
+              const trimmed = newName.trim();
+              if (!trimmed) return;
+              await onRenameProject?.(renameProjectId, trimmed);
+              setRenameProjectId(null);
+            }}
+          />
+        ) : null}
+
         <div className="mt-4">
           <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span>Views</span>
@@ -485,148 +623,63 @@ export function Sidebar({
             {filtersOpen ? (
               <div className="mt-1 rounded-xl bg-white/60 p-2">
                 <div className="flex flex-col gap-2 px-1">
-                {activeFilterCount > 0 && (
-                  <div className="flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
-                  {assignee !== 'all' && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onAssignee('all')}
-                      title="Clear assignee filter"
-                    >
-                      {assignee === '' ? 'Unassigned' : assignee}
-                    </button>
+                  {activeFilterCount > 0 && (
+                    <div className="flex flex-wrap gap-1 rounded-lg border border-indigo-100 bg-indigo-50 p-2">
+                      {filterChips.map((chip) => (
+                        <button
+                          key={chip.key}
+                          type="button"
+                          className={filterChipClass}
+                          onClick={chip.onClear}
+                          title={chip.title}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
                   )}
-                  {hideDone && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onHideDone(false)}
-                      title="Clear hide done"
+
+                  {filterMenus
+                    .filter((menu) => menu.enabled !== false)
+                    .map((menu) => (
+                      <FilterMenu
+                        key={menu.key}
+                        label={menu.label}
+                        value={menu.value}
+                        onChange={menu.onChange}
+                        options={menu.options}
+                      />
+                    ))}
+
+                  {filterToggles.map((toggle) => (
+                    <label
+                      key={toggle.key}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800"
                     >
-                      Hide done
-                    </button>
-                  )}
-                  {blocked && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onBlocked(false)}
-                      title="Clear blocked filter"
-                    >
-                      Blocked only
-                    </button>
-                  )}
-                  {due !== 'any' && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onDue('any')}
-                      title="Clear due filter"
-                    >
-                      Due: {due}
-                    </button>
-                  )}
-                  {tag !== 'all' && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onTag('all')}
-                      title="Clear tag filter"
-                    >
-                      #{tag}
-                    </button>
-                  )}
-                  {context !== 'all' && (
-                    <button
-                      type="button"
-                      className={filterChipClass}
-                      onClick={() => onContext('all')}
-                      title="Clear context filter"
-                    >
-                      Context: {context === 'current' ? currentContextKey || 'current' : context}
-                    </button>
-                  )}
-                </div>
-              )}
-              <FilterMenu
-                label="Assignee"
-                value={assignee}
-                onChange={(value) => onAssignee(value as AssigneeFilter)}
-                options={[
-                  { value: 'all', label: 'All' },
-                  { value: 'tee', label: 'tee' },
-                  { value: 'fay', label: 'fay' },
-                  { value: 'armin', label: 'armin' },
-                  { value: '', label: '(unassigned)' },
-                ]}
-              />
+                      <span>{toggle.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={toggle.checked}
+                        onChange={(e) => toggle.onChange(e.target.checked)}
+                      />
+                    </label>
+                  ))}
 
-              <FilterMenu
-                label="Due"
-                value={due}
-                onChange={(value) => onDue(value as DueFilter)}
-                options={[
-                  { value: 'any', label: 'Any' },
-                  { value: 'overdue', label: 'Overdue' },
-                  { value: 'soon', label: 'Due soon (7d)' },
-                  { value: 'has', label: 'Has due date' },
-                  { value: 'none', label: 'No due date' },
-                ]}
-              />
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
+                    onClick={() => void onArchiveDone()}
+                  >
+                    Archive done
+                  </button>
 
-              <FilterMenu
-                label="Tag"
-                value={tag === 'all' ? 'all' : String(tag)}
-                onChange={(value) => onTag((value || 'all') as TagFilter)}
-                options={[
-                  { value: 'all', label: 'All' },
-                  ...tagOptions.map((t) => ({ value: t, label: t })),
-                ]}
-              />
-
-              {currentContextKey && (
-                <FilterMenu
-                  label="Context (branch/worktree)"
-                  value={context}
-                  onChange={(value) => onContext((value || 'all') as ContextFilter)}
-                  options={[
-                    { value: 'all', label: 'All contexts' },
-                    { value: 'current', label: `Current: ${currentContextKey}` },
-                  ]}
-                />
-              )}
-
-              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
-                <span>Hide done</span>
-                <input type="checkbox" checked={hideDone} onChange={(e) => onHideDone(e.target.checked)} />
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
-                <span>Blocked only</span>
-                <input type="checkbox" checked={blocked} onChange={(e) => onBlocked(e.target.checked)} />
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-800">
-                <span>Show archived</span>
-                <input type="checkbox" checked={showArchived} onChange={(e) => onShowArchived(e.target.checked)} />
-              </label>
-
-              <button
-                type="button"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
-                onClick={() => void onArchiveDone()}
-              >
-                Archive done
-              </button>
-
-              <button
-                type="button"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
-                onClick={onReset}
-              >
-                Reset
-              </button>
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-100 active:bg-slate-200 active:translate-y-px active:shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
+                    onClick={onReset}
+                  >
+                    Reset
+                  </button>
               </div>
             </div>
           ) : (
@@ -712,6 +765,8 @@ function FilterMenu({
       <div className="mb-1 text-xs font-medium text-slate-600">{label}</div>
       <Menu
         align="left"
+        density="compact"
+        menuClassName="w-full max-w-full"
         trigger={({ open, toggle }) => (
           <button
             type="button"
