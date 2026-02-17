@@ -136,12 +136,12 @@ export function BulkActionBar({
           Assign
         </button>
         {showAssignMenu ? (
-          <div className="absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] py-1 shadow-lg">
+          <div className="absolute bottom-full left-0 mb-2 min-w-40 cb-menu">
             {ASSIGNEE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                className="block w-full text-left cb-menu-item"
                 onClick={() => handleAssign(opt.value)}
               >
                 {opt.label}
@@ -166,12 +166,12 @@ export function BulkActionBar({
           Status
         </button>
         {showStatusMenu ? (
-          <div className="absolute bottom-full left-0 mb-2 w-40 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] py-1 shadow-lg">
+          <div className="absolute bottom-full left-0 mb-2 min-w-40 cb-menu">
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
-                className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                className="block w-full text-left cb-menu-item"
                 onClick={() => handleStatus(opt.value)}
               >
                 {opt.label}
@@ -196,10 +196,10 @@ export function BulkActionBar({
             Project
           </button>
           {showProjectMenu ? (
-            <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] py-1 shadow-lg">
+            <div className="absolute bottom-full left-0 mb-2 min-w-48 cb-menu">
               <button
                 type="button"
-                className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                className="block w-full text-left cb-menu-item"
                 onClick={() => handleProject('')}
               >
                 (unassigned)
@@ -208,14 +208,14 @@ export function BulkActionBar({
                 <button
                   key={p.id}
                   type="button"
-                  className="block w-full px-3 py-1.5 text-left text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-accent-soft))]"
+                  className="block w-full text-left cb-menu-item"
                   onClick={() => handleProject(String(p.id))}
                 >
                   {p.name}
                 </button>
               ))}
               {projects.length === 0 ? (
-                <div className="px-3 py-1.5 text-xs text-[rgb(var(--cb-text-muted))]">No projects found.</div>
+                <div className="cb-menu-section-label">No projects found.</div>
               ) : null}
             </div>
           ) : null}

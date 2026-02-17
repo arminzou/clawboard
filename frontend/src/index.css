@@ -103,6 +103,47 @@
   .cb-modal-pop {
     animation: cb-modal-pop 0.15s ease-out;
   }
+
+  .cb-menu {
+    border-radius: var(--cb-radius-lg);
+    border: 1px solid rgb(var(--cb-border));
+    background: rgb(var(--cb-surface));
+    box-shadow: var(--cb-shadow-md);
+    padding: 0.5rem;
+  }
+
+  .cb-menu-item {
+    border-radius: var(--cb-radius);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: rgb(var(--cb-text));
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .cb-menu-item:hover {
+    background: rgb(var(--cb-accent-soft));
+  }
+
+  .cb-menu-item:focus-visible {
+    outline: 2px solid rgb(var(--cb-accent) / 0.45);
+    outline-offset: 2px;
+  }
+
+  .cb-menu-separator {
+    margin: 0.25rem 0;
+    height: 1px;
+    background: rgb(var(--cb-border));
+  }
+
+  .cb-menu-section-label {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(var(--cb-text-muted));
+  }
 }
 
 @keyframes cb-modal-pop {

@@ -71,18 +71,18 @@ export function Menu({
           role="menu"
           aria-label="Menu"
           className={clsx(
-            'absolute z-50 mt-2 min-w-48 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-1 shadow-lg',
+            'absolute z-50 mt-2 min-w-48 cb-menu',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >
           {items.map((it) => {
             if (it.kind === 'separator') {
-              return <div key={it.key} className="my-1 h-px bg-[rgb(var(--cb-border))]" />;
+              return <div key={it.key} className="cb-menu-separator" />;
             }
 
             if (it.kind === 'label') {
               return (
-                <div key={it.key} className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">
+                <div key={it.key} className="cb-menu-section-label">
                   {it.label}
                 </div>
               );
@@ -94,10 +94,10 @@ export function Menu({
                 type="button"
                 role="menuitem"
                 className={clsx(
-                  'w-full rounded-lg px-2 py-2 text-left text-sm text-[rgb(var(--cb-text))] transition',
+                  'w-full text-left cb-menu-item',
                   it.disabled
-                    ? 'cursor-not-allowed opacity-60'
-                    : 'hover:bg-[rgb(var(--cb-accent-soft))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)]',
+                    ? 'cursor-not-allowed opacity-60 pointer-events-none'
+                    : 'focus-visible:outline-none',
                 )}
                 onClick={() => {
                   if (it.disabled) return;
