@@ -89,7 +89,14 @@ export function KanbanPage({
   }, [urlProjectId]);
 
   // Project management
-  const { projects, currentProjectId, currentProject, setCurrentProjectId, refresh: refreshProjects } = useProjects(initialProjectId);
+  const {
+    projects,
+    currentProjectId,
+    currentProject,
+    setCurrentProjectId,
+    refresh: refreshProjects,
+    updateProject: updateProjectLocal,
+  } = useProjects(initialProjectId);
 
   // Sync URL changes with project state (URL is source of truth)
   useEffect(() => {
@@ -840,6 +847,17 @@ export function KanbanPage({
     }
   }, [currentProjectId, setCurrentProjectId, navigate, refreshProjects]);
 
+  const handleRenameProject = useCallback(async (id: number, name: string) => {
+    try {
+      const updated = await api.updateProject(id, { name });
+      updateProjectLocal(updated);
+      toast.success(`Project renamed to "${updated.name}"`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to rename project: ${msg}`);
+    }
+  }, [updateProjectLocal]);
+
   const handleAssignUnassignedTasks = useCallback(async (projectId: number) => {
     try {
       const { updated } = await api.assignUnassignedTasks(projectId);
@@ -869,6 +887,7 @@ export function KanbanPage({
       currentProjectId={currentProjectId}
       onProjectChange={handleProjectChange}
       onDeleteProject={handleDeleteProject}
+      onRenameProject={handleRenameProject}
       collapsed={sidebarCollapsed}
       onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
       viewsOpen={viewsOpen}

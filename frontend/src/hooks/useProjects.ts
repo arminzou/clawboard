@@ -27,6 +27,13 @@ export function useProjects(initialProjectId?: number | null) {
     }
   }, []);
 
+  const updateProject = useCallback((updated: Project) => {
+    setProjects((prev) => {
+      const next = prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p));
+      return next.slice().sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }, []);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -71,5 +78,6 @@ export function useProjects(initialProjectId?: number | null) {
     loading,
     error,
     refresh,
+    updateProject,
   };
 }

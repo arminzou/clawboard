@@ -28,6 +28,7 @@ export function Sidebar({
   currentProjectId,
   onProjectChange,
   onDeleteProject,
+  onRenameProject,
   collapsed,
   onToggleCollapsed,
   viewsOpen,
@@ -72,6 +73,7 @@ export function Sidebar({
   currentProjectId?: number | null;
   onProjectChange?: (id: number | null) => void;
   onDeleteProject?: (id: number) => void | Promise<void>;
+  onRenameProject?: (id: number, name: string) => void | Promise<void>;
 
   collapsed: boolean;
   onToggleCollapsed: () => void;

@@ -21,7 +21,9 @@ export class ProjectService {
 
   update(id: number, patch: Partial<Pick<Project, 'name' | 'description' | 'icon' | 'color'>>): Project {
     try {
-      return this.repo.update(id, patch);
+      const updated = this.repo.update(id, patch);
+      this.broadcast?.({ type: 'projects_updated', data: { updated: 1, project: updated } });
+      return updated;
     } catch (err) {
       if (err instanceof Error && err.message === 'Project not found') {
         throw new HttpError(404, 'Project not found');
