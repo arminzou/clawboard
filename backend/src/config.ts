@@ -2,7 +2,7 @@ import path from 'path';
 import os from 'os';
 
 // Resolve backend root from package.json location
-const BACKEND_ROOT = path.dirname(require.resolve('../package.json'));
+const BACKEND_ROOT = path.dirname(require.resolve('../../package.json'));
 
 // Lazy resolver - called at runtime, not module load
 function resolveDbPath(): string {
