@@ -34,6 +34,9 @@ COPY backend/ ./backend/
 # Build backend (TypeScript -> dist)
 RUN cd backend && npm run build
 
+# Change to backend directory for runtime
+WORKDIR /app/backend
+
 # Remove dev deps for smaller runtime image
 RUN cd backend && npm prune --omit=dev
 
@@ -49,4 +52,4 @@ ENV PORT=3001
 ENV HOST=0.0.0.0
 
 EXPOSE 3001
-CMD ["node", "backend/dist/server.js"]
+CMD ["node", "dist/server.js"]
