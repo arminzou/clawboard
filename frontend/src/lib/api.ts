@@ -20,6 +20,7 @@ export interface Task {
   project_id: number | null;
   context_key?: string | null;
   context_type?: string | null;
+  is_someday?: boolean;
 }
 
 export interface Activity {
@@ -122,6 +123,7 @@ export const api = {
     project_id?: number;
     context_key?: string;
     context_type?: string;
+    is_someday?: boolean;
   }) {
     const usp = new URLSearchParams();
     if (params?.status) usp.set('status', params.status);
@@ -130,6 +132,7 @@ export const api = {
     if (params?.project_id) usp.set('project_id', String(params.project_id));
     if (params?.context_key) usp.set('context_key', params.context_key);
     if (params?.context_type) usp.set('context_type', params.context_type);
+    if (params?.is_someday !== undefined) usp.set('is_someday', params.is_someday ? '1' : '0');
     const url = `${withBase('/api/tasks')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Task[]>(await fetch(url, { headers: authHeaders() }));
   },

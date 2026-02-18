@@ -326,6 +326,7 @@ export function EditTaskModal({
     assigned_to?: Assignee | null;
     blocked_reason?: string | null;
     project_id?: number | null;
+    is_someday?: boolean;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
   tagOptions?: string[];
@@ -344,6 +345,7 @@ export function EditTaskModal({
   const [assigned, setAssigned] = useState<Assignee | null>(task.assigned_to ?? null);
   const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? '');
   const [projectId, setProjectId] = useState<number | null>(task.project_id ?? null);
+  const [isSomeday, setIsSomeday] = useState(task.is_someday ?? false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -367,12 +369,13 @@ export function EditTaskModal({
         assigned_to: assigned,
         blocked_reason: blockedReason.trim() ? blockedReason : null,
         project_id: projectId,
+        is_someday: isSomeday,
       });
       queueMicrotask(() => prev?.focus());
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, deleting, description, dueDate, onSave, priority, projectId, saving, selectedTags, status, task.title, title]);
+  }, [assigned, blockedReason, deleting, description, dueDate, isSomeday, onSave, priority, projectId, saving, selectedTags, status, task.title, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -412,6 +415,18 @@ export function EditTaskModal({
             <div className="text-xs text-[rgb(var(--cb-text-muted))]">Status: {status}</div>
           </div>
           
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isSomeday}
+                onChange={(e) => setIsSomeday(e.target.checked)}
+                className="h-4 w-4 rounded border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] text-[rgb(var(--cb-primary))] focus:ring-[rgb(var(--cb-primary))]"
+              />
+              <span className="text-xs font-medium text-[rgb(var(--cb-text-muted))]">Save for later</span>
+            </label>
+          </div>
+
           <div className="flex items-center gap-1 -mr-1 -mt-1">
             <Button
               variant="ghost-danger"
@@ -626,6 +641,7 @@ export function CreateTaskModal({
     assigned_to?: Assignee | null;
     position?: number;
     project_id?: number | null;
+    is_someday?: boolean;
   }) => Promise<void>;
   tagOptions?: string[];
   projects?: Project[];
@@ -639,6 +655,7 @@ export function CreateTaskModal({
   const [blockedReason, setBlockedReason] = useState('');
   const [assigned, setAssigned] = useState<Assignee | null>('tee');
   const [projectId, setProjectId] = useState<number | null>(initialProjectId ?? null);
+  const [isSomeday, setIsSomeday] = useState(false);
   const [saving, setSaving] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
 
@@ -667,11 +684,12 @@ export function CreateTaskModal({
         blocked_reason: blockedReason.trim() ? blockedReason : null,
         assigned_to: assigned,
         project_id: projectId,
+        is_someday: isSomeday,
       });
     } finally {
       setSaving(false);
     }
-  }, [assigned, blockedReason, description, dueDate, onCreate, priority, projectId, saving, selectedTags, status, title]);
+  }, [assigned, blockedReason, description, dueDate, isSomeday, onCreate, priority, projectId, saving, selectedTags, status, title]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -695,9 +713,20 @@ export function CreateTaskModal({
             <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
             <div className="text-xs text-[rgb(var(--cb-text-muted))]">Fill in the basics. You can edit later.</div>
           </div>
-          <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isSomeday}
+                onChange={(e) => setIsSomeday(e.target.checked)}
+                className="h-4 w-4 rounded border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] text-[rgb(var(--cb-primary))] focus:ring-[rgb(var(--cb-primary))]"
+              />
+              <span className="text-xs font-medium text-[rgb(var(--cb-text-muted))]">Save for later</span>
+            </label>
+            <Button variant="ghost" size="sm" className="px-2" onClick={onClose} aria-label="Close">
             ✕
           </Button>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-col gap-3">

@@ -59,6 +59,8 @@ export function Sidebar({
   onTag,
   showArchived,
   onShowArchived,
+  showSomeday,
+  onShowSomeday,
   onArchiveDone,
   onAssignUnassignedTasks,
   context,
@@ -115,6 +117,9 @@ export function Sidebar({
 
   showArchived: boolean;
   onShowArchived: (v: boolean) => void;
+
+  showSomeday: boolean;
+  onShowSomeday: (v: boolean) => void;
 
   onArchiveDone: () => void | Promise<void>;
   onAssignUnassignedTasks?: (projectId: number) => void | Promise<void>;
@@ -241,6 +246,7 @@ export function Sidebar({
     { key: 'hide-done', label: 'Hide done', checked: hideDone, onChange: (value: boolean) => onHideDone(value) },
     { key: 'blocked', label: 'Blocked only', checked: blocked, onChange: (value: boolean) => onBlocked(value) },
     { key: 'archived', label: 'Show archived', checked: showArchived, onChange: (value: boolean) => onShowArchived(value) },
+    { key: 'someday', label: 'Show saved', checked: showSomeday, onChange: (value: boolean) => onShowSomeday(value) },
   ];
 
   const activeSavedView = activeSavedViewId ? savedViews.find((x) => x.id === activeSavedViewId) : null;

@@ -53,6 +53,7 @@ type SavedView = {
     hideDone: boolean;
     blocked: boolean;
     showArchived: boolean;
+    showSomeday: boolean;
     due: DueFilter;
     tag: TagFilter;
     q: string;
@@ -188,6 +189,14 @@ export function KanbanPage({
   const [showArchived, setShowArchived] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem('cb.v2.kanban.showArchived') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const [showSomeday, setShowSomeday] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('cb.v2.kanban.showSomeday') === '1';
     } catch {
       return false;
     }
@@ -499,6 +508,14 @@ export function KanbanPage({
 
   useEffect(() => {
     try {
+      window.localStorage.setItem('cb.v2.kanban.showSomeday', showSomeday ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [showSomeday]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem('cb.v2.kanban.due', due);
     } catch {
       // ignore
@@ -603,6 +620,7 @@ export function KanbanPage({
       hideDone: Boolean(sv.filters?.hideDone),
       blocked: Boolean(sv.filters?.blocked),
       showArchived: Boolean(sv.filters?.showArchived),
+      showSomeday: Boolean(sv.filters?.showSomeday),
       due: normalizedDue,
       tag: normalizedTag as TagFilter,
       q: (sv.filters?.q ?? '') as string,
@@ -616,6 +634,7 @@ export function KanbanPage({
     setHideDone(filters.hideDone);
     setBlocked(filters.blocked);
     setShowArchived(filters.showArchived);
+    setShowSomeday(filters.showSomeday);
     setDue(filters.due);
     setTag(filters.tag);
     setQ(filters.q);
@@ -625,7 +644,7 @@ export function KanbanPage({
     const trimmed = saveViewName.trim();
     if (!trimmed) return;
 
-    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
+    const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, showSomeday, due, tag, q };
     const id = `sv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 
     const next: SavedView = { id, name: trimmed, filters };
@@ -757,6 +776,7 @@ export function KanbanPage({
       if (wantTag !== 'all' && !(Array.isArray(t.tags) && t.tags.includes(wantTag))) return false;
       if (hideDone && t.status === 'done') return false;
       if (blocked && !t.blocked_reason) return false;
+      if (!showSomeday && t.is_someday) return false;
 
       // Context filtering
       if (context !== 'all' && currentContextKey) {
@@ -787,7 +807,7 @@ export function KanbanPage({
       const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [assignee, tag, hideDone, blocked, q, tasks, due, context, currentContextKey]);
+  }, [assignee, tag, hideDone, blocked, showSomeday, q, tasks, due, context, currentContextKey]);
 
   const [tagOptions, setTagOptions] = useState<string[]>([]);
 
@@ -920,6 +940,8 @@ export function KanbanPage({
       onTag={setTag}
       showArchived={showArchived}
       onShowArchived={setShowArchived}
+      showSomeday={showSomeday}
+      onShowSomeday={setShowSomeday}
       onArchiveDone={() => {
         setShowArchiveConfirm(true);
       }}
@@ -933,6 +955,7 @@ export function KanbanPage({
         setHideDone(false);
         setBlocked(false);
         setShowArchived(false);
+        setShowSomeday(false);
         setDue('any');
         setTag('all');
         setContext('all');
@@ -944,6 +967,7 @@ export function KanbanPage({
         setView('all');
         setHideDone(false);
         setBlocked(false);
+        setShowSomeday(false);
         setDue('any');
         setTag('all');
         setContext('all');
@@ -1216,7 +1240,7 @@ export function KanbanPage({
             const sv = savedViews.find((x) => x.id === id);
             if (!sv) return;
 
-            const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, due, tag, q };
+            const filters: SavedView['filters'] = { view, assignee, hideDone, blocked, showArchived, showSomeday, due, tag, q };
             setSavedViews((prev) =>
               prev.map((x) => (x.id === id ? { ...x, filters } : x))
             );
