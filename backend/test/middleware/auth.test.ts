@@ -11,7 +11,8 @@ describe('API key middleware', () => {
   });
 
   it('blocks requests without key when enabled', async () => {
-    process.env.CLAWBOARD_API_KEY = 'secret';
+    const testKey = 'test-secret-key-' + Date.now();
+    process.env.CLAWBOARD_API_KEY = testKey;
     const appCtx = createTestApp();
     db = appCtx.db;
 
@@ -19,7 +20,7 @@ describe('API key middleware', () => {
 
     await request(appCtx.app)
       .get('/api/tasks')
-      .set('x-api-key', 'secret')
+      .set('x-api-key', testKey)
       .expect(200);
   });
 });

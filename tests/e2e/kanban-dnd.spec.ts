@@ -1,13 +1,10 @@
 import { test, expect, request } from '@playwright/test';
 
-const API_KEY = '[REDACTED]';
-
 test('drag task between columns updates status', async ({ page }) => {
   const api = await request.newContext({ baseURL: 'http://127.0.0.1:3001' });
   
-  // Create task with auth header on each request
+  // Create task (auth handled by config's extraHTTPHeaders)
   const create = await api.post('/api/tasks', {
-    headers: { Authorization: `Bearer ${API_KEY}` },
     data: {
       title: `E2E Drag ${Date.now()}`,
       status: 'backlog',
@@ -116,9 +113,7 @@ test('drag task between columns updates status', async ({ page }) => {
 
     // Verify backend status updated
     await expect.poll(async () => {
-      const refreshed = await api.get(`/api/tasks/${taskId}`, {
-        headers: { Authorization: `Bearer ${API_KEY}` },
-      });
+      const refreshed = await api.get(`/api/tasks/${taskId}`);
       const updated = await refreshed.json();
       return updated.status;
     }).toBe('in_progress');
@@ -126,8 +121,6 @@ test('drag task between columns updates status', async ({ page }) => {
     await expect(inProgressColumn.getByTestId(`task-card-${taskId}`)).toBeVisible();
     await expect(inProgressColumn).toContainText('In Progress');
   } finally {
-    await api.delete(`/api/tasks/${taskId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` },
-    });
+    await api.delete(`/api/tasks/${taskId}`);
   }
 });
