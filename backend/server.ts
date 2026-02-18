@@ -1,9 +1,9 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import http from 'http';
 import { createDatabase } from './src/infra/database/dbConnection';
+import { config } from './src/config';
 import { createWebSocketHub } from './src/infra/realtime/websocketHub';
 import { applyCommonMiddleware } from './src/presentation/http/middleware/commonMiddleware';
 import { registerRoutes } from './src/presentation/http/routes';
@@ -14,16 +14,13 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = String(process.env.HOST ?? '127.0.0.1');
-const dataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share');
-const defaultDbPath = path.join(dataHome, 'clawboard', 'clawboard.db');
-const DB_PATH = String(process.env.CLAWBOARD_DB_PATH || defaultDbPath);
 
 // Ensure DB directory exists (container may mount /app/data)
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 
 // Initialize core dependencies
 const app = express();
-const db = createDatabase(DB_PATH);
+const db = createDatabase();
 
 // Make db available to routes (legacy pattern, to be removed when all routes migrated)
 app.locals.db = db;
@@ -109,7 +106,7 @@ server.listen(PORT, HOST, () => {
     const wsUrl = `ws://${HOST}:${PORT}/ws`;
     console.log(`\n🚀 Clawboard Backend running on ${baseUrl}`);
     console.log(`📊 WebSocket endpoint: ${wsUrl}`);
-    console.log(`💾 Database: ${DB_PATH}`);
+    console.log(`💾 Database: ${config.dbPath}`);
 
     // Optional: auto-sync for dashboard data freshness
     if (String(process.env.AUTO_SYNC || '').toLowerCase() === '1' || String(process.env.AUTO_SYNC || '').toLowerCase() === 'true') {

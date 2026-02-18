@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import fs from 'fs';
-import path from 'path';
 import { ActivityRepository } from '../repositories/activityRepository';
 import { ActivityService } from './activityService';
 import { HttpError } from '../presentation/http/errors/httpError';
+import { config } from '../config';
 
 describe('ActivityService', () => {
   let db: any;
@@ -13,8 +13,7 @@ describe('ActivityService', () => {
 
   beforeEach(() => {
     db = new Database(':memory:');
-    const schemaPath = path.join(__dirname, '../../db/schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    const schema = fs.readFileSync(config.dbSchema, 'utf8');
     db.exec(schema);
 
     repo = new ActivityRepository(db);

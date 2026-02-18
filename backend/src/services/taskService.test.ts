@@ -4,7 +4,7 @@ import { TaskRepository } from '../repositories/taskRepository';
 import { TaskService } from './taskService';
 import { HttpError } from '../presentation/http/errors/httpError';
 import fs from 'fs';
-import path from 'path';
+import { config } from '../config';
 
 describe('TaskService', () => {
   let db: any;
@@ -14,8 +14,7 @@ describe('TaskService', () => {
   beforeEach(() => {
     db = new Database(':memory:');
     // Load schema
-    const schemaPath = path.join(__dirname, '../../db/schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    const schema = fs.readFileSync(config.dbSchema, 'utf8');
     db.exec(schema);
 
     repo = new TaskRepository(db);

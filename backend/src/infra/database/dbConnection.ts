@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { config } from '../../config';
 
 function ensureSchema(db: Database.Database) {
   const hasTasks = db
@@ -9,22 +9,15 @@ function ensureSchema(db: Database.Database) {
     .get();
 
   if (!hasTasks) {
-    const schemaPath = path.join(__dirname, '../../../../db/schema.sql');
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Schema not found at ${schemaPath}`);
+    if (!fs.existsSync(config.dbSchema)) {
+      throw new Error(`Schema not found at ${config.dbSchema}`);
     }
-    const schema = fs.readFileSync(schemaPath, 'utf8');
+    const schema = fs.readFileSync(config.dbSchema, 'utf8');
     db.exec(schema);
   }
 }
 
-export function createDatabase(
-  dbPath: string = path.join(
-    process.env.XDG_DATA_HOME ?? path.join(os.homedir(), '.local', 'share'),
-    'clawboard',
-    'clawboard.db',
-  ),
-): Database.Database {
+export function createDatabase(dbPath: string = config.dbPath): Database.Database {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL'); // Better performance for concurrent reads/writes
@@ -35,7 +28,7 @@ export function createDatabase(
   // Run migrations
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { migrate } = require('../../../db/migrate');
+    const { migrate } = require(config.dbMigrate);
     migrate(db);
   } catch (e) {
     console.error('Migration failed:', e);
