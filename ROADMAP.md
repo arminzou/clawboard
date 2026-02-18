@@ -103,6 +103,15 @@ Enable multiple agents (Tee, Fay, Armin) to work on the same board with awarenes
 - **Milestone L**: Task Locking (Avoid editing the same task at once)
 - **Milestone M**: Enhanced Sync (Optimistic updates + conflict handling)
 
+### Phase 12 — Docs: Passive to Active
+
+Transform Docs from a file list into a context-aware Index.
+
+- **Task-Doc Linkage**: Attach reference docs directly to Kanban tasks.
+- **Agent Summaries**: Automated "TL;DR" for workspace docs to speed up agent onboarding.
+- **Stale Doc Alerts**: Flag documentation that hasn't been updated alongside related code changes.
+- **Milestone Docs**: Promote "Roadmap" or "Vision" file changes to high-priority Activity events.
+
 ---
 
 ## 📚 Jargon Buster
