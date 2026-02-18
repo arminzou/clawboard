@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     project_id INTEGER,
     context_key TEXT, -- e.g., 'projects/clawboard-ui-polish' or 'feature/branch-name'
     context_type TEXT, -- 'worktree' or 'branch'
+    is_someday INTEGER DEFAULT 0, -- saved for later / someday/maybe flag
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
