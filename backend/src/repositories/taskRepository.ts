@@ -46,6 +46,7 @@ function hydrateTask(row: TaskRow): Task {
     context_key: row.context_key ?? null,
     context_type: row.context_type ?? null,
     tags: normalizeTags(row.tags),
+    is_someday: Boolean(row.is_someday),
   };
 }
 
@@ -56,6 +57,7 @@ export type ListTasksParams = {
   project_id?: number;
   context_key?: string;
   context_type?: string;
+  is_someday?: boolean;
 };
 
 export type CreateTaskBody = {
@@ -71,6 +73,7 @@ export type CreateTaskBody = {
   project_id?: number | null;
   context_key?: string | null;
   context_type?: string | null;
+  is_someday?: boolean;
 };
 
 export type UpdateTaskBody = Partial<
@@ -88,6 +91,7 @@ export type UpdateTaskBody = Partial<
     | 'project_id'
     | 'context_key'
     | 'context_type'
+    | 'is_someday'
   >
 > & {
   tags?: string[] | string | null;
@@ -119,6 +123,7 @@ export class TaskRepository {
       project_id,
       context_key,
       context_type,
+      is_someday,
     } = params;
 
     let query = 'SELECT * FROM tasks';
@@ -148,6 +153,10 @@ export class TaskRepository {
       conditions.push('context_type = ?');
       values.push(context_type);
     }
+    if (is_someday !== undefined) {
+      conditions.push('is_someday = ?');
+      values.push(is_someday ? 1 : 0);
+    }
 
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
 
@@ -176,6 +185,7 @@ export class TaskRepository {
     const project_id = body.project_id != null ? Number(body.project_id) : null;
     const context_key = typeof body.context_key === 'string' && body.context_key.trim() ? body.context_key.trim() : null;
     const context_type = typeof body.context_type === 'string' && body.context_type.trim() ? body.context_type.trim() : null;
+    const is_someday = body.is_someday === true ? 1 : 0;
 
     // If no explicit position, append to end of column for stable ordering.
     const resolvedPosition =
@@ -193,9 +203,9 @@ export class TaskRepository {
         INSERT INTO tasks (
           title, description, status, priority, due_date,
           tags, blocked_reason, assigned_to, position, project_id,
-          context_key, context_type, completed_at
+          context_key, context_type, completed_at, is_someday
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -212,6 +222,7 @@ export class TaskRepository {
         context_key,
         context_type,
         completedAt,
+        is_someday,
       );
 
     const created = this.getById(Number(result.lastInsertRowid));
@@ -285,6 +296,10 @@ export class TaskRepository {
     if (patch.context_type !== undefined) {
       updates.push('context_type = ?');
       values.push(typeof patch.context_type === 'string' && patch.context_type.trim() ? patch.context_type.trim() : null);
+    }
+    if (patch.is_someday !== undefined) {
+      updates.push('is_someday = ?');
+      values.push(patch.is_someday ? 1 : 0);
     }
 
     if (updates.length === 0) throw new Error('No fields to update');

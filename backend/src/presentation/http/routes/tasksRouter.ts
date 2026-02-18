@@ -24,7 +24,7 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
 
   // GET /api/tasks
   router.get('/', (req: Request, res: Response, next: NextFunction) => {
-    const { status, assigned_to, include_archived, project_id, context_key, context_type } = req.query as Record<string, string | undefined>;
+    const { status, assigned_to, include_archived, project_id, context_key, context_type, is_someday } = req.query as Record<string, string | undefined>;
 
     try {
       const tasks = service.list({
@@ -34,6 +34,7 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
         project_id: project_id != null ? Number(project_id) : undefined,
         context_key,
         context_type,
+        is_someday: is_someday === '1' || is_someday === 'true' ? true : is_someday === '0' || is_someday === 'false' ? false : undefined,
       });
       res.json(tasks);
     } catch (err) {
