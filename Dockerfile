@@ -38,11 +38,11 @@ RUN cd backend && npm run build
 WORKDIR /app/backend
 
 # Remove dev deps for smaller runtime image
-RUN cd backend && npm prune --omit=dev
+RUN npm prune --omit=dev
 
 # Copy frontend build from Stage 1
 RUN mkdir -p frontend/dist
-COPY --from=build-frontend /app/frontend/dist ./frontend/dist
+COPY --from=build-frontend /app/frontend/dist /app/frontend/dist
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data
