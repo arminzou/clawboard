@@ -119,8 +119,9 @@ export function Menu({
                 )}
                 onClick={() => {
                   if (it.disabled) return;
-                  setOpen(false);
                   it.onSelect?.();
+                  // Defer close to ensure state update completes first
+                  setTimeout(() => setOpen(false), 0);
                 }}
               >
                 <div className={clsx('flex items-center', itemGapClass)}>
