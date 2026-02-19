@@ -4,6 +4,7 @@ import { createTasksRouter } from './tasksRouter';
 import { createProjectsRouter } from './projectsRouter';
 import { createActivitiesRouter } from './activitiesRouter';
 import { createTagsRouter } from './tagsRouter';
+import { createOpenClawRouter } from './openclawRouter';
 import { errorHandler } from '../middleware/errorHandler';
 
 export type BroadcastFn = (data: unknown) => void;
@@ -28,6 +29,9 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // OpenClaw integration
+  app.use('/api/openclaw', createOpenClawRouter());
 
   // Centralized error handling (must be last)
   app.use(errorHandler);
