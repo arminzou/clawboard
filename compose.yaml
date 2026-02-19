@@ -1,0 +1,29 @@
+networks:
+  proxy:
+    external: true
+
+services:
+  clawboard:
+    build:
+      context: .
+      args:
+        - CLAWBOARD_API_KEY=${CLAWBOARD_API_KEY}
+        - API_BASE=${API_BASE}
+        - WS_BASE=${WS_BASE}
+    container_name: clawboard
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - proxy
+    volumes:
+      - ./data:/app/data
+      - ${CLAWBOARD_PROJECTS_DIR:-./projects}:/app/workspace-projects:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.clawboard.rule=Host(`${CLAWBOARD_HOST:-clawboard.localhost}`)"
+      - "traefik.http.routers.clawboard.entrypoints=https"
+      - "traefik.http.routers.clawboard.tls=true"
+      - "traefik.http.routers.clawboard.tls.certresolver=cloudflare"
+      - "traefik.http.services.clawboard.loadbalancer.server.port=3001"
+      - "traefik.docker.network=proxy"
