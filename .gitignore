@@ -21,6 +21,6 @@ yarn-error.log*
 # OS
 .DS_Store
 
-docs
+docs/internal
 test-results/
 AGENTS.md
