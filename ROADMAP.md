@@ -16,25 +16,26 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 ---
 
-## 🚧 Phase 11: OpenClaw Integration (High Priority)
+## 🚧 Phase 11: OpenClaw Integration (Completed ✅)
 
 *Making Clawboard "Just Work" with OpenClaw.*
 
-### Why This Matters
+### Documentation
 
-Current friction: Users must manually configure API keys, run scripts, and set up connections. The goal is **zero-config**.
+See `docs/` for detailed guides:
+- [`docs/openclaw-integration.md`](docs/openclaw-integration.md) — WebSocket, webhook system, Tamagotchi component
+- [`docs/openclaw-auto-detect.md`](docs/openclaw-auto-detect.md) — Auto-detect workspace, agent discovery
+- [`docs/auto-generate-api-key.md`](docs/auto-generate-api-key.md) — Auto-generated API key mechanism
 
-### Checklist
+### Features Delivered
 
-#### 1. Auto-Discovery
-- [ ] Clawboard detects OpenClaw workspace from environment/config
-- [ ] Clawboard provides setup script (`curl Clawboard/setup | bash`)
-- [ ] One command configures OpenClaw to talk to Clawboard
-
-#### 2. Built-in Activity Reporting
-- [ ] Add activity-reporting helper to OpenClaw (skill or core)
-- [ ] Simple CLI: `clawboard report "working on X"`
-- [ ] Agents report activity without manual API calls
+| Feature | Status |
+|---------|--------|
+| Auto-detect OpenClaw workspace | ✅ |
+| Auto-generate and store API key | ✅ |
+| Activity-reporting skill | ✅ |
+| Real-time session stream (WebSocket) | ✅ |
+| Agent presence display (Tamagotchi) | ✅ |
 
 ---
 
