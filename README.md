@@ -1,89 +1,90 @@
-# Clawboard 📋
+# Clawboard
 
-Clawboard is your self-hosted engineering dashboard and multi-project task hub. It’s designed to give you (and your AI agents) a single place to track work, activities, and documentation across your entire workspace.
+**A local-first command center for OpenClaw users.**
 
-*Note: You are currently looking at the "Clean Architecture" refactor phase (Phase 10).*
+Clawboard gives you a real-time Kanban board that tracks what you—and your OpenClaw agents—are working on across your entire workspace. It Just Works™ with your existing OpenClaw setup.
 
----
-
-## 🏗 The Big Picture
-
-Think of Clawboard as the "Command Center" for your homelab or workspace. Instead of having tasks scattered across separate projects, Clawboard:
-1.  **Discovers Projects**: Automatically scans your workspace folders for git projects.
-2.  **Unifies Tasks**: Provides a single Kanban board that can filter by project, branch, or worktree.
-3.  **Tracks History**: Logs what you and your agents are doing in real-time.
-4.  **Monitors Docs**: Keeps an eye on your workspace documentation files.
-
-## 🛠 Tech Stack (The "How")
-
-### Current (Transitioning)
-- **Backend**: Node.js + Express (The web server)
-- **Database**: SQLite (A simple, file-based database—no complex setup required)
-- **Real-time**: WebSockets (Allows the UI to update instantly when a task changes)
-- **Frontend**: React + TypeScript + Tailwind CSS (The visual dashboard)
-
-### Moving Toward (Phase 10)
-- **Full TypeScript**: Adding "guardrails" to the backend for better safety.
-- **Clean Architecture**: Separating the "brain" (logic) from the "hands" (database) to make the code easier to maintain and test.
+*For OpenClaw users who want visibility into what your agents are doing.*
 
 ---
 
-## 🚀 Getting Started
+## ✨ What You Get
 
-If this is your first time setting up Clawboard:
+- **Seamless OpenClaw Integration** — Just works with your existing OpenClaw setup
+- **Local-First** — Your data stays on your machine (SQLite)
+- **Kanban Board** — Drag-and-drop tasks, filter by project/branch/status
+- **Activity Feed** — See who did what, when, and where
+- **Multi-Project Discovery** — Auto-finds git projects in your workspace
+- **Real-Time Updates** — Changes appear instantly via WebSocket
 
-### 1. Initial Setup (One-time)
-This installs all the dependencies and sets up your database.
+---
+
+## 🚀 Quick Start (Docker)
+
 ```bash
-npm run init
+docker run -d \
+  --name clawboard \
+  -p 3001:3001 \
+  -p 5173:5173 \
+  -v ./data:/app/data \
+  -e CLAWBOARD_API_KEY=secret \
+  zoulogic/clawboard:latest
 ```
 
-### 2. Start Development
-This starts both the backend server and the frontend dashboard.
+Dashboard: **http://localhost:5173**
+
+---
+
+## 🚀 Local Development
+
 ```bash
-npm run dev
-```
-*Access the dashboard at: `http://localhost:5173` (or whatever Vite tells you!)*
+# Clone and go
+cd clawboard
 
----
+# Install deps
+pnpm install
+pnpm -C backend init-db
 
-## 📁 Folder Structure (The "Where")
-
-```
-clawboard/
-├── backend/           # The Server (The "Engine")
-│   ├── routes/       # Handlers for web requests (Tasks, Projects, etc.)
-│   ├── db/           # Database setup and migrations
-│   └── server.js     # Entry point (being refactored to server.ts)
-├── frontend/         # The User Interface (The "Dashboard")
-│   ├── src/
-│   │   ├── components/ # Reusable UI pieces (Buttons, Cards, Boards)
-│   │   ├── hooks/      # Shared logic (WebSocket connection, Project listing)
-│   │   └── lib/        # API clients and utilities
-├── data/             # Your actual data (clawboard.db)
-├── docs/             # Documentation and Learning Guides
-└── README.md         # You are here!
+# Start both backend + frontend
+pnpm run dev
 ```
 
----
-
-## 🔐 Security (API Keys)
-
-By default, Clawboard is open for local use. If you want to secure it, you can set an API key in your environment:
-
-- **Backend**: `CLAWBOARD_API_KEY="your-secret-key"`
-- **Frontend**: `VITE_CLAWBOARD_API_KEY="your-secret-key"`
+Open **http://localhost:5173** — API runs on port 3001.
 
 ---
 
-## 🗺 Roadmap
+## 🧩 Why Clawboard?
 
-We track our progress and future plans in [ROADMAP.md](./ROADMAP.md). 
+OpenClaw agents work around your workspace, but their activity can be hard to track. You have no visibility into what they're doing until something breaks or gets committed.
 
-Currently, we are focusing on **Phase 10: Backend Clean Architecture**, moving the server logic into a more structured, testable, and robust system.
+Clawboard watches your OpenClaw agents and projects together, so you get:
+- **Visibility** into agent activity (tasks, sessions, commits)
+- **Context-aware views** (filter by branch or worktree)
+- **One board for everything** — no more jumping between project folders
 
 ---
 
-## 💡 Learning More
+## 🛠 Tech Stack
 
-If you are new to Node.js, TypeScript, or modern web architecture, check out our **Learning Guides** in `docs/learning/`. We're building this project "Explain-as-we-go" style!
+- **Backend:** Node.js + Express + SQLite + WebSocket
+- **Frontend:** React + TypeScript + Tailwind CSS + @dnd-kit
+
+---
+
+## 🤝 Contributing
+
+PRs welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
+
+---
+
+## 📦 Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for what's next.
+
+**Current focus:** Phase 11 — Real-time collaboration with OpenClaw agents
+
+---
+
+## 📜 License
+
+MIT — see [LICENSE](./LICENSE)

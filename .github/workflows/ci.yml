@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.29.2
+
+      - name: Install root deps
+        run: pnpm install
+
+      - name: Install backend deps
+        run: pnpm -C backend install
+
+      - name: Install frontend deps
+        run: pnpm -C frontend install
+
+      - name: Build frontend
+        run: pnpm -C frontend build
+
+      - name: Run backend tests
+        run: pnpm -C backend test:run
