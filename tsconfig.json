@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "types": [
+            "node"
+        ],
+        "esModuleInterop": true,
+        "moduleResolution": "node"
+    },
+    "include ": [
+        "playwright.config.ts"
+    ]
+}
