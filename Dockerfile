@@ -46,7 +46,7 @@ COPY --from=build-frontend /app/frontend/dist /app/frontend/dist
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data
-ENV CLAWBOARD_DB_PATH=/app/data/tasks.db
+ENV CLAWBOARD_DB_PATH=/app/data/clawboard.db
 ENV NODE_ENV=production
 ENV PORT=3001
 ENV HOST=0.0.0.0
