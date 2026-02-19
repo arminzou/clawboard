@@ -8,22 +8,26 @@ export function createWebhookRouter({ broadcast }: { broadcast?: (data: unknown)
   router.post('/clawboard', (req: Request, res: Response, next: NextFunction) => {
     try {
       const event = req.body;
-      console.log('[webhook] Received:', event.type, event.agent);
+      console.log('[webhook] Received:', event);
+
+      // Map incoming fields (our hook sends agentId, event)
+      const agentId = event.agentId || event.agent || 'unknown';
+      const eventType = event.event || event.type || 'unknown';
 
       // Broadcast to WebSocket clients
       if (broadcast) {
         const payload = {
           type: 'agent_status_updated',
           data: {
-            agentId: event.agent,
-            status: event.type === 'session:start' ? 'active' : 
-                    event.type === 'session:end' ? 'idle' : 
-                    event.type === 'agent:turn' ? 'thinking' : 'active',
+            agentId,
+            status: eventType === 'session:start' ? 'active' : 
+                    eventType === 'session:end' ? 'idle' : 
+                    eventType === 'thinking' ? 'thinking' : 'active',
             lastActivity: event.timestamp,
-            thought: event.data?.thought || (event.type === 'session:start' ? 'I am awake!' : undefined),
+            thought: event.thought || (eventType === 'session:start' ? 'I am awake!' : undefined),
           }
         };
-        console.log('[webhook] Broadcasted agent_status_updated for', event.agent);
+        console.log('[webhook] Broadcasted agent_status_updated for', agentId);
         broadcast(payload);
       } else {
         console.log('[webhook] WARNING: broadcast not available, skipping');

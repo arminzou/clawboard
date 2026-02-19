@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 type AgentStatus = 'active' | 'thinking' | 'idle' | 'blocked' | 'offline';
@@ -10,6 +10,9 @@ interface AgentPresence {
   currentTask?: string;
   thought?: string;
 }
+
+// How long before returning to idle (in milliseconds)
+const IDLE_TIMEOUT_MS = 30_000; // 30 seconds
 
 // Random motivational thoughts for the agent
 const AGENT_THOUGHTS = [
@@ -68,6 +71,36 @@ export function AgentTamagotchi({ agentId = 'tee' }: { agentId?: string }) {
     lastActivity: null,
     thought: getRandomThought(),
   });
+
+  // Ref to track idle timeout
+  const idleTimeoutRef = useRef<number | null>(null);
+
+  // Auto-return to idle after timeout
+  useEffect(() => {
+    // Clear any existing timeout
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current);
+    }
+
+    // If status is active or thinking, set a timer to return to idle
+    if (presence.status === 'active' || presence.status === 'thinking') {
+      idleTimeoutRef.current = window.setTimeout(() => {
+        setPresence(prev => ({
+          ...prev,
+          status: 'idle',
+          thought: getRandomThought(),
+        }));
+        console.log(`[Tamagotchi] ${agentId} returned to idle after timeout`);
+      }, IDLE_TIMEOUT_MS);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (idleTimeoutRef.current) {
+        clearTimeout(idleTimeoutRef.current);
+      }
+    };
+  }, [presence.status, agentId]);
 
   // Listen to WebSocket events for real-time updates
   useWebSocket({
