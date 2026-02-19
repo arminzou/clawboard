@@ -10,6 +10,8 @@ metadata:
       - "command:reset"
       - "command:stop"
       - "gateway:startup"
+      - "message:received"
+      - "message:sent"
 ---
 
 # Clawboard Pulse

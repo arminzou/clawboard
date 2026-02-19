@@ -27,6 +27,13 @@ const handler: HookHandler = async (event) => {
     payload.senderId = event.context.senderId;
   }
 
+  if (event.type === "message" && event.context) {
+    payload.messageFrom = event.context.from;
+    payload.messageTo = event.context.to;
+    payload.messageContent = event.context.content;
+    payload.channel = event.context.channelId;
+  }
+
   if (event.type === "gateway") {
     payload.message = "Gateway started";
   }

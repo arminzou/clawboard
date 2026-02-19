@@ -169,4 +169,54 @@ describe("clawboard-pulse", () => {
       expect(body.agentId).toBe(expected);
     }
   });
+
+  it("should send webhook on message:received", async () => {
+    process.env.CLAWBOARD_WEBHOOK_URL = "http://localhost:3001/api/webhook/clawboard";
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+    });
+
+    const event = createMockEvent("message", "received", "agent:tee:main", {
+      from: "user123",
+      to: "tee",
+      content: "Hello!",
+      channelId: "telegram",
+    });
+
+    await handler(event);
+
+    const body = parseBody((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]);
+    expect(body.event).toBe("received");
+    expect(body.agentId).toBe("tee");
+    expect(body.messageFrom).toBe("user123");
+    expect(body.messageTo).toBe("tee");
+    expect(body.messageContent).toBe("Hello!");
+    expect(body.channel).toBe("telegram");
+  });
+
+  it("should send webhook on message:sent", async () => {
+    process.env.CLAWBOARD_WEBHOOK_URL = "http://localhost:3001/api/webhook/clawboard";
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+    });
+
+    const event = createMockEvent("message", "sent", "agent:fay:main", {
+      from: "fay",
+      to: "user123",
+      content: "Hi there!",
+      channelId: "discord",
+    });
+
+    await handler(event);
+
+    const body = parseBody((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]);
+    expect(body.event).toBe("sent");
+    expect(body.agentId).toBe("fay");
+    expect(body.messageFrom).toBe("fay");
+    expect(body.messageTo).toBe("user123");
+    expect(body.messageContent).toBe("Hi there!");
+    expect(body.channel).toBe("discord");
+  });
 });
