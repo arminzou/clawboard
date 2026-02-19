@@ -28,8 +28,8 @@ Current friction: Users must manually configure API keys, run scripts, and set u
 
 #### 1. Auto-Discovery
 - [ ] Clawboard detects OpenClaw workspace from environment/config
-- [ ] Auto-generate API key, store in OpenClaw config
-- [ ] OpenClaw auto-configures to talk to Clawboard
+- [ ] Clawboard provides setup script (`curl Clawboard/setup | bash`)
+- [ ] One command configures OpenClaw to talk to Clawboard
 
 #### 2. Built-in Activity Reporting
 - [ ] Add activity-reporting helper to OpenClaw (skill or core)
