@@ -1,12 +1,21 @@
 {
-    "compilerOptions": {
-        "types": [
-            "node"
-        ],
-        "esModuleInterop": true,
-        "moduleResolution": "node"
-    },
-    "include ": [
-        "playwright.config.ts"
-    ]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "backend/**/*.ts",
+    "frontend/**/*.ts",
+    "hooks/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/dist"]
 }
