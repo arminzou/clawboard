@@ -1,129 +1,162 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What This Is
+> **Project-specific rules and current focus:** see [AGENTS.md](./AGENTS.md).
 
-Clawboard is a personal task/workflow management dashboard for OpenClaw agents. It provides a Kanban board, activity timeline, and document tracking — designed to help Armin monitor and coordinate work with Fay and Tee.
+---
 
-**Purpose:** UI for managing agent tasks, not a general-purpose project management tool.
+## What Is Clawboard?
+
+A **local-first command center for OpenClaw users** — a real-time Kanban board that tracks what you and your OpenClaw agents are working on.
+
+**Vision:** "Just Works™" — zero-config integration with OpenClaw.
+
+---
 
 ## Tech Stack
 
-- **Backend:** Node.js + Express + SQLite + WebSocket (port 3001)
-- **Frontend:** React 19 + TypeScript + Vite + Tailwind CSS 4
-- **Drag-and-drop:** @dnd-kit
-- **Icons:** lucide-react
+| Layer | Technology |
+|-------|------------|
+| Backend | Node.js + Express + SQLite (`better-sqlite3`) + WebSocket (`ws`) |
+| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 |
+| Drag-and-drop | @dnd-kit |
+| Icons | lucide-react |
+| Testing | Vitest (backend unit) + Playwright (E2E) |
 
-## Project Structure
-
-```
-clawboard/
-├── backend/
-│   ├── server.js         # Express + WebSocket server
-│   ├── routes/           # API endpoints (tasks, activities, docs)
-│   ├── db/               # SQLite schema + init
-│   └── utils/
-├── frontend/
-│   └── src/
-│       ├── App.tsx
-│       ├── lib/api.ts    # Typed API client
-│       ├── hooks/        # Custom React hooks
-│       └── components/
-│           ├── v2/       # Current UI (v2 redesign)
-│           │   ├── layout/   # AppShellV2, IconRail, Sidebar, Topbar
-│           │   ├── ui/       # Button, Chip, Input, Menu, Panel
-│           │   ├── KanbanBoardV2.tsx
-│           │   ├── KanbanPageV2.tsx
-│           │   ├── TaskModals.tsx
-│           │   └── TaskTableV2.tsx
-│           └── [legacy v1 components]
-├── data/                 # SQLite database
-├── ROADMAP.md            # High-level vision/plan (not for task tracking)
-└── README.md             # Setup + API reference
-```
+---
 
 ## Commands
 
 ```bash
-npm run dev          # Run backend + frontend concurrently
-npm run dev:frontend # Frontend only (if backend already running)
-npm run dev:backend  # Backend only
-npm run init         # First-time setup (install deps + init DB)
-npm run build        # Build frontend for production
+pnpm run dev              # Backend + Frontend concurrently
+pnpm run dev:backend     # Backend only (port 3001)
+pnpm run dev:frontend    # Frontend only (port 5173)
+pnpm run build           # Build frontend
+pnpm run test:e2e        # Playwright E2E tests
+
+# Backend unit tests (Vitest)
+pnpm -C backend test:run                              # All unit tests
+pnpm -C backend test:run src/services/taskService.test.ts  # Single test file
 ```
 
-## Current State
+---
 
-**Branch:** `v2/board-redesign` — UI redesign in progress
+## Environment
 
-**What's done (see ROADMAP.md):**
-- Kanban board v2 with drag-and-drop
-- App shell (icon rail, sidebar with filters, topbar)
-- Design system tokens + local UI kit
-- Task CRUD, saved views, keyboard shortcuts
+Copy `.env.example` to `.env` in the project root. Key variables:
 
-**What's next:**
-- Migrate Activity/Docs styling to v2 tokens
-- Consider table view improvements
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CLAWBOARD_API_KEY` | — | Bearer token for API auth (required) |
+| `CLAWBOARD_DB_PATH` | `~/.local/share/clawboard/clawboard.db` | SQLite path |
+| `CLAWBOARD_PROJECTS_DIR` | — | Directory to scan for projects |
+| `AUTO_SYNC` | `false` | Enable periodic activity/doc sync |
+| `PORT` / `HOST` | `3001` / `127.0.0.1` | Server bind |
 
-## Task Management Workflow
+Frontend reads `VITE_API_BASE` and `VITE_CLAWBOARD_API_KEY` from `frontend/.env.local`.
 
-**The database is the source of truth** for task status — not ROADMAP.md.
+---
 
-ROADMAP.md is a high-level planning document. For tracking individual task status, use the Clawboard database via API.
+## Backend Architecture
 
-### When working on this project:
+```
+backend/
+├── server.ts                      # Entry point: wires Express, SQLite, WebSocket
+├── src/
+│   ├── config.ts                  # DB path, schema path resolution
+│   ├── domain/                    # Canonical TypeScript types (Task, Project, Activity, Document)
+│   ├── repositories/              # Raw SQLite access (better-sqlite3)
+│   ├── services/                  # Business logic; tested with Vitest
+│   ├── presentation/http/
+│   │   ├── routes/                # Express routers (injected with db + broadcast)
+│   │   ├── middleware/            # CORS, JSON, auth, logging, error handler
+│   │   └── errors/httpError.ts   # Typed HTTP errors
+│   └── infra/
+│       ├── database/dbConnection.ts   # Opens/migrates SQLite DB
+│       └── realtime/websocketHub.ts  # WebSocket server + broadcast fn
+└── db/
+    ├── schema.sql                 # Table definitions (source of truth)
+    └── migrate.js                 # Migration runner
+```
 
-1. **Before starting work** on a feature/fix:
-   - Check existing tasks: `curl -s http://localhost:3001/api/tasks | jq`
-   - Create a task if none exists, or update existing one to `in_progress`
+**Data flow:** `Route → Service → Repository → SQLite`
 
-2. **While working:**
-   - Update `blocked_reason` if you hit blockers
-   - Keep task description current if scope changes
+Routes receive `{ db, broadcast }` at startup. After mutations, routes call `broadcast({ type, data })` to push real-time events to WebSocket clients.
 
-3. **After completing work:**
-   - Update status to `done` (or `review` if needs verification)
+**WebSocket event types:** `task_created`, `task_updated`, `task_deleted`, `tasks_reordered`
 
-### Quick commands:
+---
+
+## Frontend Architecture
+
+```
+frontend/src/
+├── App.tsx                        # Router + WebSocket setup; routes: /, /project/:id, /activity, /docs
+├── pages/
+│   ├── Kanban/                    # Board view (KanbanPage → KanbanBoard + TaskModals)
+│   ├── Activity/ActivityTimeline  # Agent activity feed
+│   └── Docs/DocsView              # Workspace document tracker
+├── components/
+│   ├── layout/                    # AppShell, IconRail, Topbar, Sidebar
+│   └── ui/                        # Primitives: Button, Input, Select, Chip, Menu, Toast, Modal
+├── hooks/                         # useWebSocket, useProjects, useHealth
+└── lib/
+    ├── api.ts                     # All API calls + frontend type definitions
+    └── toast.ts                   # Imperative toast system
+```
+
+**Note:** Frontend has its own type definitions in `lib/api.ts` (not shared with backend `domain/`).
+
+Design tokens are CSS variables in `index.css`. Use `clsx` for conditional classes.
+
+---
+
+## Task Management (API as source of truth)
 
 ```bash
-# List tasks
-curl -s http://localhost:3001/api/tasks | jq
+# List backlog tasks
+curl -s http://127.0.0.1:3001/api/tasks?status=backlog | jq
 
 # Create task
-curl -X POST http://localhost:3001/api/tasks \
+curl -X POST http://127.0.0.1:3001/api/tasks \
   -H "Content-Type: application/json" \
-  -d '{"title": "...", "status": "in_progress", "assigned_to": "tee"}'
+  -d '{"title": "...", "status": "in_progress", "project_id": 1}'
 
-# Update status
-curl -X PATCH http://localhost:3001/api/tasks/ID \
+# Update task
+curl -X PATCH http://127.0.0.1:3001/api/tasks/ID \
   -H "Content-Type: application/json" \
   -d '{"status": "done"}'
 ```
 
-See `/clawboard-task` skill for full API reference.
+---
 
 ## API Endpoints
 
-- `GET/POST/PATCH/DELETE /api/tasks` — Task CRUD
-- `GET/POST /api/activities` — Activity log
-- `GET/POST /api/docs` — Document tracking
+- `GET/POST/PATCH/DELETE /api/tasks` — Task CRUD; also `POST /api/tasks/reorder`, `POST /api/tasks/archive_done`
+- `GET/POST /api/activities` — Activity timeline; `POST /api/activities/ingest-sessions`
+- `GET/POST /api/docs` — Document tracking; `POST /api/docs/resync`, `POST /api/docs/sync`
+- `GET/PATCH/DELETE /api/projects` — Project management; `POST /api/projects/discover`
+- `GET /api/tags` — All tags in use
 - `ws://localhost:3001/ws` — Real-time updates
 
-## Conventions
-
-- **v2 components** are in `components/v2/` — this is the active UI
-- **Design tokens** are CSS variables in `index.css` (surfaces, borders, shadows)
-- **UI primitives** live in `components/v2/ui/` — keep them small and composable
-- Use `clsx` for conditional class names
-- Prefer Tailwind utilities; extract to design tokens only when reused 3+ times
+---
 
 ## Data Model
 
-**Tasks:** id, title, description, status, priority, due_date, tags (JSON), blocked_reason, assigned_to, position, timestamps
+| Entity | Key Fields |
+|--------|------------|
+| Task | id, title, status, priority, tags (JSON string in DB, `string[]` in API), assigned_to, project_id, context_key, context_type, is_someday, blocked_reason, position |
+| Status | `backlog` \| `in_progress` \| `review` \| `done` |
+| Priority | `low` \| `medium` \| `high` \| `urgent` \| null |
+| Assignee | `tee` \| `fay` \| `armin` \| null |
 
-**Status values:** `backlog | in_progress | review | done`
+`context_key` / `context_type` links tasks to git branches or worktrees (OpenClaw integration). `is_someday` marks "someday/maybe" tasks.
 
-**Priority values:** `low | medium | high | urgent`
+---
+
+## See Also
+
+- [AGENTS.md](./AGENTS.md) — Workflow rules, current phase, autopilot mode
+- [ROADMAP.md](./ROADMAP.md) — High-level plan
+- [README.md](./README.md) — User documentation
