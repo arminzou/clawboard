@@ -16,54 +16,72 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 
 ---
 
-## 🚧 Current Phase: Real-time Collaboration
+## 🚧 Phase 11: OpenClaw Integration (High Priority)
 
-*Making Clawboard work seamlessly with OpenClaw agents.*
+*Making Clawboard "Just Work" with OpenClaw.*
 
-### Goals
+### Why This Matters
 
-- Enable multiple agents (Tee, Fay, Armin) to work on the same board
-- Add proper authentication (replace API key with cookies/tokens)
-- Make agent activity visible in real-time
+Current friction: Users must manually configure API keys, run scripts, and set up connections. The goal is **zero-config**.
 
 ### Checklist
 
-#### Authentication
-- [ ] **Auth with cookies/tokens** — Replace shared API key with proper auth
+#### 1. Auto-Discovery
+- [ ] Clawboard detects OpenClaw workspace from environment/config
+- [ ] Auto-generate API key, store in OpenClaw config
+- [ ] OpenClaw auto-configures to talk to Clawboard
 
-#### Agent Integration
-- [ ] **Activity reporting CLI** — Simple `clawboard report` command agents can call to log activity
-- [ ] **Real-time session ingestion** — Poll session logs more frequently (cron) or stream live
-- [ ] **Agent presence** — Show which agents are online and what they're working on
-- [ ] **Task context** — Allow agents to auto-create tasks from conversations
+#### 2. Built-in Activity Reporting
+- [ ] Add activity-reporting helper to OpenClaw (skill or core)
+- [ ] Simple CLI: `clawboard report "working on X"`
+- [ ] Agents report activity without manual API calls
 
-#### Collaboration Features
-- [ ] Task locking — Avoid editing the same task at once
-- [ ] Enhanced sync — Optimistic updates + conflict handling
+---
+
+## 🚧 Phase 12: Real-Time Awareness (Medium Priority)
+
+*See what agents are doing, as they do it.*
+
+### Checklist
+
+#### 3. Real-Time Session Stream
+- [ ] OpenClaw emits events as agents work
+- [ ] Clawboard listens (WebSocket or polling)
+- [ ] Activity appears instantly
+
+#### 4. Context Awareness
+- [ ] Show "Tee is working on task #75"
+- [ ] Link sessions to tasks automatically
+- [ ] Branch/worktree context in activity feed
+
+---
+
+## 🎯 Phase 13: Active Docs (Lower Priority)
+
+*Transform Docs from passive file list to active participant.*
+
+### Checklist
+
+#### 5. Task-Doc Linkage
+- [ ] Attach "Reference Docs" to a Task
+
+#### 6. Doc Intelligence
+- [ ] Agent-generated summaries (TL;DR)
+- [ ] Stale Doc Alerts: flag outdated docs vs recent code changes
+- [ ] Milestone Events: promote Vision/Roadmap updates to high-priority activity
 
 ---
 
 ## 🧪 Validation Track (Deferred)
 
-Testing and debugging — deferred until auth is stable.
+Testing and debugging — deferred until Phase 11 stabilizes.
 
-- [ ] Expand backend unit tests (Vitest): tasks, projects, activities, docs, auth
+- [ ] Expand backend unit tests (Vitest): tasks, projects, activities, docs
 - [ ] Run backend smoke test + API health
 - [ ] Add Playwright E2E (drag/drop + keyboard flows)
 - [ ] Manual UI regression: board load, drag/drop, create/edit task, project switch, activity feed
 - [ ] Verify VS Code debugging configs (backend + frontend)
 - [ ] Fix any regressions found
-
----
-
-## 🎯 Future Phases
-
-### Phase 12 — Docs: Passive to Active
-
-- Task-Doc Linkage: Attach reference docs directly to Kanban tasks
-- Agent Summaries: Automated "TL;DR" for workspace docs
-- Stale Doc Alerts: Flag outdated documentation
-- Milestone Docs: Promote Roadmap/Vision changes to activity events
 
 ---
 
