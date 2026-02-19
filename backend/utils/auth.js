@@ -35,7 +35,7 @@ function requireApiKey(opts = {}) {
     const expected = getExpectedKey();
     if (!expected) return next();
 
-    if (allowPaths.some((p) => req.path === p)) return next();
+    if (allowPaths.some((p) => req.path === p || req.path.startsWith(p + '/'))) return next();
 
     const provided = extractProvidedKey(req);
     if (provided && provided === expected) return next();

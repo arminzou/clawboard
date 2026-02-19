@@ -5,6 +5,7 @@ import { createProjectsRouter } from './projectsRouter';
 import { createActivitiesRouter } from './activitiesRouter';
 import { createTagsRouter } from './tagsRouter';
 import { createOpenClawRouter } from './openclawRouter';
+import { createWebhookRouter } from './webhookRouter';
 import { errorHandler } from '../middleware/errorHandler';
 
 export type BroadcastFn = (data: unknown) => void;
@@ -32,6 +33,9 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
 
   // OpenClaw integration
   app.use('/api/openclaw', createOpenClawRouter());
+
+  // Webhook endpoint for OpenClaw events
+  app.use('/api/webhook', createWebhookRouter({ broadcast }));
 
   // Centralized error handling (must be last)
   app.use(errorHandler);
