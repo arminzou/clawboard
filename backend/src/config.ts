@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -51,6 +52,40 @@ function resolveProjectsDir(): string {
   return path.join(os.homedir(), '.clawboard', 'projects');
 }
 
+// Clawboard data directory
+function getClawboardDir(): string {
+  return path.join(os.homedir(), '.clawboard');
+}
+
+// Ensure clawboard directory exists
+function ensureClawboardDir(): string {
+  const dir = getClawboardDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+// API key: generate if not provided, store in ~/.clawboard/api-key
+function resolveApiKey(): string {
+  // 1. Use env var if set
+  if (process.env.CLAWBOARD_API_KEY) {
+    return process.env.CLAWBOARD_API_KEY;
+  }
+
+  // 2. Check file
+  const keyFile = path.join(getClawboardDir(), 'api-key');
+  if (fs.existsSync(keyFile)) {
+    return fs.readFileSync(keyFile, 'utf8').trim();
+  }
+
+  // 3. Generate new key
+  const newKey = crypto.randomBytes(32).toString('hex');
+  fs.writeFileSync(keyFile, newKey, { mode: 0o600 });
+  console.log(`[config] Generated new API key, saved to ${keyFile}`);
+  return newKey;
+}
+
 // Lazy-init OpenClaw detection (run once at startup)
 let _openclaw: ReturnType<typeof detectOpenClaw> | null = null;
 
@@ -63,6 +98,14 @@ export const config = {
 
   get projectsDir(): string {
     return resolveProjectsDir();
+  },
+
+  get apiKey(): string {
+    return resolveApiKey();
+  },
+
+  get clawboardDir(): string {
+    return ensureClawboardDir();
   },
 
   get openclaw(): ReturnType<typeof detectOpenClaw> {

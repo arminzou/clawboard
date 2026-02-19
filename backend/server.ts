@@ -107,6 +107,11 @@ server.listen(PORT, HOST, () => {
     console.log(`\n🚀 Clawboard Backend running on ${baseUrl}`);
     console.log(`📊 WebSocket endpoint: ${wsUrl}`);
     console.log(`💾 Database: ${config.dbPath}`);
+    console.log(`🔑 API Key: ${config.apiKey}`);
+    console.log(`📁 Projects: ${config.projectsDir}`);
+    if (config.openclaw.detected) {
+        console.log(`🤖 OpenClaw: detected at ${config.openclaw.home}`);
+    }
 
     // Optional: auto-sync for dashboard data freshness
     if (String(process.env.AUTO_SYNC || '').toLowerCase() === '1' || String(process.env.AUTO_SYNC || '').toLowerCase() === 'true') {
