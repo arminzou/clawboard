@@ -26,6 +26,7 @@ See `docs/` for detailed guides:
 - [`docs/openclaw-integration.md`](docs/openclaw-integration.md) — WebSocket, webhook system, Tamagotchi component
 - [`docs/openclaw-auto-detect.md`](docs/openclaw-auto-detect.md) — Auto-detect workspace, agent discovery
 - [`docs/auto-generate-api-key.md`](docs/auto-generate-api-key.md) — Auto-generated API key mechanism
+- [`docs/clawboard-agent-plugin.md`](docs/clawboard-agent-plugin.md) — Native plugin for accurate agent lifecycle tracking
 
 ### Features Delivered
 
@@ -36,6 +37,27 @@ See `docs/` for detailed guides:
 | Activity-reporting skill | ✅ |
 | Real-time session stream (WebSocket) | ✅ |
 | Agent presence display (Tamagotchi) | ✅ |
+| Native OpenClaw plugin for lifecycle | ✅ |
+
+### Native Plugin for Real-Time Agent Status
+
+Replaced the external `clawboard-pulse` hook with a native OpenClaw plugin (`clawboard-agent`) that subscribes to agent lifecycle events via `api.on()`:
+
+- `before_agent_start` → Thinking (modifying hook — 3s fetch timeout so it never delays agents)
+- `agent_end` + idle timer → Idle
+- `session_start` → Idle (if not mid-run)
+- `gateway_start` / `gateway_stop` → Online / Offline
+
+Plugin loads directly from `extensions/clawboard-agent/` via `plugins.load.paths` — no copy step needed. Uses `api.logger` so lifecycle events appear in `openclaw logs`. See [`docs/clawboard-agent-plugin.md`](docs/clawboard-agent-plugin.md) for full details and debug guide.
+
+### Known Issues (Phase 11.1)
+
+- [ ] **Tamagotchi not updating in UI** — WebSocket connection issue
+  - Frontend connects to `ws://localhost:5173/ws` but needs `ws://localhost:3001/ws`
+  - Fix: Set `VITE_WS_BASE=ws://localhost:3001/ws` in frontend environment
+  - Alternative: Use Vite proxy (`/ws` → backend) - not working correctly
+- [ ] **Frontend tests** — Added `AgentTamagotchi.test.tsx` for UI testing
+- [x] **Webhook field mapping** — Fixed to handle `agentId`/`event` fields correctly
 
 ---
 
@@ -46,9 +68,9 @@ See `docs/` for detailed guides:
 ### Checklist
 
 #### 3. Real-Time Session Stream
-- [ ] OpenClaw emits events as agents work
-- [ ] Clawboard listens (WebSocket or polling)
-- [ ] Activity appears instantly
+- [x] OpenClaw emits events via internal hooks (command:new, message:received, etc.)
+- [x] Clawboard webhook receives events
+- [ ] Frontend receives WebSocket broadcast — **BLOCKED by Phase 11.1 WebSocket issue**
 
 #### 4. Context Awareness
 - [ ] Show "Tee is working on task #75"

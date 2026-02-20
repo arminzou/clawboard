@@ -1,52 +1,60 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
-import { config } from '../../../config';
 
-export function createWebhookRouter({ broadcast }: { broadcast?: (data: unknown) => void }) {
+type AgentStatus = 'thinking' | 'idle' | 'offline';
+
+const EVENT_STATUS_MAP: Record<string, AgentStatus> = {
+  'agent:thinking': 'thinking',
+  'agent:idle':     'idle',
+  'agent:offline':  'offline',
+  'gateway:online': 'idle',
+  'gateway:offline':'offline',
+};
+
+export function createWebhookRouter({ broadcast }: { broadcast: (data: unknown) => void }) {
   const router = express.Router();
 
-  // POST /api/webhook/clawboard - Receive events from OpenClaw
+  // POST /api/webhook/clawboard - Receive events from OpenClaw clawboard-agent plugin
   router.post('/clawboard', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const event = req.body;
-      console.log('[webhook] Received:', event);
+      const body = req.body;
 
-      // Map incoming fields (our hook sends agentId, event)
-      const agentId = event.agentId || event.agent || 'unknown';
-      const eventType = event.event || event.type || 'unknown';
+      const agentId: string = body.agentId || body.agent;
+      const eventType: string = body.event || body.type;
 
-      // Broadcast to WebSocket clients
-      if (broadcast) {
-        const payload = {
-          type: 'agent_status_updated',
-          data: {
-            agentId,
-            status: eventType === 'session:start' ? 'active' : 
-                    eventType === 'session:end' ? 'idle' : 
-                    eventType === 'thinking' ? 'thinking' : 'active',
-            lastActivity: event.timestamp,
-            thought: event.thought || (eventType === 'session:start' ? 'I am awake!' : undefined),
-          }
-        };
-        console.log('[webhook] Broadcasted agent_status_updated for', agentId);
-        broadcast(payload);
-      } else {
-        console.log('[webhook] WARNING: broadcast not available, skipping');
+      if (!agentId || !eventType) {
+        res.status(400).json({ error: 'Missing required fields: agentId, event' });
+        return;
       }
-      
+
+      const status = EVENT_STATUS_MAP[eventType];
+      if (!status) {
+        res.status(400).json({ error: `Unknown event type: ${eventType}` });
+        return;
+      }
+
+      broadcast({
+        type: 'agent_status_updated',
+        data: {
+          agentId,
+          status,
+          lastActivity: body.timestamp,
+          thought: body.thought,
+        },
+      });
+
       res.json({ success: true });
     } catch (err) {
       next(err);
     }
   });
 
-  // GET /api/webhook/config - Get webhook configuration for OpenClaw
+  // GET /api/webhook/config - Get webhook configuration info
   router.get('/config', (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Return webhook URL and configuration info
       res.json({
         enabled: true,
         url: `${req.protocol}://${req.get('host')}/api/webhook/clawboard`,
-        events: ['session:start', 'session:end', 'agent:turn', 'task:completed'],
+        events: Object.keys(EVENT_STATUS_MAP),
       });
     } catch (err) {
       next(err);
