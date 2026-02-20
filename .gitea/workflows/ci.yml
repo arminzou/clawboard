@@ -40,6 +40,11 @@ jobs:
       - name: Run backend tests
         run: pnpm -C backend test:run
 
+      - name: Validate Docker Compose files
+        run: |
+          docker compose config > /dev/null
+          docker compose -f compose.yaml -f compose.traefik.yaml config > /dev/null
+
   deploy:
     needs: build_and_test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -59,4 +64,3 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
             "APP_DIR='$APP_DIR' bash -lc '$APP_DIR/scripts/deploy.sh'"
-
