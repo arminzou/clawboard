@@ -2,14 +2,13 @@ name: Clawboard CI
 
 on:
   push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
 
 jobs:
   build_and_test:
+    # Avoid duplicate runs for same-repo PRs (push already validates branches).
+    # Keep PR validation for forks where push events are not available in this repo.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
