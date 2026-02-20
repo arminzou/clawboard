@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
-# Navigate to the Clawboard project directory on the homelab
-# This path needs to be configured correctly on the runner/server
-cd ~/homelab/docker/clawboard
+# Resolve deployment directory from workflow env (with fallback for manual runs)
+DEPLOY_DIR="${APP_DIR:-$HOME/homelab/docker/clawboard}"
 
-# Pull the latest changes from the git repository
-git pull origin main
+cd "$DEPLOY_DIR"
+
+# Force deployment checkout to match origin/main.
+# This avoids merge conflicts when the server has local tracked-file edits.
+git fetch origin main
+git checkout main
+git reset --hard origin/main
 
 # Rebuild and restart the services with Docker Compose
 docker compose up -d --build
