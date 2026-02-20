@@ -11,6 +11,15 @@ const DEFAULT_WS_BASE = (() => {
 
 const WS_BASE = ((import.meta as unknown as { env?: { VITE_WS_BASE?: string } }).env?.VITE_WS_BASE) ?? DEFAULT_WS_BASE;
 const API_KEY = ((import.meta as unknown as { env?: { VITE_CLAWBOARD_API_KEY?: string } }).env?.VITE_CLAWBOARD_API_KEY) ?? '';
+const WS_DEBUG = (() => {
+  const raw = String(((import.meta as unknown as { env?: { VITE_WS_DEBUG?: string } }).env?.VITE_WS_DEBUG) ?? '').trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes';
+})();
+
+function wsDebug(...args: unknown[]) {
+  if (!WS_DEBUG) return;
+  console.info('[ws]', ...args);
+}
 
 function withApiKey(url: string) {
   if (!API_KEY) return url;
@@ -55,6 +64,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
       clearReconnectTimer();
 
       setStatus(nextStatus);
+      wsDebug('connect:start', { url, nextStatus, attempt: attemptRef.current + 1 });
 
       const ws = new WebSocket(url);
       wsRef.current = ws;
@@ -63,21 +73,25 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
         everConnectedRef.current = true;
         attemptRef.current = 0;
         setStatus('connected');
+        wsDebug('connect:open');
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (cancelled) return;
+        wsDebug('connect:close', { code: event.code, reason: event.reason, wasClean: event.wasClean });
 
         // If we ever had a successful connection, treat subsequent connects as "reconnecting".
         setStatus(everConnectedRef.current ? 'reconnecting' : 'disconnected');
 
         attemptRef.current += 1;
         const backoffMs = Math.min(5000, 500 * Math.max(1, attemptRef.current));
+        wsDebug('connect:retry_scheduled', { backoffMs, attempt: attemptRef.current });
         reconnectTimerRef.current = window.setTimeout(() => connect('reconnecting'), backoffMs);
       };
 
-      ws.onerror = () => {
+      ws.onerror = (event) => {
         if (cancelled) return;
+        wsDebug('connect:error', { type: event.type });
         // onclose will also fire; keep UI conservative.
         setStatus((s) => (s === 'connected' ? 'reconnecting' : s));
       };

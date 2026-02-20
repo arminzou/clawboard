@@ -51,6 +51,28 @@ pnpm run dev
 
 Open **http://localhost:5173** — API runs on port 3001.
 
+### Mobile / LAN Dev
+
+If desktop works but mobile gets stuck in `reconnecting`, point frontend directly to backend with your LAN IP.
+
+In `frontend/.env.local`:
+
+```env
+API_BASE=http://<your-lan-ip>:3001
+WS_BASE=ws://<your-lan-ip>:3001/ws
+CLAWBOARD_API_KEY=<same as backend>
+```
+
+Example:
+
+```env
+API_BASE=http://192.168.20.10:3001
+WS_BASE=ws://192.168.20.10:3001/ws
+CLAWBOARD_API_KEY=mysecretkey
+```
+
+Then restart frontend dev server.
+
 ---
 
 ## 🧩 Why Clawboard?
