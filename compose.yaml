@@ -1,7 +1,3 @@
-networks:
-  proxy:
-    external: true
-
 services:
   clawboard:
     build:
@@ -12,18 +8,19 @@ services:
         - WS_BASE=${WS_BASE}
     container_name: clawboard
     restart: always
+    ports:
+      - "${CLAWBOARD_PORT:-3001}:3001"
     env_file:
       - .env
-    networks:
-      - proxy
+    environment:
+      # Fixed container path for database (volume maps host data dir to /app/data)
+      - CLAWBOARD_DB_PATH=/app/data/clawboard.db
+      # Keep runtime paths container-local even when .env uses host paths for mounts
+      - CLAWBOARD_PROJECTS_DIR=/app/workspace-projects
+      - OPENCLAW_HOME=/app/openclaw
     volumes:
-      - ./data:/app/data
-      - ${CLAWBOARD_PROJECTS_DIR:-./projects}:/app/workspace-projects:ro
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.clawboard.rule=Host(`${CLAWBOARD_HOST:-clawboard.localhost}`)"
-      - "traefik.http.routers.clawboard.entrypoints=https"
-      - "traefik.http.routers.clawboard.tls=true"
-      - "traefik.http.routers.clawboard.tls.certresolver=cloudflare"
-      - "traefik.http.services.clawboard.loadbalancer.server.port=3001"
-      - "traefik.docker.network=proxy"
+      # User-provided host paths from .env (CLAWBOARD_DATA_DIR, CLAWBOARD_PROJECTS_DIR, OPENCLAW_HOME)
+      # These map host directories to fixed container paths
+      - ${CLAWBOARD_DATA_DIR:-./data}:/app/data
+      - ${CLAWBOARD_PROJECTS_DIR:-${HOME}/.clawboard/projects}:/app/workspace-projects:ro
+      - ${OPENCLAW_HOME:-${HOME}/.openclaw}:/app/openclaw:ro

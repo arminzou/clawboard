@@ -2,9 +2,9 @@
 
 **A local-first command center for OpenClaw users.**
 
-Clawboard gives you a real-time Kanban board that tracks what you—and your OpenClaw agents—are working on across your entire workspace. It Just Works™ with your existing OpenClaw setup.
+Clawboard gives you a real-time Kanban board that tracks what you and your OpenClaw agents are working on across your workspace.
 
-*For OpenClaw users who want visibility into what your agents are doing.*
+*For OpenClaw users who want visibility into what their agents are doing.*
 
 ---
 
@@ -22,16 +22,36 @@ Clawboard gives you a real-time Kanban board that tracks what you—and your Ope
 ## 🚀 Quick Start (Docker)
 
 ```bash
-docker run -d \
-  --name clawboard \
-  -p 3001:3001 \
-  -p 5173:5173 \
-  -v ./data:/app/data \
-  -e CLAWBOARD_API_KEY=secret \
-  zoulogic/clawboard:latest
+# Clone and configure
+git clone https://github.com/zoulogic/clawboard.git
+cd clawboard
+
+# Copy environment template
+cp .env.example .env
+# Optional: edit .env (API key, non-standard paths, port)
+
+# Start with Docker Compose
+docker compose up -d --build
 ```
 
-Dashboard: **http://localhost:5173**
+Dashboard: **http://localhost:3001**
+
+`compose.yaml` is local-first and works without Traefik or extra Docker networks.
+By default it reads OpenClaw from `$HOME/.openclaw` and projects from `$HOME/.clawboard/projects`.
+
+### Reverse Proxy (Traefik)
+
+Use the optional override file when you already run Traefik:
+
+```bash
+# one-time (if missing)
+docker network create proxy
+
+# start with Traefik labels + external proxy network
+docker compose -f compose.yaml -f compose.traefik.yaml up -d --build
+```
+
+Set `CLAWBOARD_HOST` and optional `TRAEFIK_*` variables in `.env` for your environment.
 
 ---
 
@@ -39,11 +59,11 @@ Dashboard: **http://localhost:5173**
 
 ```bash
 # Clone and go
+git clone https://github.com/zoulogic/clawboard.git
 cd clawboard
 
-# Install deps
-pnpm install
-pnpm -C backend init-db
+# Install all deps and initialize DB
+pnpm run init
 
 # Start both backend + frontend
 pnpm run dev
@@ -122,8 +142,6 @@ PRs welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 ## 📦 Roadmap
 
 See [ROADMAP.md](./ROADMAP.md) for what's next.
-
-**Current focus:** Phase 11 — Real-time collaboration with OpenClaw agents
 
 ---
 

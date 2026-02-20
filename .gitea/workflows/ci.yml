@@ -2,14 +2,13 @@ name: Clawboard CI
 
 on:
   push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
 
 jobs:
   build_and_test:
+    # Avoid duplicate runs for same-repo PRs (push already validates branches).
+    # Keep PR validation for forks where push events are not available in this repo.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,6 +39,19 @@ jobs:
       - name: Run backend tests
         run: pnpm -C backend test:run
 
+      - name: Validate Docker Compose files
+        run: |
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker CLI not available on this runner; skipping compose validation."
+            exit 0
+          fi
+          if ! docker compose version >/dev/null 2>&1; then
+            echo "Docker Compose plugin not available on this runner; skipping compose validation."
+            exit 0
+          fi
+          docker compose config > /dev/null
+          docker compose -f compose.yaml -f compose.traefik.yaml config > /dev/null
+
   deploy:
     needs: build_and_test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -59,4 +71,3 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
             "APP_DIR='$APP_DIR' bash -lc '$APP_DIR/scripts/deploy.sh'"
-
