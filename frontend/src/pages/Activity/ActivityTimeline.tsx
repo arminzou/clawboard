@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import type { Activity } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -23,11 +24,18 @@ export function ActivityTimeline({
   wsSignal?: { type?: string; data?: unknown } | null;
   onOpenTask?: (id: number) => void;
 }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [agent, setAgent] = useState<string>(() => {
+    try {
+      const fromQuery = new URLSearchParams(window.location.search).get('agent');
+      if (fromQuery) return fromQuery;
+    } catch {
+      // ignore
+    }
     try {
       return (
         window.localStorage.getItem('cb.activity.agent') ??
@@ -74,6 +82,20 @@ export function ActivityTimeline({
       // ignore
     }
   }, [agent]);
+
+  useEffect(() => {
+    if (!searchParams.has('agent')) return;
+    const fromQuery = searchParams.get('agent') ?? '';
+    if (fromQuery !== agent) setAgent(fromQuery);
+  }, [searchParams, agent]);
+
+  function handleAgentChange(nextAgent: string) {
+    setAgent(nextAgent);
+    const next = new URLSearchParams(searchParams);
+    if (nextAgent) next.set('agent', nextAgent);
+    else next.delete('agent');
+    setSearchParams(next, { replace: true });
+  }
 
   useEffect(() => {
     try {
@@ -141,7 +163,7 @@ export function ActivityTimeline({
           <select
             className="cb-input w-44"
             value={agent}
-            onChange={(e) => setAgent(e.target.value)}
+            onChange={(e) => handleAgentChange(e.target.value)}
           >
             <option value="">All agents</option>
             <option value="tee">tee</option>

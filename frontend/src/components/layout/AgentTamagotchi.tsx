@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useNavigate } from 'react-router-dom';
 
 type AgentStatus = 'thinking' | 'idle' | 'offline';
 
@@ -56,6 +57,8 @@ export function AgentTamagotchi({
   slot?: boolean;
   className?: string;
 }) {
+  const navigate = useNavigate();
+
   // Start offline — the gateway_start webhook / WebSocket event will bring us online.
   const [presence, setPresence] = useState<AgentPresence>({
     status: 'offline',
@@ -112,7 +115,12 @@ export function AgentTamagotchi({
 
   if (compact) {
     return (
-      <div className={cardClassName}>
+      <button
+        type="button"
+        className={`${cardClassName} cursor-pointer appearance-none text-left hover:ring-2 hover:ring-amber-300/30`}
+        onClick={() => navigate(`/activity?agent=${encodeURIComponent(agentId)}`)}
+        aria-label={`Open ${agentId} activity`}
+      >
         <div className="flex items-center gap-2">
           <div className={`cb-agent-avatar-wrap ${presence.status === 'idle' ? 'cb-agent-avatar-idle' : ''}`}>
             <div className="relative inline-flex items-center justify-center">
@@ -136,12 +144,17 @@ export function AgentTamagotchi({
             <div className="truncate text-[11px] italic text-slate-300">💭 "{thought}"</div>
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className={cardClassName}>
+    <button
+      type="button"
+      className={`${cardClassName} cursor-pointer appearance-none hover:ring-2 hover:ring-amber-300/30`}
+      onClick={() => navigate(`/activity?agent=${encodeURIComponent(agentId)}`)}
+      aria-label={`Open ${agentId} activity`}
+    >
       {/* Avatar */}
       <div className={`cb-agent-avatar-wrap mb-1 ${presence.status === 'idle' ? 'cb-agent-avatar-idle' : ''}`}>
         <div className="relative inline-flex items-center justify-center">
@@ -173,6 +186,6 @@ export function AgentTamagotchi({
       <div className="cb-agent-conn mt-1 text-xs text-slate-500 italic">
         {isLive ? <span className="invisible">Connected</span> : (wsStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...')}
       </div>
-    </div>
+    </button>
   );
 }
