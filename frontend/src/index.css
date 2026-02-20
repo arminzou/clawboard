@@ -154,6 +154,66 @@
     letter-spacing: 0.08em;
     color: rgb(var(--cb-text-muted));
   }
+
+  .cb-agent-card {
+    transition:
+      opacity 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  .cb-agent-card-thinking {
+    border-color: rgb(250 204 21 / 0.5);
+    animation: cb-agent-thinking-pulse 1.8s ease-in-out infinite;
+  }
+
+  .cb-agent-avatar-wrap {
+    transform-origin: center;
+  }
+
+  .cb-agent-avatar-idle {
+    animation: cb-agent-idle-breathe 2.4s ease-in-out infinite;
+  }
+
+  .cb-agent-thinking-ring {
+    position: absolute;
+    inset: -0.35rem;
+    border-radius: 9999px;
+    border: 2px dashed rgb(250 204 21 / 0.75);
+    animation: cb-agent-ring-spin 1.35s linear infinite;
+    pointer-events: none;
+  }
+
+  .cb-agent-status {
+    animation: cb-agent-status-swap 220ms ease-out;
+  }
+
+  .cb-agent-card-slot {
+    flex: 0 0 auto;
+    width: clamp(180px, 44vw, 220px);
+    min-width: 180px;
+    max-width: 220px;
+    height: 196px;
+    scroll-snap-align: start;
+  }
+
+  .cb-agent-card-slot .cb-agent-thought {
+    min-height: 2.5rem;
+    max-height: 2.5rem;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .cb-agent-card-slot .cb-agent-meta {
+    min-height: 1rem;
+  }
+
+  .cb-agent-card-slot .cb-agent-conn {
+    min-height: 1rem;
+  }
 }
 
 @keyframes cb-modal-pop {
@@ -164,5 +224,57 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes cb-agent-thinking-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgb(250 204 21 / 0.18),
+      0 0 8px rgb(250 204 21 / 0.14);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgb(250 204 21 / 0.28),
+      0 0 16px rgb(250 204 21 / 0.26);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes cb-agent-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cb-agent-status-swap {
+  from {
+    opacity: 0.65;
+    transform: translateY(2px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cb-agent-idle-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-agent-card-thinking,
+  .cb-agent-avatar-idle,
+  .cb-agent-thinking-ring,
+  .cb-agent-status {
+    animation: none !important;
   }
 }

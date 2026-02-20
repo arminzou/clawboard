@@ -105,3 +105,58 @@ The card is currently pure display with no affordances.
 | 7 | Turn counter | Medium | Plugin emit support |
 | 8 | Horizontal compact mode | Medium | None |
 | 9 | Ping button | High | Agent messaging API |
+
+---
+
+## Phase 3: Arcade Pet Direction (v1 Spec)
+
+Chosen direction:
+- Visual style: **arcade pet**
+- Product emphasis: **personality-first**
+- Primary click action: open **Activity Feed** (agent-filtered when available)
+
+### Visual System
+
+- Strong per-agent identity via avatar + scene first, text second.
+- Personality mix target:
+  - 70% avatar + background scene
+  - 20% motion behavior
+  - 10% quotes/copy
+- Agent themes:
+  - Tee: cool blue/cyan palette, calmer motion
+  - Fay: warm amber/orange palette, more playful motion
+
+### Card Structure
+
+- Top lane: avatar capsule + name + status chip.
+- Mid lane: thought bubble (real thought first, decorative quote fallback).
+- Bottom lane: compact telemetry (elapsed time, last activity).
+- Offline card keeps identity visible, but desaturates scene and pauses decorative motion.
+
+### Motion Language
+
+- Thinking:
+  - energetic spark particles/ring around avatar
+  - status chip flicker/pulse (small amplitude)
+- Idle:
+  - low-amplitude breathing
+  - slow ambient backdrop drift
+- Offline:
+  - subtle moon/sleep icon accent, no active pulse
+
+### Global Presence Requirement
+
+- Tamagotchi panel must be visible across **all primary pages**:
+  - Kanban
+  - Activity
+  - Docs
+- Placement rule:
+  - Desktop: persistent right-side "Agent Arcade" panel
+  - Mobile: compact sticky bottom dock, expandable into a bottom sheet
+- Keep one shared component to avoid diverging behavior across routes.
+
+### Interaction Rules
+
+- Card click opens Activity Feed scoped to that agent.
+- Task deep-link remains a secondary affordance for later Phase 12 linkage.
+- Quotes are only shown when idle and no real thought is present.

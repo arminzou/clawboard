@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock useWebSocket - this is the key test
 vi.mock('../../hooks/useWebSocket', () => ({

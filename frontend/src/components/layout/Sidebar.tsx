@@ -8,7 +8,6 @@ import { Menu } from '../ui/Menu';
 import { ModalShell } from '../ui/ModalShell';
 import { PromptModal } from '../ui/PromptModal';
 import { Select } from '../ui/Select';
-import { AgentTamagotchi } from './AgentTamagotchi';
 
 type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
 
@@ -705,14 +704,6 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Agent Tamagotchi */}
-        <div className="border-t border-slate-200 p-3">
-          <div className="text-xs font-medium text-slate-500 mb-2">Agents</div>
-          <div className="flex gap-2 justify-center">
-            <AgentTamagotchi agentId="tee" />
-            <AgentTamagotchi agentId="fay" />
-          </div>
-        </div>
       </div>
     </aside>
     </>

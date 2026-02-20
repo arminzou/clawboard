@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Menu, X } from 'lucide-react';
+import { AgentArcadePanel } from './AgentArcadePanel';
+import { AgentMobileDock } from './AgentMobileDock';
 
 export function AppShell({
   sidebar,
@@ -12,6 +14,19 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMobileDock, setShowMobileDock] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !window.matchMedia('(min-width: 1280px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 1280px)');
+    const onChange = () => setShowMobileDock(!media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
 
   return (
     <div className="flex h-full">
@@ -60,7 +75,16 @@ export function AppShell({
         </div>
 
         {topbar}
-        <div className="flex-1 overflow-auto px-4 py-4">{children}</div>
+
+        <div className="flex min-h-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
+
+          <aside className="hidden w-[320px] shrink-0 border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
+            <AgentArcadePanel />
+          </aside>
+        </div>
+
+        {showMobileDock ? <AgentMobileDock /> : null}
       </main>
     </div>
   );
