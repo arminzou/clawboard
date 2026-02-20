@@ -30,7 +30,7 @@ export function AgentMobileDock() {
   }, [agentIds, profileSources]);
 
   return (
-    <div className="border-t border-slate-200 bg-white/95 backdrop-blur xl:hidden">
+    <div className="min-w-0 border-t border-slate-200 bg-white/95 backdrop-blur xl:hidden">
       <div>
         <button
           type="button"
@@ -44,7 +44,7 @@ export function AgentMobileDock() {
             <div className="text-xs font-medium text-slate-700">{summary}</div>
           </div>
 
-          <div className="cb-scrollbar-hidden flex max-w-[56vw] items-center gap-1.5 overflow-x-auto">
+          <div className="cb-scrollbar-hidden min-w-0 flex max-w-[56vw] items-center gap-1.5 overflow-x-auto overflow-y-hidden">
             {agentIds.map((agentId) => (
               <span
                 key={agentId}
@@ -61,11 +61,11 @@ export function AgentMobileDock() {
 
       <div
         className={clsx(
-          'overflow-hidden border-t border-slate-200 bg-[rgb(var(--cb-surface))] transition-[max-height,opacity] duration-200',
+          'min-w-0 overflow-hidden border-t border-slate-200 bg-[rgb(var(--cb-surface))] transition-[max-height,opacity] duration-200',
           expanded ? 'max-h-[280px] opacity-100' : 'max-h-0 opacity-0',
         )}
       >
-        <div className="px-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2">
+        <div className="min-w-0 overflow-x-hidden px-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2">
           <AgentArcadePanel horizontal hideHeader />
         </div>
       </div>

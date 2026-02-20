@@ -93,10 +93,10 @@ export function AppShell({
           initialAgentIds={initialAgentIds}
           profileSources={agentProfileSources}
         >
-          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
             <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
 
-            <aside className="hidden w-[320px] shrink-0 border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
+            <aside className="cb-scrollbar-hidden hidden min-h-0 w-[320px] shrink-0 overflow-x-hidden overflow-y-auto border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
               <AgentArcadePanel />
             </aside>
           </div>
