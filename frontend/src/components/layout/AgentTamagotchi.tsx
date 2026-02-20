@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
 
@@ -46,6 +46,21 @@ function formatLastActivity(timestamp: string | null): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function parseTimestampMs(timestamp: string | null | undefined): number | null {
+  if (!timestamp) return null;
+  const ms = new Date(timestamp).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function AgentTamagotchi({
   agentId = 'tee',
   compact = false,
@@ -68,6 +83,8 @@ export function AgentTamagotchi({
 
   // Chosen once on mount, stable for the lifetime of this widget.
   const [decorativeQuote] = useState(pickQuote);
+  const [thinkingSinceMs, setThinkingSinceMs] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const { status: wsStatus } = useWebSocket({
     onMessage: (event) => {
@@ -101,8 +118,28 @@ export function AgentTamagotchi({
   // Dim the card while the WebSocket is not connected — data may be stale.
   const isLive = wsStatus === 'connected';
 
+  useEffect(() => {
+    if (presence.status === 'thinking') {
+      if (thinkingSinceMs == null) setThinkingSinceMs(parseTimestampMs(presence.lastActivity) ?? Date.now());
+      return;
+    }
+    if (thinkingSinceMs != null) setThinkingSinceMs(null);
+  }, [presence.status, presence.lastActivity, thinkingSinceMs]);
+
+  useEffect(() => {
+    if (presence.status !== 'thinking') return;
+    setNowMs(Date.now());
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [presence.status, thinkingSinceMs]);
+
   const emoji = AGENT_EMOJIS[agentId] ?? '🤖';
   const statusCfg = STATUS_CONFIG[presence.status];
+  const elapsed = useMemo(() => {
+    if (presence.status !== 'thinking' || thinkingSinceMs == null) return null;
+    return formatElapsed(nowMs - thinkingSinceMs);
+  }, [presence.status, thinkingSinceMs, nowMs]);
+  const statusLabel = elapsed ? `${statusCfg.label} · ${elapsed}` : statusCfg.label;
   const thought = presence.agentThought ?? decorativeQuote;
   const cardClassName = [
     compact
@@ -134,11 +171,11 @@ export function AgentTamagotchi({
               <span className="truncate font-medium capitalize">{agentId}</span>
               <span
                 key={presence.status}
-                title={statusCfg.label}
+                title={statusLabel}
                 className={`cb-agent-status inline-flex items-center gap-1 text-xs ${statusCfg.color}`}
               >
                 <span>{statusCfg.emoji}</span>
-                <span className="max-[380px]:hidden">{statusCfg.label}</span>
+                <span className={elapsed ? '' : 'max-[380px]:hidden'}>{statusLabel}</span>
               </span>
             </div>
             <div className="truncate text-[11px] italic text-slate-300">💭 "{thought}"</div>
@@ -169,7 +206,7 @@ export function AgentTamagotchi({
       {/* Status */}
       <div key={presence.status} className={`cb-agent-status text-xs ${statusCfg.color} flex items-center justify-center gap-1`}>
         <span>{statusCfg.emoji}</span>
-        <span>{statusCfg.label}</span>
+        <span>{statusLabel}</span>
       </div>
 
       {/* Thought bubble */}
