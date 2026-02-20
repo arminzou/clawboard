@@ -1,30 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-type AgentStatus = 'active' | 'thinking' | 'idle' | 'blocked' | 'offline';
+type AgentStatus = 'thinking' | 'idle' | 'offline';
 
 interface AgentPresence {
-  agent: string;
   status: AgentStatus;
   lastActivity: string | null;
-  currentTask?: string;
-  thought?: string;
+  agentThought: string | null;
 }
-
-// How long before returning to idle (in milliseconds)
-const IDLE_TIMEOUT_MS = 30_000; // 30 seconds
-
-// Random motivational thoughts for the agent
-const AGENT_THOUGHTS = [
-  "Just finished a feature! 🎉",
-  "Debugging is like being a detective...",
-  "Writing tests is a love letter to your future self",
-  "Clean code is happy code",
-  "Ship it! 🚀",
-  "One bug at a time",
-  "Coffee + Code = ❤️",
-  "Making things work, one commit at a time",
-];
 
 const AGENT_EMOJIS: Record<string, string> = {
   tee: '🐱',
@@ -33,15 +16,22 @@ const AGENT_EMOJIS: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<AgentStatus, { emoji: string; label: string; color: string }> = {
-  active: { emoji: '😊', label: 'Active', color: 'text-green-400' },
   thinking: { emoji: '🤔', label: 'Thinking', color: 'text-yellow-400' },
-  idle: { emoji: '😴', label: 'Idle', color: 'text-gray-400' },
-  blocked: { emoji: '😰', label: 'Blocked', color: 'text-red-400' },
-  offline: { emoji: '💤', label: 'Offline', color: 'text-gray-500' },
+  idle:     { emoji: '😴', label: 'Idle',     color: 'text-gray-400' },
+  offline:  { emoji: '💤', label: 'Offline',  color: 'text-gray-500' },
 };
 
-function getRandomThought(): string {
-  return AGENT_THOUGHTS[Math.floor(Math.random() * AGENT_THOUGHTS.length)];
+// Stable decorative quote — shown when no real agent thought is available.
+// Chosen once per mount so it doesn't flash on every status change.
+const DECORATIVE_QUOTES = [
+  "Debugging is like being a detective...",
+  "Writing tests is a love letter to your future self",
+  "Clean code is happy code",
+  "One bug at a time",
+  "Making things work, one commit at a time",
+];
+function pickQuote(): string {
+  return DECORATIVE_QUOTES[Math.floor(Math.random() * DECORATIVE_QUOTES.length)];
 }
 
 function formatLastActivity(timestamp: string | null): string {
@@ -55,136 +45,83 @@ function formatLastActivity(timestamp: string | null): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function getApiKey(): string {
-  // Try to get API key from env or localStorage
-  return import.meta.env.VITE_CLAWBOARD_API_KEY || localStorage.getItem('apiKey') || '';
-}
-
-function getApiBase(): string {
-  return import.meta.env.VITE_API_BASE || '';
-}
-
 export function AgentTamagotchi({ agentId = 'tee' }: { agentId?: string }) {
+  // Start offline — the gateway_start webhook / WebSocket event will bring us online.
   const [presence, setPresence] = useState<AgentPresence>({
-    agent: agentId,
-    status: 'idle',
+    status: 'offline',
     lastActivity: null,
-    thought: getRandomThought(),
+    agentThought: null,
   });
 
-  // Ref to track idle timeout
-  const idleTimeoutRef = useRef<number | null>(null);
+  // Chosen once on mount, stable for the lifetime of this widget.
+  const [decorativeQuote] = useState(pickQuote);
 
-  // Auto-return to idle after timeout
-  useEffect(() => {
-    // Clear any existing timeout
-    if (idleTimeoutRef.current) {
-      clearTimeout(idleTimeoutRef.current);
-    }
-
-    // If status is active or thinking, set a timer to return to idle
-    if (presence.status === 'active' || presence.status === 'thinking') {
-      idleTimeoutRef.current = window.setTimeout(() => {
-        setPresence(prev => ({
-          ...prev,
-          status: 'idle',
-          thought: getRandomThought(),
-        }));
-        console.log(`[Tamagotchi] ${agentId} returned to idle after timeout`);
-      }, IDLE_TIMEOUT_MS);
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (idleTimeoutRef.current) {
-        clearTimeout(idleTimeoutRef.current);
-      }
-    };
-  }, [presence.status, agentId]);
-
-  // Listen to WebSocket events for real-time updates
-  useWebSocket({
+  const { status: wsStatus } = useWebSocket({
     onMessage: (event) => {
-      if (event.type === 'agent_status_updated') {
-        const data = event.data as { agentId?: string; status?: AgentStatus; lastActivity?: string; thought?: string };
-        if (data.agentId === agentId) {
-          setPresence(prev => ({
-            ...prev,
-            status: data.status || prev.status,
-            lastActivity: data.lastActivity || prev.lastActivity,
-            thought: data.thought || prev.thought || getRandomThought(),
-          }));
-        }
-      }
-    }
+      if (event.type !== 'agent_status_updated') return;
+
+      const data = event.data as {
+        agentId?: string;
+        status?: AgentStatus;
+        lastActivity?: string;
+        thought?: string;
+      };
+
+      // Accept both exact match and the gateway '*' wildcard broadcast.
+      if (data.agentId !== agentId && data.agentId !== '*') return;
+
+      const incomingStatus = data.status;
+      if (!incomingStatus) return;
+
+      setPresence(prev => ({
+        status: incomingStatus,
+        lastActivity: data.lastActivity ?? prev.lastActivity,
+        // Keep agentThought on idle (preserve last known output).
+        // Clear it on offline (agent is gone).
+        agentThought: incomingStatus === 'offline'
+          ? null
+          : data.thought ?? prev.agentThought,
+      }));
+    },
   });
 
-  useEffect(() => {
-    // Poll for initial agent status
-    const fetchStatus = async () => {
-      try {
-        const apiKey = getApiKey();
-        const apiBase = getApiBase();
-        const url = apiBase ? `${apiBase}/api/openclaw/status` : '/api/openclaw/status';
-        
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.agents?.includes(agentId)) {
-            setPresence(prev => ({
-              ...prev,
-              status: 'idle',
-              thought: prev.thought || getRandomThought(),
-            }));
-          }
-        }
-      } catch {
-        setPresence(prev => ({ ...prev, status: 'offline' }));
-      }
-    };
+  // Dim the card while the WebSocket is not connected — data may be stale.
+  const isLive = wsStatus === 'connected';
 
-    fetchStatus();
-  }, [agentId]);
-
-  const emoji = AGENT_EMOJIS[agentId] || '🤖';
-  const config = STATUS_CONFIG[presence.status];
+  const emoji = AGENT_EMOJIS[agentId] ?? '🤖';
+  const statusCfg = STATUS_CONFIG[presence.status];
+  const thought = presence.agentThought ?? decorativeQuote;
 
   return (
-    <div className="bg-slate-800 rounded-lg p-3 min-w-[140px] text-center border border-slate-700">
+    <div className={`bg-slate-800 rounded-lg p-3 min-w-[140px] text-center border border-slate-700 transition-opacity duration-300 ${isLive ? 'opacity-100' : 'opacity-60'}`}>
       {/* Avatar */}
       <div className="text-4xl mb-1">{emoji}</div>
-      
+
       {/* Name */}
       <div className="font-medium text-white text-sm capitalize">{agentId}</div>
-      
+
       {/* Status */}
-      <div className={`text-xs ${config.color} flex items-center justify-center gap-1`}>
-        <span>{config.emoji}</span>
-        <span>{config.label}</span>
+      <div className={`text-xs ${statusCfg.color} flex items-center justify-center gap-1`}>
+        <span>{statusCfg.emoji}</span>
+        <span>{statusCfg.label}</span>
       </div>
-      
+
       {/* Thought bubble */}
       <div className="mt-2 bg-slate-700 rounded px-2 py-1 text-xs text-slate-300 italic">
-        💭 "{presence.thought}"
+        💭 "{thought}"
       </div>
-      
+
       {/* Last activity */}
       <div className="mt-2 text-xs text-slate-500">
         Last: {formatLastActivity(presence.lastActivity)}
       </div>
-      
-      {/* Energy bar (decorative) */}
-      <div className="mt-2">
-        <div className="text-xs text-slate-500 mb-1">Energy</div>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-500"
-            style={{ width: presence.status === 'active' ? '85%' : presence.status === 'thinking' ? '60%' : '30%' }}
-          />
+
+      {/* Connection indicator */}
+      {!isLive && (
+        <div className="mt-2 text-xs text-slate-500 italic">
+          {wsStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
         </div>
-      </div>
+      )}
     </div>
   );
 }
