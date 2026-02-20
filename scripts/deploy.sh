@@ -1,18 +1,25 @@
 #!/bin/bash
 set -e
 
-# Resolve deployment directory from workflow env (with fallback for manual runs)
-DEPLOY_DIR="${APP_DIR:-$HOME/homelab/docker/clawboard}"
+# Resolve deployment directory.
+# - APP_DIR is used by CI/remote deploy jobs.
+# - Fallback is the repository root for local/manual usage.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEPLOY_DIR="${APP_DIR:-$REPO_ROOT}"
 
 cd "$DEPLOY_DIR"
 
-# Force deployment checkout to match origin/main.
-# This avoids merge conflicts when the server has local tracked-file edits.
-git fetch origin main
-git checkout main
-git reset --hard origin/main
+# Optional personal override (not tracked in this repo).
+# If present and executable, it fully controls deployment behavior.
+OVERRIDE_SCRIPT="${CLAWBOARD_DEPLOY_OVERRIDE:-$HOME/.clawboard/deploy.override.sh}"
+if [ -x "$OVERRIDE_SCRIPT" ]; then
+  echo "[deploy] Using override script: $OVERRIDE_SCRIPT"
+  APP_DIR="$DEPLOY_DIR" CLAWBOARD_DEPLOY_DIR="$DEPLOY_DIR" "$OVERRIDE_SCRIPT"
+  exit 0
+fi
 
-# Rebuild and restart the services with Docker Compose
+# Default OSS/local deployment
 docker compose up -d --build
 
-echo "Deployment successful!"
+echo "[deploy] Deployment successful (default mode)"
