@@ -9,7 +9,8 @@ const DEFAULT_WS_BASE = (() => {
   return `${protocol}://${window.location.host}/ws`;
 })();
 
-const WS_BASE = ((import.meta as unknown as { env?: { VITE_WS_BASE?: string } }).env?.VITE_WS_BASE) ?? DEFAULT_WS_BASE;
+const RAW_WS_BASE = ((import.meta as unknown as { env?: { VITE_WS_BASE?: string } }).env?.VITE_WS_BASE) ?? '';
+const WS_BASE = RAW_WS_BASE.trim() ? RAW_WS_BASE : DEFAULT_WS_BASE;
 const API_KEY = ((import.meta as unknown as { env?: { VITE_CLAWBOARD_API_KEY?: string } }).env?.VITE_CLAWBOARD_API_KEY) ?? '';
 const WS_DEBUG = (() => {
   const raw = String(((import.meta as unknown as { env?: { VITE_WS_DEBUG?: string } }).env?.VITE_WS_DEBUG) ?? '').trim().toLowerCase();
