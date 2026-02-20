@@ -40,6 +40,7 @@ export type AgentProfileHint = {
 };
 
 export type AgentProfileMap = Record<string, AgentProfileHint>;
+export type AgentIncludeList = string[] | null;
 
 function detectOpenClaw(): { detected: boolean; home: string | null; agents: string[] } {
   for (const dir of OPENCLAW_DIRS) {
@@ -59,6 +60,18 @@ function detectOpenClaw(): { detected: boolean; home: string | null; agents: str
 
 function normalizeAgentId(raw: string): string {
   return String(raw || '').trim().toLowerCase();
+}
+
+function normalizeAgentIds(rawIds: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of rawIds) {
+    const id = normalizeAgentId(raw);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
 }
 
 function readAgentProfileFile(filePath: string | null): AgentProfileMap {
@@ -117,6 +130,61 @@ function resolvePluginAgentProfilesPath(): string | null {
   return path.join(config.openclaw.home, 'agent-profiles.json');
 }
 
+type ClawboardConfigFile = {
+  agents?: {
+    include?: unknown;
+  };
+  includeAgents?: unknown;
+};
+
+function resolveClawboardConfigPath(): string {
+  const raw = process.env.CLAWBOARD_CONFIG_PATH;
+  if (raw) return raw.startsWith('/') ? raw : path.resolve(BACKEND_ROOT, raw);
+  return path.join(getClawboardDir(), 'config.json');
+}
+
+function readClawboardConfigFile(filePath: string): ClawboardConfigFile {
+  if (!fs.existsSync(filePath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as ClawboardConfigFile;
+  } catch (err) {
+    console.warn(`[config] Failed to parse config file ${filePath}:`, err);
+    return {};
+  }
+}
+
+function parseAgentIncludeListFromEnv(): AgentIncludeList {
+  const raw = process.env.CLAWBOARD_AGENTS_INCLUDE ?? process.env.CLAWBOARD_INCLUDE_AGENTS;
+  if (raw == null) return null;
+  const parsed = normalizeAgentIds(String(raw).split(','));
+  // Empty env should be treated as "no restriction", not "show none".
+  return parsed.length ? parsed : null;
+}
+
+function parseAgentIncludeListFromConfigFile(cfg: ClawboardConfigFile): AgentIncludeList {
+  const candidate = cfg?.agents?.include ?? cfg?.includeAgents;
+  if (candidate === undefined) return null;
+  if (!Array.isArray(candidate)) return null;
+  // Explicit empty array in config is allowed and means "show none".
+  return normalizeAgentIds(candidate.filter((v): v is string => typeof v === 'string'));
+}
+
+function resolveAgentIncludeList(): AgentIncludeList {
+  const fromEnv = parseAgentIncludeListFromEnv();
+  if (fromEnv !== null) return fromEnv;
+
+  const cfg = readClawboardConfigFile(resolveClawboardConfigPath());
+  return parseAgentIncludeListFromConfigFile(cfg);
+}
+
+function isAgentIncluded(agentId: string, includeList: AgentIncludeList): boolean {
+  if (agentId === '*') return true;
+  if (includeList == null) return true;
+  return includeList.includes(normalizeAgentId(agentId));
+}
+
 // Default projects directory: ~/.clawboard/projects
 function resolveProjectsDir(): string {
   const raw = process.env.CLAWBOARD_PROJECTS_DIR;
@@ -164,6 +232,14 @@ function resolveApiKey(): string {
 let _openclaw: ReturnType<typeof detectOpenClaw> | null = null;
 let _agentProfiles: AgentProfileMap | null = null;
 let _pluginAgentProfiles: AgentProfileMap | null = null;
+let _includedAgents: AgentIncludeList | undefined;
+
+export function resetConfigCacheForTests() {
+  _openclaw = null;
+  _agentProfiles = null;
+  _pluginAgentProfiles = null;
+  _includedAgents = undefined;
+}
 
 export const config = {
   get dbPath(): string {
@@ -203,5 +279,16 @@ export const config = {
       _pluginAgentProfiles = readAgentProfileFile(resolvePluginAgentProfilesPath());
     }
     return _pluginAgentProfiles;
+  },
+
+  get includedAgents(): AgentIncludeList {
+    if (_includedAgents === undefined) {
+      _includedAgents = resolveAgentIncludeList();
+    }
+    return _includedAgents;
+  },
+
+  isAgentIncluded(agentId: string): boolean {
+    return isAgentIncluded(agentId, config.includedAgents);
   },
 };

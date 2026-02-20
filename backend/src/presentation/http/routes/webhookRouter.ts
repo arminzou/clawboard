@@ -1,4 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import { config } from '../../../config';
 
 type AgentStatus = 'thinking' | 'idle' | 'offline';
 
@@ -29,6 +30,11 @@ export function createWebhookRouter({ broadcast }: { broadcast: (data: unknown) 
       const status = EVENT_STATUS_MAP[eventType];
       if (!status) {
         res.status(400).json({ error: `Unknown event type: ${eventType}` });
+        return;
+      }
+
+      if (!config.isAgentIncluded(agentId)) {
+        res.json({ success: true, ignored: true, reason: 'agent_not_included' });
         return;
       }
 

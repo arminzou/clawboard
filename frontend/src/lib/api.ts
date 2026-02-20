@@ -38,6 +38,8 @@ export interface OpenClawStatus {
   detected: boolean;
   home: string | null;
   agents: string[];
+  discoveredAgents?: string[];
+  includedAgents?: string[] | null;
   pluginAgentProfiles?: Record<string, {
     displayName?: string;
     avatar?: string;

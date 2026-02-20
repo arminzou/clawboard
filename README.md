@@ -73,6 +73,26 @@ CLAWBOARD_API_KEY=mysecretkey
 
 Then restart frontend dev server.
 
+### Agent Include Filter
+
+If you want Clawboard to show only specific agents (Arcade + real-time status events), set:
+
+```env
+CLAWBOARD_AGENTS_INCLUDE=tee,fay
+```
+
+You can also configure this in `~/.clawboard/config.json`:
+
+```json
+{
+  "agents": {
+    "include": ["tee", "fay"]
+  }
+}
+```
+
+Environment variable takes precedence over config file.
+
 ---
 
 ## 🧩 Why Clawboard?

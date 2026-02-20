@@ -90,6 +90,7 @@ React component in sidebar showing agent status with a fun, Tamagotchi-like UI.
 **Features:**
 - Deterministic avatar/personality fallback for any `agentId`
 - Optional profile overrides from config/plugin metadata
+- Optional include filter to only surface selected agents (`CLAWBOARD_AGENTS_INCLUDE` or `~/.clawboard/config.json`)
 - Status indicator with color coding:
   - `thinking` - 🤔 Yellow (processing)
   - `idle` - 😴 Gray (waiting)
