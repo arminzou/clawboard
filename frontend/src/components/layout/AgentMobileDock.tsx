@@ -1,21 +1,8 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronUp } from 'lucide-react';
-import { useWebSocket } from '../../hooks/useWebSocket';
 import { AgentArcadePanel } from './AgentArcadePanel';
-
-type AgentStatus = 'thinking' | 'idle' | 'offline';
-type AgentId = 'tee' | 'fay';
-
-type AgentPresence = {
-  status: AgentStatus;
-  lastActivity: string | null;
-};
-
-const AGENTS: Array<{ id: AgentId; label: string }> = [
-  { id: 'tee', label: 'Tee' },
-  { id: 'fay', label: 'Fay' },
-];
+import { useAgentPresence, type AgentStatus } from './AgentPresenceContext';
 
 const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
   thinking: 'bg-amber-400',
@@ -23,55 +10,21 @@ const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
   offline: 'bg-slate-400',
 };
 
-function createInitialPresence(): Record<AgentId, AgentPresence> {
-  return {
-    tee: { status: 'offline', lastActivity: null },
-    fay: { status: 'offline', lastActivity: null },
-  };
+function labelFromAgentId(id: string) {
+  if (!id) return 'Agent';
+  return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
 export function AgentMobileDock() {
   const [expanded, setExpanded] = useState(true);
-  const [presence, setPresence] = useState<Record<AgentId, AgentPresence>>(createInitialPresence);
-  const { status: wsStatus } = useWebSocket({
-    onMessage: (event) => {
-      if (event.type !== 'agent_status_updated') return;
-
-      const data = event.data as {
-        agentId?: string;
-        status?: AgentStatus;
-        lastActivity?: string;
-      };
-
-      if (!data.status) return;
-
-      if (data.agentId === '*') {
-        setPresence((prev) => ({
-          tee: { status: data.status as AgentStatus, lastActivity: data.lastActivity ?? prev.tee.lastActivity },
-          fay: { status: data.status as AgentStatus, lastActivity: data.lastActivity ?? prev.fay.lastActivity },
-        }));
-        return;
-      }
-
-      if (data.agentId !== 'tee' && data.agentId !== 'fay') return;
-      const agentId: AgentId = data.agentId;
-
-      setPresence((prev) => ({
-        ...prev,
-        [agentId]: {
-          status: data.status as AgentStatus,
-          lastActivity: data.lastActivity ?? prev[agentId].lastActivity,
-        },
-      }));
-    },
-  });
+  const { wsStatus, agentIds, presenceByAgent } = useAgentPresence();
 
   const summary = useMemo(() => {
-    const thinkingCount = AGENTS.filter((a) => presence[a.id].status === 'thinking').length;
+    const thinkingCount = agentIds.filter((id) => (presenceByAgent[id]?.status ?? 'offline') === 'thinking').length;
     if (thinkingCount > 0) return `${thinkingCount} thinking`;
     if (wsStatus !== 'connected') return 'Connecting';
     return 'Idle';
-  }, [presence, wsStatus]);
+  }, [agentIds, presenceByAgent, wsStatus]);
 
   return (
     <div className="border-t border-slate-200 bg-white/95 backdrop-blur xl:hidden">
@@ -88,14 +41,14 @@ export function AgentMobileDock() {
             <div className="text-xs font-medium text-slate-700">{summary}</div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {AGENTS.map((agent) => (
+          <div className="cb-scrollbar-hidden flex max-w-[56vw] items-center gap-1.5 overflow-x-auto">
+            {agentIds.map((agentId) => (
               <span
-                key={agent.id}
+                key={agentId}
                 className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700"
               >
-                <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASS[presence[agent.id].status])} />
-                <span>{agent.label}</span>
+                <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASS[presenceByAgent[agentId]?.status ?? 'offline'])} />
+                <span>{labelFromAgentId(agentId)}</span>
               </span>
             ))}
             <ChevronUp size={16} className={clsx('ml-0.5 text-slate-500 transition-transform', expanded ? 'rotate-180' : '')} />

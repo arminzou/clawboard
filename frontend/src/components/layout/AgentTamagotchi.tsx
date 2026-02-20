@@ -1,19 +1,48 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useWebSocket } from '../../hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
+import { useAgentPresence, type AgentPresence, type AgentStatus } from './AgentPresenceContext';
 
-type AgentStatus = 'thinking' | 'idle' | 'offline';
-
-interface AgentPresence {
-  status: AgentStatus;
-  lastActivity: string | null;
-  agentThought: string | null;
-}
+const DEFAULT_AGENT_PRESENCE: AgentPresence = {
+  status: 'offline',
+  lastActivity: null,
+  agentThought: null,
+};
 
 const AGENT_EMOJIS: Record<string, string> = {
   tee: '🐱',
   fay: '🐱',
   armin: '👤',
+};
+
+const AGENT_PERSONAS: Record<string, { cardClass: string; dotClass: string; idleQuotes: string[] }> = {
+  tee: {
+    cardClass: 'cb-agent-theme-tee',
+    dotClass: 'bg-sky-400',
+    idleQuotes: [
+      'Checking the types first...',
+      'I prefer to read the whole file.',
+      'Walking through edge cases now.',
+      'Let me verify assumptions before edits.',
+    ],
+  },
+  fay: {
+    cardClass: 'cb-agent-theme-fay',
+    dotClass: 'bg-orange-400',
+    idleQuotes: [
+      'Ooh what does this button do?',
+      'Already three ideas, pick one.',
+      'Found a shortcut. Want to try it?',
+      'I can probably ship this in one pass.',
+    ],
+  },
+  armin: {
+    cardClass: '',
+    dotClass: 'bg-slate-400',
+    idleQuotes: [
+      'Reviewing the board...',
+      'Preparing the next task.',
+    ],
+  },
 };
 
 const STATUS_CONFIG: Record<AgentStatus, { emoji: string; label: string; color: string }> = {
@@ -22,17 +51,11 @@ const STATUS_CONFIG: Record<AgentStatus, { emoji: string; label: string; color: 
   offline:  { emoji: '💤', label: 'Offline',  color: 'text-gray-500' },
 };
 
-// Stable decorative quote — shown when no real agent thought is available.
+// Stable decorative quote — shown when no real agent thought is available in idle.
 // Chosen once per mount so it doesn't flash on every status change.
-const DECORATIVE_QUOTES = [
-  "Debugging is like being a detective...",
-  "Writing tests is a love letter to your future self",
-  "Clean code is happy code",
-  "One bug at a time",
-  "Making things work, one commit at a time",
-];
-function pickQuote(): string {
-  return DECORATIVE_QUOTES[Math.floor(Math.random() * DECORATIVE_QUOTES.length)];
+function pickIdleQuote(agentId: string): string {
+  const persona = AGENT_PERSONAS[agentId] ?? AGENT_PERSONAS.armin;
+  return persona.idleQuotes[Math.floor(Math.random() * persona.idleQuotes.length)];
 }
 
 function formatLastActivity(timestamp: string | null): string {
@@ -73,47 +96,14 @@ export function AgentTamagotchi({
   className?: string;
 }) {
   const navigate = useNavigate();
-
-  // Start offline — the gateway_start webhook / WebSocket event will bring us online.
-  const [presence, setPresence] = useState<AgentPresence>({
-    status: 'offline',
-    lastActivity: null,
-    agentThought: null,
-  });
+  const { wsStatus, presenceByAgent } = useAgentPresence();
+  const persona = AGENT_PERSONAS[agentId] ?? AGENT_PERSONAS.armin;
+  const presence = presenceByAgent[agentId] ?? DEFAULT_AGENT_PRESENCE;
 
   // Chosen once on mount, stable for the lifetime of this widget.
-  const [decorativeQuote] = useState(pickQuote);
+  const [decorativeQuote] = useState(() => pickIdleQuote(agentId));
   const [thinkingSinceMs, setThinkingSinceMs] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-
-  const { status: wsStatus } = useWebSocket({
-    onMessage: (event) => {
-      if (event.type !== 'agent_status_updated') return;
-
-      const data = event.data as {
-        agentId?: string;
-        status?: AgentStatus;
-        lastActivity?: string;
-        thought?: string;
-      };
-
-      // Accept both exact match and the gateway '*' wildcard broadcast.
-      if (data.agentId !== agentId && data.agentId !== '*') return;
-
-      const incomingStatus = data.status;
-      if (!incomingStatus) return;
-
-      setPresence(prev => ({
-        status: incomingStatus,
-        lastActivity: data.lastActivity ?? prev.lastActivity,
-        // Keep agentThought on idle (preserve last known output).
-        // Clear it on offline (agent is gone).
-        agentThought: incomingStatus === 'offline'
-          ? null
-          : data.thought ?? prev.agentThought,
-      }));
-    },
-  });
 
   // Dim the card while the WebSocket is not connected — data may be stale.
   const isLive = wsStatus === 'connected';
@@ -140,11 +130,12 @@ export function AgentTamagotchi({
     return formatElapsed(nowMs - thinkingSinceMs);
   }, [presence.status, thinkingSinceMs, nowMs]);
   const statusLabel = elapsed ? `${statusCfg.label} · ${elapsed}` : statusCfg.label;
-  const thought = presence.agentThought ?? decorativeQuote;
+  const thought = presence.agentThought ?? (presence.status === 'idle' ? decorativeQuote : '...');
   const cardClassName = [
     compact
       ? 'cb-agent-card bg-slate-800 rounded-lg px-2 py-1.5 min-w-[180px] border border-slate-700 transition-opacity duration-300'
       : `cb-agent-card ${slot ? 'cb-agent-card-slot' : 'min-w-[140px]'} bg-slate-800 rounded-lg p-3 text-center border border-slate-700 transition-opacity duration-300`,
+    persona.cardClass,
     isLive ? 'opacity-100' : 'opacity-60',
     presence.status === 'thinking' ? 'cb-agent-card-thinking' : '',
     className ?? '',
@@ -168,6 +159,7 @@ export function AgentTamagotchi({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-sm text-white">
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${persona.dotClass}`} />
               <span className="truncate font-medium capitalize">{agentId}</span>
               <span
                 key={presence.status}
@@ -201,7 +193,10 @@ export function AgentTamagotchi({
       </div>
 
       {/* Name */}
-      <div className="font-medium text-white text-sm capitalize">{agentId}</div>
+      <div className="flex items-center justify-center gap-1.5 text-sm text-white">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${persona.dotClass}`} />
+        <span className="font-medium capitalize">{agentId}</span>
+      </div>
 
       {/* Status */}
       <div key={presence.status} className={`cb-agent-status text-xs ${statusCfg.color} flex items-center justify-center gap-1`}>

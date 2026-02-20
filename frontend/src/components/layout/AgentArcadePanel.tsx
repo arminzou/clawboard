@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { AgentTamagotchi } from './AgentTamagotchi';
+import { useAgentPresence } from './AgentPresenceContext';
 
 export function AgentArcadePanel({
   compact = false,
@@ -12,6 +13,8 @@ export function AgentArcadePanel({
   horizontal?: boolean;
   hideHeader?: boolean;
 }) {
+  const { agentIds } = useAgentPresence();
+
   return (
     <section
       className={clsx(
@@ -38,18 +41,15 @@ export function AgentArcadePanel({
               : 'flex flex-col gap-2',
         )}
       >
-        <AgentTamagotchi
-          agentId="tee"
-          compact={compact}
-          slot={horizontal}
-          className={mobileGrid ? 'min-w-0' : undefined}
-        />
-        <AgentTamagotchi
-          agentId="fay"
-          compact={compact}
-          slot={horizontal}
-          className={mobileGrid ? 'min-w-0' : undefined}
-        />
+        {agentIds.map((id) => (
+          <AgentTamagotchi
+            key={id}
+            agentId={id}
+            compact={compact}
+            slot={horizontal}
+            className={mobileGrid ? 'min-w-0' : undefined}
+          />
+        ))}
       </div>
     </section>
   );

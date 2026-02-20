@@ -30,7 +30,7 @@ export default function App() {
     toast.show(msg);
   }, []);
 
-  const { lastMessage } = useWebSocket({
+  const { lastMessage, status: wsStatus } = useWebSocket({
     onMessage: (m) => {
       const t = String(m.type || '');
       if (t.startsWith('task_')) pushToast(`Tasks updated (${t})`);
@@ -60,6 +60,7 @@ export default function App() {
                 element={
                   <KanbanPage
                     wsSignal={wsSignal}
+                    wsStatus={wsStatus}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
                   />
@@ -70,6 +71,7 @@ export default function App() {
                 element={
                   <KanbanPage
                     wsSignal={wsSignal}
+                    wsStatus={wsStatus}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
                   />
@@ -78,7 +80,7 @@ export default function App() {
               <Route
                 path="/activity"
                 element={
-                  <AppShell topbar={<TopbarLite title="Activity" subtitle="Timeline" />}>
+                  <AppShell topbar={<TopbarLite title="Activity" subtitle="Timeline" />} wsSignal={wsSignal} wsStatus={wsStatus}>
                     <ActivityTimeline
                       wsSignal={wsSignal}
                       onOpenTask={(id) => {
@@ -92,7 +94,7 @@ export default function App() {
               <Route
                 path="/docs"
                 element={
-                  <AppShell topbar={<TopbarLite title="Docs" subtitle="Workspace documents" />}>
+                  <AppShell topbar={<TopbarLite title="Docs" subtitle="Workspace documents" />} wsSignal={wsSignal} wsStatus={wsStatus}>
                     <DocsView wsSignal={wsSignal} />
                   </AppShell>
                 }

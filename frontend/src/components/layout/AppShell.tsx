@@ -3,14 +3,20 @@ import clsx from 'clsx';
 import { Menu, X } from 'lucide-react';
 import { AgentArcadePanel } from './AgentArcadePanel';
 import { AgentMobileDock } from './AgentMobileDock';
+import { AgentPresenceProvider } from './AgentPresenceContext';
+import type { WsStatus } from '../../hooks/useWebSocket';
 
 export function AppShell({
   sidebar,
   topbar,
+  wsSignal,
+  wsStatus,
   children,
 }: {
   sidebar?: ReactNode;
   topbar?: ReactNode;
+  wsSignal?: { type?: string; data?: unknown } | null;
+  wsStatus?: WsStatus;
   children: ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,15 +82,17 @@ export function AppShell({
 
         {topbar}
 
-        <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
+        <AgentPresenceProvider wsSignal={wsSignal} wsStatus={wsStatus}>
+          <div className="flex min-h-0 flex-1">
+            <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
 
-          <aside className="hidden w-[320px] shrink-0 border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
-            <AgentArcadePanel />
-          </aside>
-        </div>
+            <aside className="hidden w-[320px] shrink-0 border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
+              <AgentArcadePanel />
+            </aside>
+          </div>
 
-        {showMobileDock ? <AgentMobileDock /> : null}
+          {showMobileDock ? <AgentMobileDock /> : null}
+        </AgentPresenceProvider>
       </main>
     </div>
   );

@@ -163,6 +163,16 @@
       transform 0.3s ease;
   }
 
+  .cb-agent-theme-tee {
+    border-color: rgb(96 165 250 / 0.45);
+    box-shadow: inset 0 0 0 1px rgb(59 130 246 / 0.16);
+  }
+
+  .cb-agent-theme-fay {
+    border-color: rgb(251 146 60 / 0.45);
+    box-shadow: inset 0 0 0 1px rgb(249 115 22 / 0.16);
+  }
+
   .cb-agent-card-thinking {
     border-color: rgb(250 204 21 / 0.5);
     animation: cb-agent-thinking-pulse 1.8s ease-in-out infinite;
