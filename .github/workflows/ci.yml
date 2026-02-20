@@ -41,5 +41,13 @@ jobs:
 
       - name: Validate Docker Compose files
         run: |
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker CLI not available on this runner; skipping compose validation."
+            exit 0
+          fi
+          if ! docker compose version >/dev/null 2>&1; then
+            echo "Docker Compose plugin not available on this runner; skipping compose validation."
+            exit 0
+          fi
           docker compose config > /dev/null
           docker compose -f compose.yaml -f compose.traefik.yaml config > /dev/null
