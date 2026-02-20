@@ -25,13 +25,38 @@ export interface Task {
 
 export interface Activity {
   id: number;
-  agent: 'tee' | 'fay' | 'armin';
+  agent: string;
   activity_type: string;
   description: string;
   details: string | null;
   session_key: string | null;
   timestamp: string;
   related_task_id: number | null;
+}
+
+export interface OpenClawStatus {
+  detected: boolean;
+  home: string | null;
+  agents: string[];
+  pluginAgentProfiles?: Record<string, {
+    displayName?: string;
+    avatar?: string;
+    accent?: string;
+    borderColor?: string;
+    insetShadow?: string;
+    idleQuotes?: string[];
+    persona?: 'methodical' | 'playful' | 'pragmatic';
+  }>;
+  agentProfiles?: Record<string, {
+    displayName?: string;
+    avatar?: string;
+    accent?: string;
+    borderColor?: string;
+    insetShadow?: string;
+    idleQuotes?: string[];
+    persona?: 'methodical' | 'playful' | 'pragmatic';
+  }>;
+  projectsDir: string | null;
 }
 
 export interface Document {
@@ -317,5 +342,9 @@ export const api = {
     return json<{ key: string | null; type: 'branch' | 'worktree' | null }>(
       await fetch(withBase(`/api/projects/${id}/context`), { headers: authHeaders() }),
     );
+  },
+
+  async getOpenClawStatus() {
+    return json<OpenClawStatus>(await fetch(withBase('/api/openclaw/status'), { headers: authHeaders() }));
   },
 };

@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { ChevronUp } from 'lucide-react';
 import { AgentArcadePanel } from './AgentArcadePanel';
 import { useAgentPresence, type AgentStatus } from './AgentPresenceContext';
+import { profileForAgent } from './agentProfile';
 
 const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
   thinking: 'bg-amber-400',
@@ -10,21 +11,23 @@ const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
   offline: 'bg-slate-400',
 };
 
-function labelFromAgentId(id: string) {
-  if (!id) return 'Agent';
-  return id.charAt(0).toUpperCase() + id.slice(1);
-}
-
 export function AgentMobileDock() {
   const [expanded, setExpanded] = useState(true);
-  const { wsStatus, agentIds, presenceByAgent } = useAgentPresence();
+  const { wsStatus, agentIds, presenceByAgent, profileSources } = useAgentPresence();
 
   const summary = useMemo(() => {
+    if (!agentIds.length) return 'No agents';
     const thinkingCount = agentIds.filter((id) => (presenceByAgent[id]?.status ?? 'offline') === 'thinking').length;
     if (thinkingCount > 0) return `${thinkingCount} thinking`;
     if (wsStatus !== 'connected') return 'Connecting';
     return 'Idle';
   }, [agentIds, presenceByAgent, wsStatus]);
+
+  const chipLabels = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const id of agentIds) out[id] = profileForAgent(id, profileSources).displayName;
+    return out;
+  }, [agentIds, profileSources]);
 
   return (
     <div className="border-t border-slate-200 bg-white/95 backdrop-blur xl:hidden">
@@ -48,7 +51,7 @@ export function AgentMobileDock() {
                 className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700"
               >
                 <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_DOT_CLASS[presenceByAgent[agentId]?.status ?? 'offline'])} />
-                <span>{labelFromAgentId(agentId)}</span>
+                <span>{chipLabels[agentId] ?? agentId}</span>
               </span>
             ))}
             <ChevronUp size={16} className={clsx('ml-0.5 text-slate-500 transition-transform', expanded ? 'rotate-180' : '')} />

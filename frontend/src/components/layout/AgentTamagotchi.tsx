@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAgentPresence, type AgentPresence, type AgentStatus } from './AgentPresenceContext';
+import { useAgentPresence, useAgentProfile, type AgentPresence, type AgentStatus } from './AgentPresenceContext';
+import { normalizeAgentId, pickIdleQuote } from './agentProfile';
 
 const DEFAULT_AGENT_PRESENCE: AgentPresence = {
   status: 'offline',
@@ -8,55 +9,11 @@ const DEFAULT_AGENT_PRESENCE: AgentPresence = {
   agentThought: null,
 };
 
-const AGENT_EMOJIS: Record<string, string> = {
-  tee: '🐱',
-  fay: '🐱',
-  armin: '👤',
-};
-
-const AGENT_PERSONAS: Record<string, { cardClass: string; dotClass: string; idleQuotes: string[] }> = {
-  tee: {
-    cardClass: 'cb-agent-theme-tee',
-    dotClass: 'bg-sky-400',
-    idleQuotes: [
-      'Checking the types first...',
-      'I prefer to read the whole file.',
-      'Walking through edge cases now.',
-      'Let me verify assumptions before edits.',
-    ],
-  },
-  fay: {
-    cardClass: 'cb-agent-theme-fay',
-    dotClass: 'bg-orange-400',
-    idleQuotes: [
-      'Ooh what does this button do?',
-      'Already three ideas, pick one.',
-      'Found a shortcut. Want to try it?',
-      'I can probably ship this in one pass.',
-    ],
-  },
-  armin: {
-    cardClass: '',
-    dotClass: 'bg-slate-400',
-    idleQuotes: [
-      'Reviewing the board...',
-      'Preparing the next task.',
-    ],
-  },
-};
-
 const STATUS_CONFIG: Record<AgentStatus, { emoji: string; label: string; color: string }> = {
   thinking: { emoji: '🤔', label: 'Thinking', color: 'text-yellow-400' },
   idle:     { emoji: '😴', label: 'Idle',     color: 'text-gray-400' },
   offline:  { emoji: '💤', label: 'Offline',  color: 'text-gray-500' },
 };
-
-// Stable decorative quote — shown when no real agent thought is available in idle.
-// Chosen once per mount so it doesn't flash on every status change.
-function pickIdleQuote(agentId: string): string {
-  const persona = AGENT_PERSONAS[agentId] ?? AGENT_PERSONAS.armin;
-  return persona.idleQuotes[Math.floor(Math.random() * persona.idleQuotes.length)];
-}
 
 function formatLastActivity(timestamp: string | null): string {
   if (!timestamp) return 'Never';
@@ -85,7 +42,7 @@ function formatElapsed(ms: number): string {
 }
 
 export function AgentTamagotchi({
-  agentId = 'tee',
+  agentId = 'agent',
   compact = false,
   slot = false,
   className,
@@ -96,12 +53,15 @@ export function AgentTamagotchi({
   className?: string;
 }) {
   const navigate = useNavigate();
-  const { wsStatus, presenceByAgent } = useAgentPresence();
-  const persona = AGENT_PERSONAS[agentId] ?? AGENT_PERSONAS.armin;
-  const presence = presenceByAgent[agentId] ?? DEFAULT_AGENT_PRESENCE;
+  const normalizedAgentId = normalizeAgentId(agentId || 'agent');
+  const { wsStatus, presenceByAgent, profileSources } = useAgentPresence();
+  const profile = useAgentProfile(normalizedAgentId);
+  const presence = presenceByAgent[normalizedAgentId] ?? DEFAULT_AGENT_PRESENCE;
 
-  // Chosen once on mount, stable for the lifetime of this widget.
-  const [decorativeQuote] = useState(() => pickIdleQuote(agentId));
+  const decorativeQuote = useMemo(
+    () => pickIdleQuote(normalizedAgentId, profileSources),
+    [normalizedAgentId, profileSources],
+  );
   const [thinkingSinceMs, setThinkingSinceMs] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
@@ -123,7 +83,7 @@ export function AgentTamagotchi({
     return () => window.clearInterval(timer);
   }, [presence.status, thinkingSinceMs]);
 
-  const emoji = AGENT_EMOJIS[agentId] ?? '🤖';
+  const emoji = profile.avatar;
   const statusCfg = STATUS_CONFIG[presence.status];
   const elapsed = useMemo(() => {
     if (presence.status !== 'thinking' || thinkingSinceMs == null) return null;
@@ -131,11 +91,14 @@ export function AgentTamagotchi({
   }, [presence.status, thinkingSinceMs, nowMs]);
   const statusLabel = elapsed ? `${statusCfg.label} · ${elapsed}` : statusCfg.label;
   const thought = presence.agentThought ?? (presence.status === 'idle' ? decorativeQuote : '...');
+  const accentStyle =
+    presence.status === 'thinking'
+      ? undefined
+      : { borderColor: profile.borderColor, boxShadow: profile.insetShadow };
   const cardClassName = [
     compact
       ? 'cb-agent-card bg-slate-800 rounded-lg px-2 py-1.5 min-w-[180px] border border-slate-700 transition-opacity duration-300'
       : `cb-agent-card ${slot ? 'cb-agent-card-slot' : 'min-w-[140px]'} bg-slate-800 rounded-lg p-3 text-center border border-slate-700 transition-opacity duration-300`,
-    persona.cardClass,
     isLive ? 'opacity-100' : 'opacity-60',
     presence.status === 'thinking' ? 'cb-agent-card-thinking' : '',
     className ?? '',
@@ -146,8 +109,9 @@ export function AgentTamagotchi({
       <button
         type="button"
         className={`${cardClassName} cursor-pointer appearance-none text-left hover:ring-2 hover:ring-amber-300/30`}
-        onClick={() => navigate(`/activity?agent=${encodeURIComponent(agentId)}`)}
-        aria-label={`Open ${agentId} activity`}
+        style={accentStyle}
+        onClick={() => navigate(`/activity?agent=${encodeURIComponent(normalizedAgentId)}`)}
+        aria-label={`Open ${normalizedAgentId} activity`}
       >
         <div className="flex items-center gap-2">
           <div className={`cb-agent-avatar-wrap ${presence.status === 'idle' ? 'cb-agent-avatar-idle' : ''}`}>
@@ -159,8 +123,8 @@ export function AgentTamagotchi({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-sm text-white">
-              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${persona.dotClass}`} />
-              <span className="truncate font-medium capitalize">{agentId}</span>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: profile.accent }} />
+              <span className="truncate font-medium">{profile.displayName}</span>
               <span
                 key={presence.status}
                 title={statusLabel}
@@ -181,8 +145,9 @@ export function AgentTamagotchi({
     <button
       type="button"
       className={`${cardClassName} cursor-pointer appearance-none hover:ring-2 hover:ring-amber-300/30`}
-      onClick={() => navigate(`/activity?agent=${encodeURIComponent(agentId)}`)}
-      aria-label={`Open ${agentId} activity`}
+      style={accentStyle}
+      onClick={() => navigate(`/activity?agent=${encodeURIComponent(normalizedAgentId)}`)}
+      aria-label={`Open ${normalizedAgentId} activity`}
     >
       {/* Avatar */}
       <div className={`cb-agent-avatar-wrap mb-1 ${presence.status === 'idle' ? 'cb-agent-avatar-idle' : ''}`}>
@@ -194,8 +159,8 @@ export function AgentTamagotchi({
 
       {/* Name */}
       <div className="flex items-center justify-center gap-1.5 text-sm text-white">
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${persona.dotClass}`} />
-        <span className="font-medium capitalize">{agentId}</span>
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: profile.accent }} />
+        <span className="font-medium">{profile.displayName}</span>
       </div>
 
       {/* Status */}

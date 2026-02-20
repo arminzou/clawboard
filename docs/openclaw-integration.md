@@ -30,7 +30,7 @@ Sends events to configured webhooks when agent activity occurs:
 
 - `session:start` - When a session is created/reset
 - `session:end` - When a session ends
-- `agent:turn` - When an agent starts thinking or becomes active
+- `agent:thinking` / `agent:idle` / `agent:offline` - Agent lifecycle state changes
 
 Configuration in `openclaw.json`:
 ```json
@@ -51,12 +51,10 @@ Receives events from OpenClaw and broadcasts to WebSocket clients.
 **Request Body:**
 ```json
 {
-  "type": "session:start" | "session:end" | "agent:turn",
-  "agent": "tee" | "fay" | "armin",
+  "event": "agent:thinking" | "agent:idle" | "agent:offline" | "gateway:online" | "gateway:offline",
+  "agentId": "<agent-id>" | "*",
   "timestamp": "2026-02-19T09:00:00Z",
-  "data": {
-    "thought": "Working on auth implementation"
-  }
+  "thought": "Working on auth implementation"
 }
 ```
 
@@ -90,35 +88,19 @@ React component in sidebar showing agent status with a fun, Tamagotchi-like UI.
 **Location:** `frontend/src/components/layout/AgentTamagotchi.tsx`
 
 **Features:**
-- Avatar with agent-specific emoji (🐱 for tee/fay, 👤 for armin)
+- Deterministic avatar/personality fallback for any `agentId`
+- Optional profile overrides from config/plugin metadata
 - Status indicator with color coding:
-  - `active` - 😊 Green (working)
   - `thinking` - 🤔 Yellow (processing)
   - `idle` - 😴 Gray (waiting)
-  - `blocked` - 😰 Red (needs help)
   - `offline` - 💤 Dark gray (disconnected)
-- Thought bubble with motivational quotes
-- Energy bar (decorative, shows activity level)
+- Thought bubble with real thought + persona fallback quote
 - Last activity timestamp
 
-**Agent Emojis:**
-```typescript
-const AGENT_EMOJIS = {
-  tee: '🐱',
-  fay: '🐱',
-  armin: '👤',
-};
-```
-
-**Motivational Thoughts:**
-- "Just finished a feature! 🎉"
-- "Debugging is like being a detective..."
-- "Writing tests is a love letter to your future self"
-- "Clean code is happy code"
-- "Ship it! 🚀"
-- "One bug at a time"
-- "Coffee + Code = ❤️"
-- "Making things work, one commit at a time"
+**Profile Source Priority:**
+1. `~/.clawboard/agent-profiles.json` (or `CLAWBOARD_AGENT_PROFILES_PATH`)
+2. `<openclaw-home>/agent-profiles.json` (or `OPENCLAW_AGENT_PROFILES_PATH`)
+3. Deterministic defaults generated from `agentId`
 
 ### 5. Webhook Router (`backend/src/presentation/http/routes/webhookRouter.ts`)
 
@@ -132,16 +114,18 @@ Handles incoming webhook events from OpenClaw.
 | GET | `/api/webhook/config` | Get webhook configuration |
 
 **Event Types Processed:**
-- `session:start` → Status: `active`, thought: "I am awake!"
-- `session:end` → Status: `idle`
-- `agent:turn` → Status: `thinking`
+- `agent:thinking` → Status: `thinking`
+- `agent:idle` → Status: `idle`
+- `agent:offline` → Status: `offline`
+- `gateway:online` → Status: `idle` (broadcast to `*`)
+- `gateway:offline` → Status: `offline` (broadcast to `*`)
 
 ## Events Flow
 
-1. **Session Start**: `sessions.reset` → `sendSessionStartEvent()` → POST to webhook
-2. **Agent Thinking**: `chat.ts` `onAgentRunStart` → `sendAgentTurnEvent("thinking")`
-3. **Agent Active**: `chat.ts` `.then()` → `sendAgentTurnEvent("active")`
-4. **Broadcast**: Webhook router → `broadcast()` → WebSocket → Frontend
+1. **Agent Run Start**: plugin emits `agent:thinking`
+2. **Agent Run End**: plugin emits `agent:idle` (after idle timeout)
+3. **Gateway Changes**: plugin emits `gateway:online` / `gateway:offline` with `agentId: "*"`
+4. **Broadcast**: webhook router maps event → `agent_status_updated` → WebSocket → frontend
 
 ## Frontend WebSocket Events
 
@@ -149,8 +133,8 @@ Handles incoming webhook events from OpenClaw.
 {
   type: 'agent_status_updated',
   data: {
-    agentId: 'tee',
-    status: 'active' | 'thinking' | 'idle' | 'blocked' | 'offline',
+    agentId: '<agent-id>' | '*',
+    status: 'thinking' | 'idle' | 'offline',
     lastActivity: '2026-02-19T09:00:00Z',
     thought: 'Working on Phase 11!'
   }
@@ -168,7 +152,7 @@ Response:
 {
   "enabled": true,
   "url": "http://localhost:3001/api/webhook/clawboard",
-  "events": ["session:start", "session:end", "agent:turn", "task:completed"]
+  "events": ["agent:thinking", "agent:idle", "agent:offline", "gateway:online", "gateway:offline"]
 }
 ```
 
@@ -179,11 +163,8 @@ The AgentTamagotchi component is displayed in the sidebar:
 ```tsx
 // frontend/src/components/layout/Sidebar.tsx
 <div className="border-t border-slate-200 p-3">
-  <div className="text-xs font-medium text-slate-500 mb-2">Agents</div>
-  <div className="flex gap-2 justify-center">
-    <AgentTamagotchi agentId="tee" />
-    <AgentTamagotchi agentId="fay" />
-  </div>
+  <div className="text-xs font-medium text-slate-500 mb-2">Agent Arcade</div>
+  <AgentArcadePanel />
 </div>
 ```
 

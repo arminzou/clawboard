@@ -20,6 +20,7 @@ import { Panel } from '../../components/ui/Panel';
 import { useProjects } from '../../hooks/useProjects';
 import { useKanbanData } from './hooks/useKanbanData';
 import type { WsStatus } from '../../hooks/useWebSocket';
+import type { AgentProfileSources } from '../../components/layout/agentProfile';
 
 const COLUMNS: { key: TaskStatus; title: string }[] = [
   { key: 'backlog', title: 'Backlog' },
@@ -64,11 +65,15 @@ type SavedView = {
 export function KanbanPage({
   wsSignal,
   wsStatus,
+  initialAgentIds,
+  agentProfileSources,
   openTaskId,
   onOpenTaskConsumed,
 }: {
   wsSignal?: { type?: string; data?: unknown } | null;
   wsStatus?: WsStatus;
+  initialAgentIds?: string[];
+  agentProfileSources?: AgentProfileSources;
   openTaskId?: number | null;
   onOpenTaskConsumed?: () => void;
 }) {
@@ -1006,7 +1011,14 @@ export function KanbanPage({
 
   return (
     <>
-      <AppShell sidebar={sidebar} topbar={topbar} wsSignal={wsSignal} wsStatus={wsStatus}>
+      <AppShell
+        sidebar={sidebar}
+        topbar={topbar}
+        wsSignal={wsSignal}
+        wsStatus={wsStatus}
+        initialAgentIds={initialAgentIds}
+        agentProfileSources={agentProfileSources}
+      >
         {overdueCount > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
             <div className="flex items-center gap-2">

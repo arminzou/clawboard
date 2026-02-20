@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { WsStatus } from '../../hooks/useWebSocket';
+import { normalizeAgentId, normalizeAgentIds, normalizeProfileSources, profileForAgent, type AgentProfileSources } from './agentProfile';
 
 export type AgentStatus = 'thinking' | 'idle' | 'offline';
 
@@ -20,6 +21,7 @@ type AgentPresenceContextValue = {
   wsStatus: WsStatus;
   agentIds: string[];
   presenceByAgent: Record<string, AgentPresence>;
+  profileSources: AgentProfileSources;
 };
 
 const DEFAULT_PRESENCE: AgentPresence = {
@@ -28,28 +30,61 @@ const DEFAULT_PRESENCE: AgentPresence = {
   agentThought: null,
 };
 
-const PINNED_AGENT_ORDER = ['tee', 'fay', 'armin'];
-const DEFAULT_AGENT_IDS = ['tee', 'fay'];
-
 const AgentPresenceContext = createContext<AgentPresenceContextValue | null>(null);
 
-function createInitialPresence(): Record<string, AgentPresence> {
-  return {
-    tee: { ...DEFAULT_PRESENCE },
-    fay: { ...DEFAULT_PRESENCE },
-  };
+function createInitialPresence(agentIds: string[]): Record<string, AgentPresence> {
+  const out: Record<string, AgentPresence> = {};
+  for (const id of normalizeAgentIds(agentIds)) out[id] = { ...DEFAULT_PRESENCE };
+  return out;
 }
 
 export function AgentPresenceProvider({
   wsSignal,
   wsStatus = 'disconnected',
+  initialAgentIds = [],
+  profileSources = {},
   children,
 }: {
   wsSignal?: { type?: string; data?: unknown } | null;
   wsStatus?: WsStatus;
+  initialAgentIds?: string[];
+  profileSources?: AgentProfileSources;
   children: ReactNode;
 }) {
-  const [presenceByAgent, setPresenceByAgent] = useState<Record<string, AgentPresence>>(createInitialPresence);
+  const normalizedProfileSources = useMemo(() => normalizeProfileSources(profileSources), [profileSources]);
+  const [agentIds, setAgentIds] = useState<string[]>(() => normalizeAgentIds(initialAgentIds));
+  const [presenceByAgent, setPresenceByAgent] = useState<Record<string, AgentPresence>>(() =>
+    createInitialPresence(initialAgentIds),
+  );
+
+  useEffect(() => {
+    const normalized = normalizeAgentIds(initialAgentIds);
+    if (!normalized.length) return;
+
+    setAgentIds((prev) => {
+      const seen = new Set(prev);
+      let changed = false;
+      const next = [...prev];
+      for (const id of normalized) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        changed = true;
+        next.push(id);
+      }
+      return changed ? next : prev;
+    });
+
+    setPresenceByAgent((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const id of normalized) {
+        if (next[id]) continue;
+        next[id] = { ...DEFAULT_PRESENCE };
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [initialAgentIds]);
 
   useEffect(() => {
     if (wsSignal?.type !== 'agent_status_updated') return;
@@ -58,11 +93,16 @@ export function AgentPresenceProvider({
     const status = data?.status;
     if (!status) return;
 
+    const normalizedId = normalizeAgentId(String(data.agentId ?? ''));
+    if (normalizedId && data.agentId !== '*') {
+      setAgentIds((prevIds) => (prevIds.includes(normalizedId) ? prevIds : [...prevIds, normalizedId]));
+    }
+
     setPresenceByAgent((prev) => {
       const next: Record<string, AgentPresence> = { ...prev };
 
       if (data.agentId === '*') {
-        const ids = Object.keys(next).length ? Object.keys(next) : DEFAULT_AGENT_IDS;
+        const ids = Object.keys(next);
         for (const id of ids) {
           const current = next[id] ?? DEFAULT_PRESENCE;
           next[id] = {
@@ -74,7 +114,7 @@ export function AgentPresenceProvider({
         return next;
       }
 
-      const normalizedId = String(data.agentId ?? '').trim().toLowerCase();
+      const normalizedId = normalizeAgentId(String(data.agentId ?? ''));
       if (!normalizedId) return prev;
 
       const current = next[normalizedId] ?? DEFAULT_PRESENCE;
@@ -87,24 +127,9 @@ export function AgentPresenceProvider({
     });
   }, [wsSignal]);
 
-  const agentIds = useMemo(() => {
-    const ids = Object.keys(presenceByAgent);
-    ids.sort((a, b) => {
-      const ai = PINNED_AGENT_ORDER.indexOf(a);
-      const bi = PINNED_AGENT_ORDER.indexOf(b);
-      if (ai !== -1 || bi !== -1) {
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      }
-      return a.localeCompare(b);
-    });
-    return ids;
-  }, [presenceByAgent]);
-
   const value = useMemo<AgentPresenceContextValue>(
-    () => ({ wsStatus, agentIds, presenceByAgent }),
-    [wsStatus, agentIds, presenceByAgent],
+    () => ({ wsStatus, agentIds, presenceByAgent, profileSources: normalizedProfileSources }),
+    [wsStatus, agentIds, presenceByAgent, normalizedProfileSources],
   );
 
   return <AgentPresenceContext.Provider value={value}>{children}</AgentPresenceContext.Provider>;
@@ -116,4 +141,9 @@ export function useAgentPresence() {
     throw new Error('useAgentPresence must be used within AgentPresenceProvider');
   }
   return ctx;
+}
+
+export function useAgentProfile(agentId: string) {
+  const { profileSources } = useAgentPresence();
+  return useMemo(() => profileForAgent(agentId, profileSources), [agentId, profileSources]);
 }

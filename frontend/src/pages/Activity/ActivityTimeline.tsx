@@ -5,6 +5,8 @@ import type { Activity } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Panel } from '../../components/ui/Panel';
+import { useAgentPresence } from '../../components/layout/AgentPresenceContext';
+import { profileForAgent } from '../../components/layout/agentProfile';
 
 function when(ts: string) {
   const d = new Date(ts);
@@ -25,6 +27,7 @@ export function ActivityTimeline({
   onOpenTask?: (id: number) => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { agentIds, profileSources } = useAgentPresence();
   const [items, setItems] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -151,6 +154,30 @@ export function ActivityTimeline({
     return out;
   }, [filtered]);
 
+  const agentOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const id of agentIds) {
+      const v = String(id).trim().toLowerCase();
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      out.push(v);
+    }
+    for (const row of items) {
+      const v = String(row.agent || '').trim().toLowerCase();
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      out.push(v);
+    }
+    return out.sort();
+  }, [agentIds, items]);
+
+  const agentOptionLabels = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const id of agentOptions) out[id] = profileForAgent(id, profileSources).displayName;
+    return out;
+  }, [agentOptions, profileSources]);
+
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -166,9 +193,9 @@ export function ActivityTimeline({
             onChange={(e) => handleAgentChange(e.target.value)}
           >
             <option value="">All agents</option>
-            <option value="tee">tee</option>
-            <option value="fay">fay</option>
-            <option value="armin">armin</option>
+            {agentOptions.map((id) => (
+              <option key={id} value={id}>{agentOptionLabels[id] ?? id}</option>
+            ))}
           </select>
 
           <div className="w-72">

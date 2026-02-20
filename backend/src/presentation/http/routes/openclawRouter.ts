@@ -12,6 +12,8 @@ export function createOpenClawRouter() {
         detected: oc.detected,
         home: oc.home,
         agents: oc.agents,
+        pluginAgentProfiles: config.pluginAgentProfiles,
+        agentProfiles: config.agentProfiles,
         projectsDir: config.projectsDir,
       });
     } catch (err) {

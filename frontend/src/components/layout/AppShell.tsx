@@ -5,18 +5,23 @@ import { AgentArcadePanel } from './AgentArcadePanel';
 import { AgentMobileDock } from './AgentMobileDock';
 import { AgentPresenceProvider } from './AgentPresenceContext';
 import type { WsStatus } from '../../hooks/useWebSocket';
+import type { AgentProfileSources } from './agentProfile';
 
 export function AppShell({
   sidebar,
   topbar,
   wsSignal,
   wsStatus,
+  initialAgentIds,
+  agentProfileSources,
   children,
 }: {
   sidebar?: ReactNode;
   topbar?: ReactNode;
   wsSignal?: { type?: string; data?: unknown } | null;
   wsStatus?: WsStatus;
+  initialAgentIds?: string[];
+  agentProfileSources?: AgentProfileSources;
   children: ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -82,7 +87,12 @@ export function AppShell({
 
         {topbar}
 
-        <AgentPresenceProvider wsSignal={wsSignal} wsStatus={wsStatus}>
+        <AgentPresenceProvider
+          wsSignal={wsSignal}
+          wsStatus={wsStatus}
+          initialAgentIds={initialAgentIds}
+          profileSources={agentProfileSources}
+        >
           <div className="flex min-h-0 flex-1">
             <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
 

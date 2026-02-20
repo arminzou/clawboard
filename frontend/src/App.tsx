@@ -1,4 +1,4 @@
-import { Component, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { KanbanPage } from './pages/Kanban/KanbanPage';
 import { IconRail, type AppTab } from './components/layout/IconRail';
@@ -9,6 +9,8 @@ import { DocsView } from './pages/Docs/DocsView';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { toast } from './lib/toast';
+import { api } from './lib/api';
+import { normalizeAgentIds, normalizeProfileSources, type AgentProfileSources } from './components/layout/agentProfile';
 import './index.css';
 
 type Tab = AppTab;
@@ -25,6 +27,8 @@ export default function App() {
   }, [location.pathname]);
 
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
+  const [initialAgentIds, setInitialAgentIds] = useState<string[]>([]);
+  const [agentProfileSources, setAgentProfileSources] = useState<AgentProfileSources>({});
 
   const pushToast = useCallback((msg: string) => {
     toast.show(msg);
@@ -38,6 +42,36 @@ export default function App() {
   });
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getOpenClawStatus()
+      .then((status) => {
+        if (cancelled) return;
+        const pluginProfiles = status.pluginAgentProfiles ?? {};
+        const configProfiles = status.agentProfiles ?? {};
+        setAgentProfileSources(
+          normalizeProfileSources({
+            pluginMetadata: pluginProfiles,
+            config: configProfiles,
+          }),
+        );
+        setInitialAgentIds(normalizeAgentIds([
+          ...(status.agents ?? []),
+          ...Object.keys(pluginProfiles),
+          ...Object.keys(configProfiles),
+        ]));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setInitialAgentIds([]);
+        setAgentProfileSources({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setTab = useCallback((t: Tab) => {
     if (t === 'activity') navigate('/activity');
@@ -61,6 +95,8 @@ export default function App() {
                   <KanbanPage
                     wsSignal={wsSignal}
                     wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
                   />
@@ -72,6 +108,8 @@ export default function App() {
                   <KanbanPage
                     wsSignal={wsSignal}
                     wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
                     openTaskId={openTaskId}
                     onOpenTaskConsumed={() => setOpenTaskId(null)}
                   />
@@ -80,7 +118,13 @@ export default function App() {
               <Route
                 path="/activity"
                 element={
-                  <AppShell topbar={<TopbarLite title="Activity" subtitle="Timeline" />} wsSignal={wsSignal} wsStatus={wsStatus}>
+                  <AppShell
+                    topbar={<TopbarLite title="Activity" subtitle="Timeline" />}
+                    wsSignal={wsSignal}
+                    wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
+                  >
                     <ActivityTimeline
                       wsSignal={wsSignal}
                       onOpenTask={(id) => {
@@ -94,7 +138,13 @@ export default function App() {
               <Route
                 path="/docs"
                 element={
-                  <AppShell topbar={<TopbarLite title="Docs" subtitle="Workspace documents" />} wsSignal={wsSignal} wsStatus={wsStatus}>
+                  <AppShell
+                    topbar={<TopbarLite title="Docs" subtitle="Workspace documents" />}
+                    wsSignal={wsSignal}
+                    wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
+                  >
                     <DocsView wsSignal={wsSignal} />
                   </AppShell>
                 }

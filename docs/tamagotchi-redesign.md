@@ -48,13 +48,15 @@ The biggest gap: nothing moves. A static card is just a status badge with a cat 
 
 ### Personality
 
-Tee and Fay are cats with distinct personalities. The widget should feel like it knows them.
+Agents should have distinct personalities without relying on hardcoded IDs. The widget should feel tailored per agent.
 
-- **Agent-specific idle quotes** — replace generic dev quotes with character-appropriate ones:
-  - Tee (methodical, nerdy): *"Checking the types first..."*, *"I prefer to read the whole file."*
-  - Fay (playful, curious): *"Ooh what does this button do?"*, *"Already three ideas, pick one."*
-- **Per-agent color accent** — Tee gets blue/purple (calm), Fay gets amber/orange (warm). Applied to card border or status dot.
-- **Distinct avatars** — both currently show 🐱. Give them different poses: Tee = 🐈 (sitting, composed), Fay = 🐈‍⬛ or custom SVG.
+- **Agent-specific idle quotes** — prefer persona-appropriate pools (`methodical`, `playful`, `pragmatic`) or explicit per-agent overrides.
+- **Per-agent color accent** — derive from stable agent profile so each agent is recognizable at a glance.
+- **Distinct avatars** — use profile-provided emoji/SVG when available, deterministic fallback otherwise.
+- **Source priority** — resolve identity from:
+  1. Clawboard config overrides
+  2. Plugin metadata hints
+  3. Generated deterministic defaults
 
 ---
 
@@ -87,8 +89,8 @@ The card is currently pure display with no affordances.
 
 ### Layout
 
-- **Horizontal compact mode** — single-row render for narrow sidebars: `🐱 Tee · Thinking · "Just finished a feature"`.
-- **Unified team panel** — when both Fay and Tee are visible, a cohesive two-agent layout rather than two independent cards floating next to each other.
+- **Horizontal compact mode** — single-row render for narrow sidebars: `🤖 Agent · Thinking · "Just finished a feature"`.
+- **Unified team panel** — when multiple agents are visible, a cohesive multi-agent layout rather than isolated cards.
 
 ---
 
@@ -122,9 +124,9 @@ Chosen direction:
   - 70% avatar + background scene
   - 20% motion behavior
   - 10% quotes/copy
-- Agent themes:
-  - Tee: cool blue/cyan palette, calmer motion
-  - Fay: warm amber/orange palette, more playful motion
+- Agent themes are data-driven:
+  - deterministic fallback per `agentId`
+  - optional config/plugin profile overrides for explicit personality
 
 ### Card Structure
 

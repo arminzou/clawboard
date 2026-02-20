@@ -30,27 +30,35 @@ export function AgentArcadePanel({
         </div>
       )}
 
-      <div
-        className={clsx(
-          mobileGrid
-            ? 'grid grid-cols-2 gap-2'
-            : horizontal
-              ? 'cb-scrollbar-hidden flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1'
-            : compact
-              ? 'cb-scrollbar-hidden flex gap-2 overflow-x-auto pb-1'
-              : 'flex flex-col gap-2',
-        )}
-      >
-        {agentIds.map((id) => (
-          <AgentTamagotchi
-            key={id}
-            agentId={id}
-            compact={compact}
-            slot={horizontal}
-            className={mobileGrid ? 'min-w-0' : undefined}
-          />
-        ))}
-      </div>
+      {!agentIds.length ? (
+        <div className="rounded-lg border border-slate-700/60 bg-slate-900/30 px-3 py-2 text-xs text-slate-300">
+          Waiting for agent discovery...
+        </div>
+      ) : null}
+
+      {agentIds.length ? (
+        <div
+          className={clsx(
+            mobileGrid
+              ? 'grid grid-cols-2 gap-2'
+              : horizontal
+                ? 'cb-scrollbar-hidden flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1'
+                : compact
+                  ? 'cb-scrollbar-hidden flex gap-2 overflow-x-auto pb-1'
+                  : 'flex flex-col gap-2',
+          )}
+        >
+          {agentIds.map((id) => (
+            <AgentTamagotchi
+              key={id}
+              agentId={id}
+              compact={compact}
+              slot={horizontal}
+              className={mobileGrid ? 'min-w-0' : undefined}
+            />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
