@@ -1,11 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Menu, X } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Menu, X } from 'lucide-react';
 import { AgentArcadePanel } from './AgentArcadePanel';
 import { AgentMobileDock } from './AgentMobileDock';
+import { AgentPresenceStrip } from './AgentPresenceStrip';
 import { AgentPresenceProvider } from './AgentPresenceContext';
+import { AgentStateTestPanel } from './AgentStateTestPanel';
 import type { WsStatus } from '../../hooks/useWebSocket';
 import type { AgentProfileSources } from './agentProfile';
+
+const AGENT_RAIL_SLIM_KEY = 'cb.agentRailSlim';
 
 export function AppShell({
   sidebar,
@@ -14,6 +18,7 @@ export function AppShell({
   wsStatus,
   initialAgentIds,
   agentProfileSources,
+  contentClassName,
   children,
 }: {
   sidebar?: ReactNode;
@@ -22,22 +27,64 @@ export function AppShell({
   wsStatus?: WsStatus;
   initialAgentIds?: string[];
   agentProfileSources?: AgentProfileSources;
+  contentClassName?: string;
   children: ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showMobileDock, setShowMobileDock] = useState(() => {
+  const [agentRailSlim, setAgentRailSlim] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !window.matchMedia('(min-width: 1280px)').matches;
+    try {
+      return window.localStorage.getItem(AGENT_RAIL_SLIM_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [layoutFlags, setLayoutFlags] = useState(() => {
+    if (typeof window === 'undefined') {
+      return { coarsePointer: false, desktopMin: true, wideMin: true };
+    }
+    return {
+      coarsePointer: window.matchMedia('(pointer: coarse)').matches,
+      desktopMin: window.matchMedia('(min-width: 900px)').matches,
+      wideMin: window.matchMedia('(min-width: 1280px)').matches,
+    };
   });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const media = window.matchMedia('(min-width: 1280px)');
-    const onChange = () => setShowMobileDock(!media.matches);
+    const coarseMedia = window.matchMedia('(pointer: coarse)');
+    const desktopMedia = window.matchMedia('(min-width: 900px)');
+    const wideMedia = window.matchMedia('(min-width: 1280px)');
+    const onChange = () => {
+      setLayoutFlags({
+        coarsePointer: coarseMedia.matches,
+        desktopMin: desktopMedia.matches,
+        wideMin: wideMedia.matches,
+      });
+    };
     onChange();
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
+    coarseMedia.addEventListener('change', onChange);
+    desktopMedia.addEventListener('change', onChange);
+    wideMedia.addEventListener('change', onChange);
+    return () => {
+      coarseMedia.removeEventListener('change', onChange);
+      desktopMedia.removeEventListener('change', onChange);
+      wideMedia.removeEventListener('change', onChange);
+    };
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AGENT_RAIL_SLIM_KEY, agentRailSlim ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [agentRailSlim]);
+
+  // Use right-side panel on wide screens; use bottom bar + sheet on narrow screens.
+  const showDesktopAgentRail = layoutFlags.wideMin;
+  const compactDesktopRail = false;
+  const showMobileDock = !layoutFlags.wideMin;
 
   return (
     <div className="flex h-full">
@@ -94,14 +141,38 @@ export function AppShell({
           profileSources={agentProfileSources}
         >
           <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-            <div className="min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4">{children}</div>
+            <div className={clsx('min-w-0 flex-1 overflow-auto px-4 pb-4 pt-4', contentClassName)}>{children}</div>
 
-            <aside className="cb-scrollbar-hidden hidden min-h-0 w-[320px] shrink-0 overflow-x-hidden overflow-y-auto border-l border-slate-200 bg-slate-100/60 p-3 xl:block">
-              <AgentArcadePanel />
-            </aside>
+            {showDesktopAgentRail ? (
+              <aside
+                className={clsx(
+                  'cb-scrollbar-hidden min-h-0 shrink-0 overflow-x-hidden overflow-y-auto border-l border-slate-200 bg-slate-100/60',
+                  agentRailSlim ? 'w-[72px] p-2' : (compactDesktopRail ? 'w-[248px] p-2' : 'w-[320px] p-3'),
+                )}
+              >
+                <div className={clsx('mb-2 flex', agentRailSlim ? 'justify-center' : 'justify-end')}>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-200 bg-white p-1 text-slate-500 hover:bg-slate-50"
+                    onClick={() => setAgentRailSlim((v) => !v)}
+                    aria-label={agentRailSlim ? 'Expand agent panel' : 'Collapse agent panel'}
+                    title={agentRailSlim ? 'Expand panel' : 'Collapse panel'}
+                  >
+                    {agentRailSlim ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+                  </button>
+                </div>
+
+                {agentRailSlim ? (
+                  <AgentPresenceStrip className="h-[calc(100%-2rem)] pt-1" />
+                ) : (
+                  <AgentArcadePanel compact={compactDesktopRail} hideHeader={compactDesktopRail} />
+                )}
+              </aside>
+            ) : null}
           </div>
 
           {showMobileDock ? <AgentMobileDock /> : null}
+          <AgentStateTestPanel />
         </AgentPresenceProvider>
       </main>
     </div>

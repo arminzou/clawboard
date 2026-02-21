@@ -116,6 +116,41 @@
     background: transparent;
   }
 
+  .cb-scrollbar-hover {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    -ms-overflow-style: auto;
+  }
+
+  .cb-scrollbar-hover::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    background: transparent;
+  }
+
+  .cb-scrollbar-hover::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .cb-scrollbar-hover:hover,
+  .cb-scrollbar-hover:focus-within {
+    scrollbar-color: rgb(148 163 184 / 0.7) transparent;
+  }
+
+  .cb-scrollbar-hover:hover::-webkit-scrollbar-thumb,
+  .cb-scrollbar-hover:focus-within::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184 / 0.7);
+  }
+
+  .cb-scrollbar-hover:hover::-webkit-scrollbar-track,
+  .cb-scrollbar-hover:focus-within::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   .cb-menu {
     border-radius: var(--cb-radius-lg);
     border: 1px solid rgb(var(--cb-border));

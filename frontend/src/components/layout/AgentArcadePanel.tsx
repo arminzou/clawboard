@@ -1,13 +1,8 @@
-import { useCallback, useRef, type WheelEvent } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { AgentTamagotchi } from './AgentTamagotchi';
 import { useAgentPresence } from './AgentPresenceContext';
-
-function toPixels(delta: number, deltaMode: number, viewportWidth: number): number {
-  if (deltaMode === 1) return delta * 16;
-  if (deltaMode === 2) return delta * Math.max(1, viewportWidth * 0.9);
-  return delta;
-}
+import { profileForAgent } from './agentProfile';
 
 export function AgentArcadePanel({
   compact = false,
@@ -20,78 +15,122 @@ export function AgentArcadePanel({
   horizontal?: boolean;
   hideHeader?: boolean;
 }) {
-  const { agentIds } = useAgentPresence();
-  const horizontalRowRef = useRef<HTMLDivElement | null>(null);
+  const { agentIds, presenceByAgent, profileSources } = useAgentPresence();
 
-  const handleHorizontalWheel = useCallback((event: WheelEvent<HTMLElement>) => {
-    if (!horizontal) return;
+  const sortedAgentIds = useMemo(() => {
+    return [...agentIds].sort((a, b) => {
+      const aName = profileForAgent(a, profileSources).displayName.toLowerCase();
+      const bName = profileForAgent(b, profileSources).displayName.toLowerCase();
+      return aName.localeCompare(bName);
+    });
+  }, [agentIds, profileSources]);
 
-    const el = horizontalRowRef.current;
-    if (!el) return;
-    if (el.scrollWidth <= el.clientWidth) return;
+  const groups = useMemo(() => {
+    const thinking: string[] = [];
+    const online: string[] = [];
+    const offline: string[] = [];
 
-    // Map vertical mouse wheel to horizontal movement for desktop usability.
-    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-      const rawDelta = toPixels(event.deltaY, event.deltaMode, el.clientWidth);
-      const scaledDelta = rawDelta * 1.35;
-      const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
-      const prev = el.scrollLeft;
-      const next = Math.max(0, Math.min(maxScrollLeft, prev + scaledDelta));
-      if (Math.abs(next - prev) > 0.5) {
-        el.scrollLeft = next;
-        event.preventDefault();
-      }
+    for (const id of sortedAgentIds) {
+      const status = presenceByAgent[id]?.status ?? 'offline';
+      if (status === 'thinking') thinking.push(id);
+      else if (status === 'offline') offline.push(id);
+      else online.push(id);
     }
-  }, [horizontal]);
+
+    return { thinking, online, offline };
+  }, [sortedAgentIds, presenceByAgent]);
+
+  if (horizontal) {
+    return (
+      <section className="min-w-0 w-full max-w-full rounded-xl border border-slate-200 bg-white p-2">
+        {!sortedAgentIds.length ? (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Waiting for agent discovery...
+          </div>
+        ) : (
+          <div className="cb-scrollbar-hidden min-w-0 w-full max-w-full flex gap-1.5 overflow-x-auto overflow-y-hidden pb-1">
+            {sortedAgentIds.map((id) => (
+              <AgentTamagotchi
+                key={id}
+                agentId={id}
+                compact
+                slot
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  const hasAgents = sortedAgentIds.length > 0;
 
   return (
     <section
-      onWheel={horizontal ? handleHorizontalWheel : undefined}
       className={clsx(
-        'min-w-0 w-full max-w-full rounded-2xl border border-slate-700/80 bg-[radial-gradient(circle_at_top,rgb(59_130_246_/_0.18),transparent_58%),radial-gradient(circle_at_90%_90%,rgb(245_158_11_/_0.14),transparent_48%),rgb(15_23_42)] shadow-lg',
+        'min-w-0 w-full max-w-full rounded-xl border border-slate-200 bg-white shadow-sm',
         compact ? 'p-2' : 'p-3',
-        horizontal ? 'overflow-hidden' : '',
-        compact ? 'overflow-hidden' : '',
         compact ? 'mx-2 mt-2' : '',
       )}
     >
-      {!hideHeader && (
+      {!hideHeader ? (
         <div className="mb-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">Agent Arcade</div>
-          <div className="text-xs text-slate-400">Live companion status</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Agents</div>
         </div>
-      )}
+      ) : null}
 
-      {!agentIds.length ? (
-        <div className="rounded-lg border border-slate-700/60 bg-slate-900/30 px-3 py-2 text-xs text-slate-300">
+      {!hasAgents ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
           Waiting for agent discovery...
         </div>
       ) : null}
 
-      {agentIds.length ? (
-        <div
-          ref={horizontal ? horizontalRowRef : undefined}
-          className={clsx(
-            mobileGrid
-              ? 'grid grid-cols-2 gap-2'
-              : horizontal
-                ? 'cb-scrollbar-hidden touch-pan-x min-w-0 w-full max-w-full flex gap-2 overflow-x-auto overflow-y-hidden pb-1'
-                : compact
-                  ? 'cb-scrollbar-hidden min-w-0 w-full max-w-full flex gap-2 overflow-x-auto overflow-y-hidden pb-1'
-                  : 'flex flex-col gap-2',
-          )}
-        >
-          {agentIds.map((id) => (
-            <AgentTamagotchi
-              key={id}
-              agentId={id}
-              compact={compact}
-              slot={horizontal}
-              className={mobileGrid ? 'min-w-0' : undefined}
-            />
-          ))}
+      {hasAgents ? (
+        <div className={clsx(mobileGrid ? 'grid grid-cols-2 gap-2' : 'space-y-2')}>
+          {groups.thinking.length ? (
+            <AgentGroup title="Thinking" count={groups.thinking.length}>
+              {groups.thinking.map((id) => (
+                <AgentTamagotchi key={id} agentId={id} compact={compact} className={mobileGrid ? 'min-w-0' : undefined} />
+              ))}
+            </AgentGroup>
+          ) : null}
+
+          {groups.online.length ? (
+            <AgentGroup title="Online" count={groups.online.length}>
+              {groups.online.map((id) => (
+                <AgentTamagotchi key={id} agentId={id} compact={compact} className={mobileGrid ? 'min-w-0' : undefined} />
+              ))}
+            </AgentGroup>
+          ) : null}
+
+          {groups.offline.length ? (
+            <AgentGroup title="Offline" count={groups.offline.length}>
+              {groups.offline.map((id) => (
+                <AgentTamagotchi key={id} agentId={id} compact={compact} className={mobileGrid ? 'min-w-0' : undefined} />
+              ))}
+            </AgentGroup>
+          ) : null}
         </div>
       ) : null}
     </section>
+  );
+}
+
+function AgentGroup({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 px-1 text-xs font-semibold text-slate-500">
+        {title} - {count}
+      </div>
+      <div className="space-y-0.5">{children}</div>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { WsStatus } from '../../hooks/useWebSocket';
 import { normalizeAgentId, normalizeAgentIds, normalizeProfileSources, profileForAgent, type AgentProfileSources } from './agentProfile';
 
@@ -22,6 +22,8 @@ type AgentPresenceContextValue = {
   agentIds: string[];
   presenceByAgent: Record<string, AgentPresence>;
   profileSources: AgentProfileSources;
+  setAgentPresence: (agentId: string, patch: Partial<AgentPresence> & { status?: AgentStatus }) => void;
+  setAllAgentStatus: (status: AgentStatus, thought?: string | null) => void;
 };
 
 const DEFAULT_PRESENCE: AgentPresence = {
@@ -127,9 +129,58 @@ export function AgentPresenceProvider({
     });
   }, [wsSignal]);
 
+  const setAgentPresence = useCallback((agentId: string, patch: Partial<AgentPresence> & { status?: AgentStatus }) => {
+    const normalizedId = normalizeAgentId(agentId);
+    if (!normalizedId) return;
+
+    setAgentIds((prevIds) => (prevIds.includes(normalizedId) ? prevIds : [...prevIds, normalizedId]));
+    setPresenceByAgent((prev) => {
+      const current = prev[normalizedId] ?? DEFAULT_PRESENCE;
+      const nextStatus = patch.status ?? current.status;
+      const nextThought = patch.agentThought !== undefined
+        ? patch.agentThought
+        : (nextStatus === 'offline' ? null : current.agentThought);
+
+      return {
+        ...prev,
+        [normalizedId]: {
+          status: nextStatus,
+          lastActivity: patch.lastActivity ?? new Date().toISOString(),
+          agentThought: nextThought,
+        },
+      };
+    });
+  }, []);
+
+  const setAllAgentStatus = useCallback((status: AgentStatus, thought?: string | null) => {
+    setPresenceByAgent((prev) => {
+      const next: Record<string, AgentPresence> = { ...prev };
+      const now = new Date().toISOString();
+      for (const id of Object.keys(next)) {
+        const current = next[id] ?? DEFAULT_PRESENCE;
+        next[id] = {
+          status,
+          lastActivity: now,
+          agentThought:
+            thought !== undefined
+              ? thought
+              : (status === 'offline' ? null : current.agentThought),
+        };
+      }
+      return next;
+    });
+  }, []);
+
   const value = useMemo<AgentPresenceContextValue>(
-    () => ({ wsStatus, agentIds, presenceByAgent, profileSources: normalizedProfileSources }),
-    [wsStatus, agentIds, presenceByAgent, normalizedProfileSources],
+    () => ({
+      wsStatus,
+      agentIds,
+      presenceByAgent,
+      profileSources: normalizedProfileSources,
+      setAgentPresence,
+      setAllAgentStatus,
+    }),
+    [wsStatus, agentIds, presenceByAgent, normalizedProfileSources, setAgentPresence, setAllAgentStatus],
   );
 
   return <AgentPresenceContext.Provider value={value}>{children}</AgentPresenceContext.Provider>;
