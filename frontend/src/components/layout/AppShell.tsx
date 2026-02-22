@@ -146,8 +146,9 @@ export function AppShell({
             {showDesktopAgentRail ? (
               <aside
                 className={clsx(
-                  'cb-scrollbar-hidden min-h-0 shrink-0 overflow-x-hidden overflow-y-auto border-l border-slate-200 bg-slate-100/60',
-                  agentRailSlim ? 'w-[72px] p-2' : (compactDesktopRail ? 'w-[248px] p-2' : 'w-[320px] p-3'),
+                  'cb-scrollbar-hidden relative min-h-0 shrink-0 border-l border-slate-200 bg-slate-100/60',
+                  agentRailSlim ? 'z-20 overflow-visible' : 'overflow-x-visible overflow-y-auto',
+                  agentRailSlim ? 'w-[72px] p-2' : (compactDesktopRail ? 'w-[252px] p-2' : 'w-[252px] p-2'),
                 )}
               >
                 <div className={clsx('mb-2 flex', agentRailSlim ? 'justify-center' : 'justify-end')}>
@@ -158,14 +159,14 @@ export function AppShell({
                     aria-label={agentRailSlim ? 'Expand agent panel' : 'Collapse agent panel'}
                     title={agentRailSlim ? 'Expand panel' : 'Collapse panel'}
                   >
-                    {agentRailSlim ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+                    {agentRailSlim ? <ChevronsLeft size={14} /> : <ChevronsRight size={14} />}
                   </button>
                 </div>
 
                 {agentRailSlim ? (
-                  <AgentPresenceStrip className="h-[calc(100%-2rem)] pt-1" />
+                  <AgentPresenceStrip autoPopupOnThoughtChange className="h-[calc(100%-2rem)] pt-1" />
                 ) : (
-                  <AgentArcadePanel compact={compactDesktopRail} hideHeader={compactDesktopRail} />
+                  <AgentArcadePanel compact={compactDesktopRail} hideHeader={compactDesktopRail} showNowLine />
                 )}
               </aside>
             ) : null}

@@ -3,6 +3,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 interface AgentState {
   status: "thinking" | "idle" | "offline";
   timeoutHandle?: ReturnType<typeof setTimeout>;
+  lastThought?: string;
 }
 
 export default function register(api: OpenClawPluginApi) {
@@ -41,7 +42,10 @@ export default function register(api: OpenClawPluginApi) {
   async function sendStatus(
     agentId: string,
     status: "thinking" | "idle" | "offline",
-    { fireAndForget = false }: { fireAndForget?: boolean } = {},
+    {
+      fireAndForget = false,
+      thought,
+    }: { fireAndForget?: boolean; thought?: string } = {},
   ) {
     if (!webhookUrl) return;
 
@@ -50,10 +54,14 @@ export default function register(api: OpenClawPluginApi) {
       status === "idle"     ? "agent:idle"     :
                               "agent:offline";
 
-    const thought =
-      status === "thinking" ? "I am thinking..." :
-      status === "offline"  ? "Gateway offline"  :
-      undefined;
+    const effectiveThought =
+      thought !== undefined
+        ? thought
+        : status === "thinking"
+          ? "Thinking..."
+          : status === "offline"
+            ? "Gateway offline"
+            : undefined;
 
     const doFetch = async () => {
       // 3-second hard timeout — before_agent_start is awaited by OpenClaw before
@@ -64,7 +72,13 @@ export default function register(api: OpenClawPluginApi) {
         const res = await fetch(webhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ event, agentId, status, thought, timestamp: new Date().toISOString() }),
+          body: JSON.stringify({
+            event,
+            agentId,
+            status,
+            thought: effectiveThought,
+            timestamp: new Date().toISOString(),
+          }),
           signal: controller.signal,
         });
         if (!res.ok) {
@@ -90,6 +104,50 @@ export default function register(api: OpenClawPluginApi) {
     return ctx.agentId ?? "default";
   }
 
+  function sanitizeToolName(value: unknown): string {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "tool";
+    const cleaned = raw.replace(/[^a-zA-Z0-9_.:/-]/g, " ").replace(/\s+/g, " ").trim();
+    return (cleaned || "tool").slice(0, 32);
+  }
+
+  function toActionThought(toolName: unknown): string {
+    const normalized = sanitizeToolName(toolName);
+    const key = normalized.toLowerCase();
+    if (!key || key === "tool") return "Running task...";
+      if (key.includes("read") || key.includes("view") || key === "cat") return "Reading files...";
+    if (
+      key.includes("write") ||
+      key.includes("edit") ||
+      key.includes("apply_patch") ||
+      key.includes("patch") ||
+      key.includes("replace")
+    ) {
+        return "Editing code...";
+    }
+    if (key.includes("rg") || key.includes("grep") || key.includes("search") || key.includes("find")) {
+        return "Searching code...";
+    }
+    if (key.includes("test") || key.includes("vitest") || key.includes("jest") || key.includes("pytest")) {
+        return "Running tests...";
+    }
+    if (key.includes("git")) return "Working with git";
+    if (key.includes("exec") || key.includes("shell") || key.includes("bash") || key.includes("sh")) {
+        return "Running command...";
+    }
+      return `Using ${normalized}...`;
+  }
+
+  function updateThinkingThought(agentId: string, thought: string) {
+    const state = getOrCreateState(agentId);
+    if (state.status !== "thinking") {
+      state.status = "thinking";
+    }
+    if (state.lastThought === thought) return;
+    state.lastThought = thought;
+    void sendStatus(agentId, "thinking", { fireAndForget: true, thought });
+  }
+
   logger.info(`[clawboard-agent] registered · webhookUrl=${webhookUrl ? "(set)" : "(not set)"} · idleTimeoutMs=${idleTimeoutMs}`);
 
   // Modifying hook — OpenClaw awaits this before the agent runs.
@@ -98,12 +156,30 @@ export default function register(api: OpenClawPluginApi) {
     const agentId = agentIdFrom(ctx);
     const state = getOrCreateState(agentId);
     clearIdleTimer(agentId);
+    const nextThought = "Planning response...";
 
-    if (state.status === "thinking") return; // suppress duplicate on rapid messages
+    if (state.status === "thinking" && state.lastThought === nextThought) return; // suppress duplicates
 
     state.status = "thinking";
+    state.lastThought = nextThought;
     logger.info(`[clawboard-agent] ${agentId} → thinking`);
-    await sendStatus(agentId, "thinking");
+    await sendStatus(agentId, "thinking", { thought: nextThought });
+  });
+
+  // Modifying hook — runs before every tool execution.
+  api.on("before_tool_call", async (event, ctx) => {
+    const agentId = agentIdFrom(ctx);
+    clearIdleTimer(agentId);
+    updateThinkingThought(agentId, toActionThought(event.toolName));
+    return undefined;
+  });
+
+  // Void hook — update status text on tool failures.
+  api.on("after_tool_call", async (event, ctx) => {
+    if (!event.error) return;
+    const agentId = agentIdFrom(ctx);
+    clearIdleTimer(agentId);
+    updateThinkingThought(agentId, `Error: ${sanitizeToolName(event.toolName)}`);
   });
 
   // Void hook — start the idle countdown after the agent finishes.
@@ -117,6 +193,7 @@ export default function register(api: OpenClawPluginApi) {
       if (current?.status === "thinking") {
         current.status = "idle";
         current.timeoutHandle = undefined;
+        current.lastThought = undefined;
         logger.info(`[clawboard-agent] ${agentId} → idle`);
         await sendStatus(agentId, "idle");
       }
@@ -129,6 +206,7 @@ export default function register(api: OpenClawPluginApi) {
     const state = getOrCreateState(agentId);
     if (state.status !== "thinking") {
       state.status = "idle";
+      state.lastThought = undefined;
       await sendStatus(agentId, "idle");
     }
   });
@@ -139,6 +217,7 @@ export default function register(api: OpenClawPluginApi) {
       for (const [agentId, state] of agentStates) {
         clearIdleTimer(agentId);
         state.status = "idle";
+        state.lastThought = undefined;
         await sendStatus(agentId, "idle");
       }
     } else {
@@ -155,6 +234,7 @@ export default function register(api: OpenClawPluginApi) {
       for (const [agentId, state] of agentStates) {
         clearIdleTimer(agentId);
         state.status = "offline";
+        state.lastThought = "Gateway offline";
         void sendStatus(agentId, "offline", { fireAndForget: true });
       }
     } else {

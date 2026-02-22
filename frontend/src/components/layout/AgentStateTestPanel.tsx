@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useAgentPresence, type AgentStatus } from './AgentPresenceContext';
 
@@ -23,10 +23,20 @@ function isEnabled(): boolean {
 export function AgentStateTestPanel() {
   const enabled = useMemo(() => isEnabled(), []);
   const { agentIds, presenceByAgent, setAgentPresence, setAllAgentStatus } = useAgentPresence();
+  const [customThought, setCustomThought] = useState('');
+  const [targetAgent, setTargetAgent] = useState('');
+  const [targetStatus, setTargetStatus] = useState<AgentStatus>('thinking');
+  const ids = useMemo(() => (agentIds.length ? agentIds : ['tee', 'fay']), [agentIds]);
+  const activeTargetAgent = ids.includes(targetAgent) ? targetAgent : (ids[0] ?? '');
 
   if (!enabled) return null;
 
-  const ids = agentIds.length ? agentIds : ['tee', 'fay'];
+  function thoughtFor(status: AgentStatus): string | null {
+    if (status === 'offline') return null;
+    const typed = customThought.trim();
+    if (typed) return typed;
+    return SCENARIO_THOUGHT[status];
+  }
 
   function applyMixedScenario() {
     ids.forEach((id, idx) => {
@@ -56,7 +66,7 @@ export function AgentStateTestPanel() {
         <button
           type="button"
           className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 hover:bg-amber-100"
-          onClick={() => setAllAgentStatus('thinking', SCENARIO_THOUGHT.thinking)}
+          onClick={() => setAllAgentStatus('thinking', thoughtFor('thinking'))}
         >
           All Thinking
         </button>
@@ -74,6 +84,51 @@ export function AgentStateTestPanel() {
         >
           Mixed
         </button>
+      </div>
+
+      <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">Manual Thought</div>
+        <textarea
+          className="mb-2 min-h-14 w-full resize-y rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] leading-4 text-slate-800 outline-none focus:border-slate-400"
+          placeholder="Type custom thought text..."
+          value={customThought}
+          onChange={(e) => setCustomThought(e.target.value)}
+        />
+        <div className="flex items-center gap-1.5">
+          <select
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-1.5 py-1 text-[11px] text-slate-700 outline-none focus:border-slate-400"
+            value={activeTargetAgent}
+            onChange={(e) => setTargetAgent(e.target.value)}
+          >
+            {ids.map((id) => (
+              <option key={`target-${id}`} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-md border border-slate-300 bg-white px-1.5 py-1 text-[11px] text-slate-700 outline-none focus:border-slate-400"
+            value={targetStatus}
+            onChange={(e) => setTargetStatus(e.target.value as AgentStatus)}
+          >
+            {STATUS_ORDER.map((status) => (
+              <option key={`target-status-${status}`} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100"
+            onClick={() => {
+              const id = activeTargetAgent;
+              if (!id) return;
+              setAgentPresence(id, { status: targetStatus, agentThought: thoughtFor(targetStatus) });
+            }}
+          >
+            Apply
+          </button>
+        </div>
       </div>
 
       <div className="max-h-52 space-y-1.5 overflow-auto pr-1">
@@ -96,7 +151,7 @@ export function AgentStateTestPanel() {
                         ? 'bg-slate-900 text-white'
                         : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                     )}
-                    onClick={() => setAgentPresence(id, { status, agentThought: SCENARIO_THOUGHT[status] })}
+                    onClick={() => setAgentPresence(id, { status, agentThought: thoughtFor(status) })}
                   >
                     {status}
                   </button>
@@ -109,4 +164,3 @@ export function AgentStateTestPanel() {
     </aside>
   );
 }
-

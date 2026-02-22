@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { WsStatus } from '../../hooks/useWebSocket';
 import { normalizeAgentId, normalizeAgentIds, normalizeProfileSources, profileForAgent, type AgentProfileSources } from './agentProfile';
@@ -63,6 +64,7 @@ export function AgentPresenceProvider({
     const normalized = normalizeAgentIds(initialAgentIds);
     if (!normalized.length) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial ids are external input, synced once per prop change
     setAgentIds((prev) => {
       const seen = new Set(prev);
       let changed = false;
@@ -97,6 +99,7 @@ export function AgentPresenceProvider({
 
     const normalizedId = normalizeAgentId(String(data.agentId ?? ''));
     if (normalizedId && data.agentId !== '*') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- websocket event mutates membership and must sync ids immediately
       setAgentIds((prevIds) => (prevIds.includes(normalizedId) ? prevIds : [...prevIds, normalizedId]));
     }
 
@@ -107,10 +110,16 @@ export function AgentPresenceProvider({
         const ids = Object.keys(next);
         for (const id of ids) {
           const current = next[id] ?? DEFAULT_PRESENCE;
+          const nextThought =
+            status === 'offline'
+              ? null
+              : status === 'idle'
+                ? (data.thought ?? null)
+                : (data.thought ?? current.agentThought);
           next[id] = {
             status,
             lastActivity: data.lastActivity ?? current.lastActivity,
-            agentThought: status === 'offline' ? null : data.thought ?? current.agentThought,
+            agentThought: nextThought,
           };
         }
         return next;
@@ -120,10 +129,16 @@ export function AgentPresenceProvider({
       if (!normalizedId) return prev;
 
       const current = next[normalizedId] ?? DEFAULT_PRESENCE;
+      const nextThought =
+        status === 'offline'
+          ? null
+          : status === 'idle'
+            ? (data.thought ?? null)
+            : (data.thought ?? current.agentThought);
       next[normalizedId] = {
         status,
         lastActivity: data.lastActivity ?? current.lastActivity,
-        agentThought: status === 'offline' ? null : data.thought ?? current.agentThought,
+        agentThought: nextThought,
       };
       return next;
     });
@@ -139,7 +154,7 @@ export function AgentPresenceProvider({
       const nextStatus = patch.status ?? current.status;
       const nextThought = patch.agentThought !== undefined
         ? patch.agentThought
-        : (nextStatus === 'offline' ? null : current.agentThought);
+        : (nextStatus === 'thinking' ? current.agentThought : null);
 
       return {
         ...prev,
@@ -164,7 +179,7 @@ export function AgentPresenceProvider({
           agentThought:
             thought !== undefined
               ? thought
-              : (status === 'offline' ? null : current.agentThought),
+              : (status === 'thinking' ? current.agentThought : null),
         };
       }
       return next;
