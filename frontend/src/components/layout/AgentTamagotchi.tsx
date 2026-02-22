@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAgentPresence, useAgentProfile, type AgentPresence, type AgentStatus } from './AgentPresenceContext';
+import { AgentPresenceAvatar } from './AgentPresenceAvatar';
 import { normalizeAgentId, pickIdleQuote } from './agentProfile';
 
 const DEFAULT_AGENT_PRESENCE: AgentPresence = {
   status: 'offline',
   lastActivity: null,
   agentThought: null,
-};
-
-const STATUS_DOT_CLASS: Record<AgentStatus, string> = {
-  thinking: 'bg-amber-400',
-  idle: 'bg-emerald-400',
-  offline: 'bg-slate-400',
 };
 
 function shouldShowAppBadge(agentId: string): boolean {
@@ -89,10 +84,7 @@ export function AgentTamagotchi({
       onBlur={() => setFocused(false)}
       aria-label={`Open ${profile.displayName} activity`}
     >
-      <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-sm">
-        <span className="leading-none">{profile.avatar}</span>
-        <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${STATUS_DOT_CLASS[presence.status]}`} />
-      </span>
+      <AgentPresenceAvatar avatar={profile.avatar} status={presence.status} />
 
       <span className="min-w-0 flex-1 truncate text-sm text-slate-800">
         {profile.displayName}
@@ -123,4 +115,3 @@ export function AgentTamagotchi({
     </button>
   );
 }
-

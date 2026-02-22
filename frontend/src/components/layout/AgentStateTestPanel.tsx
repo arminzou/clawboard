@@ -36,7 +36,7 @@ export function AgentStateTestPanel() {
   }
 
   return (
-    <aside className="fixed bottom-4 left-20 z-50 w-[340px] max-w-[calc(100vw-6rem)] rounded-xl border border-amber-200/60 bg-white/95 p-3 text-slate-800 shadow-xl backdrop-blur-sm">
+    <aside className="fixed bottom-20 left-20 z-50 w-[340px] max-w-[calc(100vw-6rem)] rounded-xl border border-amber-200/60 bg-white/95 p-3 text-slate-800 shadow-xl backdrop-blur-sm">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Agent Test Mode</div>

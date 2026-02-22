@@ -27,7 +27,7 @@ export type AgentProfileSources = {
   config?: AgentProfileSourceMap;
 };
 
-const AVATARS = ['🤖', '🦊', '🐼', '🦉', '🐸', '🐙', '🦄', '🐧', '🦦', '🐺'];
+const AVATARS = ['🐱'];
 
 const QUOTES: Record<PersonaFlavor, string[]> = {
   methodical: [
