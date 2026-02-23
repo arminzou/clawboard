@@ -23,7 +23,7 @@ This document is the living plan for Clawboard. It tracks where we've been and w
 ### Documentation
 
 See `docs/` for detailed guides:
-- [`docs/openclaw-integration.md`](docs/openclaw-integration.md) — WebSocket, webhook system, Tamagotchi component
+- [`docs/openclaw-integration.md`](docs/openclaw-integration.md) — WebSocket, webhook system, agent component
 - [`docs/openclaw-auto-detect.md`](docs/openclaw-auto-detect.md) — Auto-detect workspace, agent discovery
 - [`docs/auto-generate-api-key.md`](docs/auto-generate-api-key.md) — Auto-generated API key mechanism
 - [`docs/clawboard-agent-plugin.md`](docs/clawboard-agent-plugin.md) — Native plugin for accurate agent lifecycle tracking
@@ -36,7 +36,7 @@ See `docs/` for detailed guides:
 | Auto-generate and store API key | ✅ |
 | Activity-reporting skill | ✅ |
 | Real-time session stream (WebSocket) | ✅ |
-| Agent presence display (Tamagotchi) | ✅ |
+| Agent presence display | ✅ |
 | Native OpenClaw plugin for lifecycle | ✅ |
 
 ### Native Plugin for Real-Time Agent Status
@@ -52,11 +52,11 @@ Plugin loads directly from `extensions/clawboard-agent/` via `plugins.load.paths
 
 ### Known Issues (Phase 11.1)
 
-- [ ] **Tamagotchi not updating in UI** — WebSocket connection issue
+- [ ] **Agent not updating in UI** — WebSocket connection issue
   - Frontend connects to `ws://localhost:5173/ws` but needs `ws://localhost:3001/ws`
   - Fix: Set `VITE_WS_BASE=ws://localhost:3001/ws` in frontend environment
   - Alternative: Use Vite proxy (`/ws` → backend) - not working correctly
-- [ ] **Frontend tests** — Added `AgentTamagotchi.test.tsx` for UI testing
+- [ ] **Frontend tests** — Added `AgentStatusRow.test.tsx` for UI testing
 - [x] **Webhook field mapping** — Fixed to handle `agentId`/`event` fields correctly
 
 ---

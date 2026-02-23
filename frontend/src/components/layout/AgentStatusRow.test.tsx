@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AgentPresenceProvider } from './AgentPresenceContext';
-import { AgentTamagotchi } from './AgentTamagotchi';
+import { AgentStatusRow } from './AgentStatusRow';
 
 function testTree(
   wsSignal?: { type?: string; data?: unknown } | null,
@@ -12,7 +12,7 @@ function testTree(
   return (
     <MemoryRouter>
       <AgentPresenceProvider wsSignal={wsSignal} initialAgentIds={['tee']}>
-        <AgentTamagotchi
+        <AgentStatusRow
           agentId="tee"
           showNowLine
           onPreviewAgentChange={options?.onPreviewAgentChange}
@@ -29,7 +29,7 @@ function renderAgentRow(
   return render(testTree(wsSignal, options));
 }
 
-describe('AgentTamagotchi thought rendering', () => {
+describe('AgentStatusRow thought rendering', () => {
   it('shows current thought in now line without row bubble', async () => {
     const thought = 'Using git.commit with amended author and running pnpm test with workspace filters.';
     renderAgentRow({

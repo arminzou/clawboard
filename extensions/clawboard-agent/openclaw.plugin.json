@@ -1,7 +1,7 @@
 {
   "id": "clawboard-agent",
   "name": "Clawboard Agent Tracker",
-  "description": "Tracks agent lifecycle events and reports to Clawboard for real-time Tamagotchi display",
+  "description": "Tracks agent lifecycle events and reports to Clawboard for real-time agent display",
   "version": "0.1.0",
   "openclaw": {
     "extensions": ["./index.ts"]

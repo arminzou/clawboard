@@ -81,11 +81,11 @@ app.use('/api', requireApiKey({ allowPaths: ['/health', '/webhook'] }));
 
 This allows OpenClaw to send events without managing API keys.
 
-### 4. Agent Tamagotchi Component
+### 4. Agent Status Row Component
 
-React component in sidebar showing agent status with a fun, Tamagotchi-like UI.
+React component in sidebar showing agent status UI.
 
-**Location:** `frontend/src/components/layout/AgentTamagotchi.tsx`
+**Location:** `frontend/src/components/layout/AgentStatusRow.tsx`
 
 **Features:**
 - Deterministic avatar/personality fallback for any `agentId`
@@ -159,7 +159,7 @@ Response:
 
 ## Sidebar Integration
 
-The AgentTamagotchi component is displayed in the sidebar:
+The agent status row component is displayed in the sidebar:
 
 ```tsx
 // frontend/src/components/layout/Sidebar.tsx

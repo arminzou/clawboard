@@ -2,7 +2,7 @@
 
 ## Overview
 
-A native OpenClaw plugin that tracks agent lifecycle events and reports real-time status to Clawboard for the Tamagotchi display.
+A native OpenClaw plugin that tracks agent lifecycle events and reports real-time status to Clawboard for the Agent display.
 
 ## Architecture
 

@@ -10,7 +10,7 @@ const DEFAULT_AGENT_PRESENCE: AgentPresence = {
   agentThought: null,
 };
 
-export function AgentTamagotchi({
+export function AgentStatusRow({
   agentId = 'agent',
   compact = false,
   slot = false,

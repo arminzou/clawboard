@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { FloatingPortal, flip, offset, shift, useFloating } from '@floating-ui/react';
-import { AgentTamagotchi } from './AgentTamagotchi';
+import { AgentStatusRow } from './AgentStatusRow';
 import { useAgentPresence, type AgentStatus } from './AgentPresenceContext';
 import { profileForAgent } from './agentProfile';
 
@@ -137,7 +137,7 @@ export function AgentArcadePanel({
         ) : (
           <div className="cb-scrollbar-hidden min-w-0 w-full max-w-full flex gap-1.5 overflow-x-auto overflow-y-hidden pb-1">
             {sortedAgentIds.map((id) => (
-              <AgentTamagotchi
+              <AgentStatusRow
                 key={id}
                 agentId={id}
                 compact
@@ -179,7 +179,7 @@ export function AgentArcadePanel({
             {groups.thinking.length ? (
               <AgentGroup title="Thinking" count={groups.thinking.length}>
                 {groups.thinking.map((id) => (
-                  <AgentTamagotchi
+                  <AgentStatusRow
                     key={id}
                     agentId={id}
                     compact={compact}
@@ -195,7 +195,7 @@ export function AgentArcadePanel({
             {groups.online.length ? (
               <AgentGroup title="Online" count={groups.online.length}>
                 {groups.online.map((id) => (
-                  <AgentTamagotchi
+                  <AgentStatusRow
                     key={id}
                     agentId={id}
                     compact={compact}
@@ -211,7 +211,7 @@ export function AgentArcadePanel({
             {groups.offline.length ? (
               <AgentGroup title="Offline" count={groups.offline.length}>
                 {groups.offline.map((id) => (
-                  <AgentTamagotchi
+                  <AgentStatusRow
                     key={id}
                     agentId={id}
                     compact={compact}

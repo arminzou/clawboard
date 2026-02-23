@@ -1,4 +1,4 @@
-# AgentTamagotchi Redesign
+# Agent Status Row / Arcade Redesign
 
 ## Phase 1: Code Cleanup (Completed ✅)
 
@@ -148,7 +148,7 @@ Chosen direction:
 
 ### Global Presence Requirement
 
-- Tamagotchi panel must be visible across **all primary pages**:
+- Agent panel must be visible across **all primary pages**:
   - Kanban
   - Activity
   - Docs

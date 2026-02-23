@@ -21,7 +21,7 @@ Reports agent events to Clawboard for real-time presence tracking and activity d
 ## What It Does
 
 - Sends webhook notifications to Clawboard when agent events occur
-- Enables the Tamagotchi agent presence display in Clawboard
+- Enables the agent presence display in Clawboard
 - Tracks agent status (active, thinking, idle, offline)
 
 ## Requirements
