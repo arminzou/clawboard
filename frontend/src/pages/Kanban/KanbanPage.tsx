@@ -407,30 +407,69 @@ export function KanbanPage({
 
   async function handleBulkAssign(assignee: Assignee | null) {
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => api.updateTask(id, { assigned_to: assignee })));
-    clearSelection();
-    await refresh();
+    if (!ids.length) return;
+
+    try {
+      const { updated } = await api.bulkAssignAssignee(ids, assignee);
+      clearSelection();
+      await refresh();
+
+      const assigneeLabel = assignee ?? 'Unassigned';
+      toast.success(`Assigned ${updated} task${updated === 1 ? '' : 's'} to ${assigneeLabel}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to assign tasks: ${msg}`);
+    }
   }
 
   async function handleBulkProject(projectId: number | null) {
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => api.updateTask(id, { project_id: projectId })));
-    clearSelection();
-    await refresh();
+    if (!ids.length) return;
+
+    try {
+      const { updated } = await api.bulkAssignProject(ids, projectId);
+      clearSelection();
+      await refresh();
+
+      const targetLabel =
+        projectId == null
+          ? 'Unassigned'
+          : (projects.find((p) => p.id === projectId)?.name ?? `Project #${projectId}`);
+      toast.success(`Assigned ${updated} task${updated === 1 ? '' : 's'} to ${targetLabel}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to assign project: ${msg}`);
+    }
   }
 
   async function handleBulkStatus(status: TaskStatus) {
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => api.updateTask(id, { status })));
-    clearSelection();
-    await refresh();
+    if (!ids.length) return;
+
+    try {
+      const { updated } = await api.bulkUpdateStatus(ids, status);
+      clearSelection();
+      await refresh();
+      toast.success(`Moved ${updated} task${updated === 1 ? '' : 's'} to ${status}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to update status: ${msg}`);
+    }
   }
 
   async function handleBulkDelete() {
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => api.deleteTask(id)));
-    clearSelection();
-    await refresh();
+    if (!ids.length) return;
+
+    try {
+      const { deleted } = await api.bulkDeleteTasks(ids);
+      clearSelection();
+      await refresh();
+      toast.success(`Deleted ${deleted} task${deleted === 1 ? '' : 's'}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Failed to delete tasks: ${msg}`);
+    }
   }
 
   async function handleBulkDuplicate() {

@@ -1,9 +1,16 @@
 import type { Task, TaskStatus } from '../domain/task';
-import type { CreateTaskBody, ListTasksParams, TaskRepository, UpdateTaskBody, ReorderTaskInput } from '../repositories/taskRepository';
+import type { CreateTaskBody, ListTasksParams, TaskRepository, UpdateTaskBody } from '../repositories/taskRepository';
 import { HttpError } from '../presentation/http/errors/httpError';
 
 export class TaskService {
   constructor(private readonly repo: TaskRepository) {}
+
+  private normalizeBulkIds(ids: number[]): number[] {
+    if (!Array.isArray(ids) || ids.length === 0) throw new HttpError(400, 'No task ids provided');
+    const uniqueIds = Array.from(new Set(ids.map((raw) => Number(raw))));
+    if (uniqueIds.some((id) => !Number.isFinite(id))) throw new HttpError(400, 'Invalid task id');
+    return uniqueIds;
+  }
 
   list(params: ListTasksParams = {}): Task[] {
     return this.repo.list(params);
@@ -44,30 +51,49 @@ export class TaskService {
     }
   }
 
-  reorder(updates: ReorderTaskInput[]): { updated: number } {
-    if (!Array.isArray(updates) || updates.length === 0) throw new HttpError(400, 'No reorder updates');
+  bulkAssignProject(ids: number[], projectId: number | null): { updated: number } {
+    const uniqueIds = this.normalizeBulkIds(ids);
 
-    const allowed: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
-    const normalized = updates.map((item) => {
-      if (!item || typeof item !== 'object') throw new HttpError(400, 'Invalid reorder payload');
-      const id = Number((item as ReorderTaskInput).id);
-      const status = (item as ReorderTaskInput).status as TaskStatus;
-      const position = (item as ReorderTaskInput).position;
-
-      if (!Number.isFinite(id)) throw new HttpError(400, 'Invalid task id');
-      if (!allowed.includes(status)) throw new HttpError(400, 'Invalid status');
-      if (position !== null && !Number.isFinite(Number(position))) throw new HttpError(400, 'Invalid position');
-
-      return { id, status, position: position === null ? null : Number(position) };
-    });
-
-    try {
-      return this.repo.reorder(normalized);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg === 'Task not found') throw new HttpError(404, 'Task not found');
-      throw err;
+    let normalizedProjectId: number | null = null;
+    if (projectId !== null) {
+      const n = Number(projectId);
+      if (!Number.isFinite(n)) throw new HttpError(400, 'Invalid project id');
+      normalizedProjectId = n;
     }
+
+    return this.repo.bulkAssignProject({
+      ids: uniqueIds,
+      project_id: normalizedProjectId,
+    });
+  }
+
+  bulkAssignAssignee(ids: number[], assigneeRaw: unknown): { updated: number } {
+    const uniqueIds = this.normalizeBulkIds(ids);
+    const allowed: Array<Task['assigned_to']> = ['tee', 'fay', 'armin', null];
+    const assignee = assigneeRaw as Task['assigned_to'];
+    if (!allowed.includes(assignee)) throw new HttpError(400, 'Invalid assignee');
+
+    return this.repo.bulkAssignAssignee({
+      ids: uniqueIds,
+      assigned_to: assignee,
+    });
+  }
+
+  bulkUpdateStatus(ids: number[], statusRaw: unknown): { updated: number } {
+    const uniqueIds = this.normalizeBulkIds(ids);
+    const allowed: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
+    const status = statusRaw as TaskStatus;
+    if (!allowed.includes(status)) throw new HttpError(400, 'Invalid status');
+
+    return this.repo.bulkUpdateStatus({
+      ids: uniqueIds,
+      status,
+    });
+  }
+
+  bulkDelete(ids: number[]): { deleted: number } {
+    const uniqueIds = this.normalizeBulkIds(ids);
+    return this.repo.bulkDelete(uniqueIds);
   }
 
   delete(id: number): void {

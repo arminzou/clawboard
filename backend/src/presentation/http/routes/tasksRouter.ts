@@ -64,13 +64,55 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
     }
   });
 
-  // POST /api/tasks/reorder
-  router.post('/reorder', (req: Request, res: Response, next: NextFunction) => {
+  // POST /api/tasks/bulk/project
+  router.post('/bulk/project', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const payload = req.body as { updates?: unknown } | unknown;
-      const updates = Array.isArray(payload) ? payload : (payload as { updates?: unknown })?.updates;
-      const result = service.reorder(updates as any);
-      broadcast?.({ type: 'tasks_reordered', data: { updated: result.updated } });
+      const body = (req.body ?? {}) as { ids?: unknown; project_id?: unknown };
+      const ids = Array.isArray(body.ids) ? body.ids.map((id) => Number(id)) : [];
+      const projectId = body.project_id === undefined || body.project_id === null ? null : Number(body.project_id);
+      const result = service.bulkAssignProject(ids, projectId);
+      broadcast?.({ type: 'tasks_bulk_updated', data: { project_assigned: result.updated, project_id: projectId } });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/tasks/bulk/assignee
+  router.post('/bulk/assignee', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = (req.body ?? {}) as { ids?: unknown; assigned_to?: unknown };
+      const ids = Array.isArray(body.ids) ? body.ids.map((id) => Number(id)) : [];
+      const assignee = body.assigned_to;
+      const result = service.bulkAssignAssignee(ids, assignee);
+      broadcast?.({ type: 'tasks_bulk_updated', data: { assignee_assigned: result.updated, assigned_to: assignee } });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/tasks/bulk/status
+  router.post('/bulk/status', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = (req.body ?? {}) as { ids?: unknown; status?: unknown };
+      const ids = Array.isArray(body.ids) ? body.ids.map((id) => Number(id)) : [];
+      const status = body.status;
+      const result = service.bulkUpdateStatus(ids, status);
+      broadcast?.({ type: 'tasks_bulk_updated', data: { status_updated: result.updated, status } });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/tasks/bulk/delete
+  router.post('/bulk/delete', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = (req.body ?? {}) as { ids?: unknown };
+      const ids = Array.isArray(body.ids) ? body.ids.map((id) => Number(id)) : [];
+      const result = service.bulkDelete(ids);
+      broadcast?.({ type: 'tasks_bulk_updated', data: { deleted: result.deleted } });
       res.json(result);
     } catch (err) {
       next(err);

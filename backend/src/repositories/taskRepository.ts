@@ -97,10 +97,19 @@ export type UpdateTaskBody = Partial<
   tags?: string[] | string | null;
 };
 
-export type ReorderTaskInput = {
-  id: number;
+export type BulkAssignProjectInput = {
+  ids: number[];
+  project_id: number | null;
+};
+
+export type BulkAssignAssigneeInput = {
+  ids: number[];
+  assigned_to: Task['assigned_to'];
+};
+
+export type BulkUpdateStatusInput = {
+  ids: number[];
   status: TaskStatus;
-  position: number | null;
 };
 
 export class TaskRepository {
@@ -315,29 +324,86 @@ export class TaskRepository {
     return updated;
   }
 
-  reorder(updates: ReorderTaskInput[]): { updated: number } {
-    if (!updates.length) return { updated: 0 };
+  bulkAssignProject(input: BulkAssignProjectInput): { updated: number } {
+    const uniqueIds = Array.from(new Set(input.ids));
+    if (!uniqueIds.length) return { updated: 0 };
 
     const now = new Date().toISOString();
-    const stmt = this.db.prepare(
-      'UPDATE tasks SET status = ?, position = ?, completed_at = ?, updated_at = ? WHERE id = ?'
-    );
+    const projectId = input.project_id != null ? Number(input.project_id) : null;
+    const stmt = this.db.prepare('UPDATE tasks SET project_id = ?, updated_at = ? WHERE id = ?');
 
-    const tx = this.db.transaction((items: ReorderTaskInput[]) => {
+    const tx = this.db.transaction((ids: number[]) => {
       let updated = 0;
-      for (const item of items) {
-        const existing = this.getById(item.id);
-        if (!existing) throw new Error('Task not found');
-        const completedAt = item.status === 'done'
-          ? (existing.status === 'done' ? existing.completed_at : now)
-          : null;
-        stmt.run(item.status, item.position ?? 0, completedAt, now, item.id);
-        updated += 1;
+      for (const id of ids) {
+        const result = stmt.run(projectId, now, id) as { changes: number };
+        updated += result.changes;
       }
       return updated;
     });
 
-    return { updated: tx(updates) };
+    return { updated: tx(uniqueIds) };
+  }
+
+  bulkAssignAssignee(input: BulkAssignAssigneeInput): { updated: number } {
+    const uniqueIds = Array.from(new Set(input.ids));
+    if (!uniqueIds.length) return { updated: 0 };
+
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare('UPDATE tasks SET assigned_to = ?, updated_at = ? WHERE id = ?');
+
+    const tx = this.db.transaction((ids: number[]) => {
+      let updated = 0;
+      for (const id of ids) {
+        const result = stmt.run(input.assigned_to, now, id) as { changes: number };
+        updated += result.changes;
+      }
+      return updated;
+    });
+
+    return { updated: tx(uniqueIds) };
+  }
+
+  bulkUpdateStatus(input: BulkUpdateStatusInput): { updated: number } {
+    const uniqueIds = Array.from(new Set(input.ids));
+    if (!uniqueIds.length) return { updated: 0 };
+
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare('UPDATE tasks SET status = ?, completed_at = ?, updated_at = ? WHERE id = ?');
+
+    const tx = this.db.transaction((ids: number[]) => {
+      let updated = 0;
+      for (const id of ids) {
+        const existing = this.getById(id);
+        if (!existing) continue;
+
+        const completedAt =
+          input.status === 'done'
+            ? (existing.status === 'done' ? existing.completed_at : now)
+            : null;
+        const result = stmt.run(input.status, completedAt, now, id) as { changes: number };
+        updated += result.changes;
+      }
+      return updated;
+    });
+
+    return { updated: tx(uniqueIds) };
+  }
+
+  bulkDelete(ids: number[]): { deleted: number } {
+    const uniqueIds = Array.from(new Set(ids));
+    if (!uniqueIds.length) return { deleted: 0 };
+
+    const stmt = this.db.prepare('DELETE FROM tasks WHERE id = ?');
+    const tx = this.db.transaction((taskIds: number[]) => {
+      let deleted = 0;
+      for (const id of taskIds) {
+        const result = stmt.run(id) as { changes: number };
+        deleted += result.changes;
+      }
+      return deleted;
+    });
+
+    return { deleted: tx(uniqueIds) };
   }
 
   delete(id: number): { changes: number } {

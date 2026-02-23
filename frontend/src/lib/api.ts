@@ -199,12 +199,42 @@ export const api = {
     );
   },
 
-  async reorderTasks(updates: Array<Pick<Task, 'id' | 'status' | 'position'>>) {
+  async bulkAssignProject(ids: number[], projectId: number | null) {
     return json<{ updated: number }>(
-      await fetch(withBase('/api/tasks/reorder'), {
+      await fetch(withBase('/api/tasks/bulk/project'), {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ updates }),
+        body: JSON.stringify({ ids, project_id: projectId }),
+      }),
+    );
+  },
+
+  async bulkAssignAssignee(ids: number[], assignee: Assignee) {
+    return json<{ updated: number }>(
+      await fetch(withBase('/api/tasks/bulk/assignee'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ ids, assigned_to: assignee }),
+      }),
+    );
+  },
+
+  async bulkUpdateStatus(ids: number[], status: TaskStatus) {
+    return json<{ updated: number }>(
+      await fetch(withBase('/api/tasks/bulk/status'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ ids, status }),
+      }),
+    );
+  },
+
+  async bulkDeleteTasks(ids: number[]) {
+    return json<{ deleted: number }>(
+      await fetch(withBase('/api/tasks/bulk/delete'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ ids }),
       }),
     );
   },
