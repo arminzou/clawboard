@@ -232,13 +232,6 @@ function useFocusTrap({
 
     const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    // Ensure focus starts inside the modal without overriding autofocus behavior.
-    queueMicrotask(() => {
-      if (containerEl.contains(document.activeElement)) return;
-      const targets = getFocusableElements(containerEl);
-      (targets[0] ?? containerEl).focus();
-    });
-
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape' && onEscapeRef.current) {
         e.preventDefault();
@@ -348,6 +341,7 @@ export function EditTaskModal({
   const modalRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
@@ -432,12 +426,12 @@ export function EditTaskModal({
               <div className="text-xs text-[rgb(var(--cb-text-muted))]">Status: {status}</div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="-mr-1 flex shrink-0 items-center">
               <Controller
                 control={control}
                 name="isSomeday"
                 render={({ field }) => (
-                  <label className="flex cursor-pointer items-center gap-1.5">
+                  <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
                     <input
                       type="checkbox"
                       checked={Boolean(field.value)}
@@ -448,9 +442,6 @@ export function EditTaskModal({
                   </label>
                 )}
               />
-            </div>
-
-            <div className="-mr-1 -mt-1 flex items-center gap-1">
               <Button
                 variant="ghost-danger"
                 size="icon"
@@ -473,21 +464,17 @@ export function EditTaskModal({
                   />
                 </svg>
               </Button>
-
-              <div className="mx-1 h-4 w-px bg-[rgb(var(--cb-border))]" />
-
-              <Button variant="ghost" size="sm" className="px-2" onClick={requestClose} aria-label="Close">
+              <Button variant="ghost" size="icon" onClick={requestClose} aria-label="Close">
                 ✕
               </Button>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col gap-3">
+          <div className="mt-2 flex flex-col gap-2.5">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Title</div>
               <Input
                 {...register('title')}
-                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -502,7 +489,7 @@ export function EditTaskModal({
               <textarea
                 {...register('description')}
                 className="cb-input w-full"
-                rows={4}
+                rows={5}
               />
             </label>
 
@@ -517,35 +504,7 @@ export function EditTaskModal({
               />
             </label>
 
-            <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
-              <textarea
-                {...register('blockedReason')}
-                className="cb-input w-full"
-                rows={2}
-                placeholder="Optional…"
-              />
-            </label>
-
             <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
-                <Controller
-                  control={control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <MenuSelect
-                      value={field.value ? String(field.value) : ''}
-                      onChange={(value) => field.onChange(value ? Number(value) : null)}
-                      options={[
-                        { value: '', label: '(unassigned)' },
-                        ...projects.map((p) => ({ value: String(p.id), label: p.name })),
-                      ]}
-                    />
-                  )}
-                />
-              </label>
-
               <label className="text-sm">
                 <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
                 <Controller
@@ -559,32 +518,6 @@ export function EditTaskModal({
                     />
                   )}
                 />
-              </label>
-
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-                <Controller
-                  control={control}
-                  name="priority"
-                  render={({ field }) => (
-                    <MenuSelect
-                      value={field.value ?? ''}
-                      onChange={(value) => field.onChange((value || null) as TaskPriority)}
-                      options={[
-                        { value: '', label: '(none)' },
-                        { value: 'low', label: 'low' },
-                        { value: 'medium', label: 'medium' },
-                        { value: 'high', label: 'high' },
-                        { value: 'urgent', label: 'urgent' },
-                      ]}
-                    />
-                  )}
-                />
-              </label>
-
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
-                <Input type="date" {...register('dueDate')} />
               </label>
 
               <label className="text-sm">
@@ -608,40 +541,110 @@ export function EditTaskModal({
               </label>
             </div>
 
-            <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] p-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Timeline</div>
-              <div className="mt-2 flex flex-col gap-1.5 text-xs text-[rgb(var(--cb-text-muted))]">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Calendar size={14} />
-                    <span>Created</span>
-                  </div>
-                  <span className="font-medium text-[rgb(var(--cb-text))]" title={task.created_at}>
-                    {formatDateTimeFull(task.created_at) || '—'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Clock size={14} />
-                    <span>Updated</span>
-                  </div>
-                  <span className="font-medium text-[rgb(var(--cb-text))]" title={task.updated_at ?? task.created_at}>
-                    {formatDateTimeFull(task.updated_at ?? task.created_at) || '—'}
-                  </span>
-                </div>
-                {task.completed_at ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <CheckCircle2 size={14} />
-                      <span>Completed</span>
-                    </div>
-                    <span className="font-medium text-[rgb(var(--cb-text))]" title={task.completed_at}>
-                      {formatDateTimeFull(task.completed_at) || '—'}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
+            <div>
+              <button
+                type="button"
+                className="text-xs font-medium text-[rgb(var(--cb-accent))] hover:underline"
+                onClick={() => setShowAdvanced((prev) => !prev)}
+              >
+                {showAdvanced ? 'Hide advanced' : 'Show advanced'}
+              </button>
             </div>
+
+            {showAdvanced ? (
+              <>
+                <label className="text-sm">
+                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+                  <textarea
+                    {...register('blockedReason')}
+                    className="cb-input w-full"
+                    rows={2}
+                    placeholder="Optional…"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
+                    <Controller
+                      control={control}
+                      name="projectId"
+                      render={({ field }) => (
+                        <MenuSelect
+                          value={field.value ? String(field.value) : ''}
+                          onChange={(value) => field.onChange(value ? Number(value) : null)}
+                          options={[
+                            { value: '', label: '(unassigned)' },
+                            ...projects.map((p) => ({ value: String(p.id), label: p.name })),
+                          ]}
+                        />
+                      )}
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
+                    <Controller
+                      control={control}
+                      name="priority"
+                      render={({ field }) => (
+                        <MenuSelect
+                          value={field.value ?? ''}
+                          onChange={(value) => field.onChange((value || null) as TaskPriority)}
+                          options={[
+                            { value: '', label: '(none)' },
+                            { value: 'low', label: 'low' },
+                            { value: 'medium', label: 'medium' },
+                            { value: 'high', label: 'high' },
+                            { value: 'urgent', label: 'urgent' },
+                          ]}
+                        />
+                      )}
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
+                    <Input type="date" {...register('dueDate')} />
+                  </label>
+                </div>
+
+                <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Timeline</div>
+                  <div className="mt-2 flex flex-col gap-1.5 text-xs text-[rgb(var(--cb-text-muted))]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Calendar size={14} />
+                        <span>Created</span>
+                      </div>
+                      <span className="font-medium text-[rgb(var(--cb-text))]" title={task.created_at}>
+                        {formatDateTimeFull(task.created_at) || '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Clock size={14} />
+                        <span>Updated</span>
+                      </div>
+                      <span className="font-medium text-[rgb(var(--cb-text))]" title={task.updated_at ?? task.created_at}>
+                        {formatDateTimeFull(task.updated_at ?? task.created_at) || '—'}
+                      </span>
+                    </div>
+                    {task.completed_at ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <CheckCircle2 size={14} />
+                          <span>Completed</span>
+                        </div>
+                        <span className="font-medium text-[rgb(var(--cb-text))]" title={task.completed_at}>
+                          {formatDateTimeFull(task.completed_at) || '—'}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </>
+            ) : null}
 
             <div className="mt-6 flex items-center justify-end gap-2 border-t border-[rgb(var(--cb-border))] pt-4">
               <Button variant="primary" className="w-full sm:w-auto" disabled={saving || deleting} onClick={save}>
@@ -717,6 +720,7 @@ export function CreateTaskModal({
   projects?: Project[];
 }) {
   const [saving, setSaving] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
@@ -806,12 +810,12 @@ export function CreateTaskModal({
               <div className="text-base font-semibold text-[rgb(var(--cb-text))]">Create task</div>
               <div className="text-xs text-[rgb(var(--cb-text-muted))]">Fill in the basics. You can edit later.</div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="-mr-1 flex shrink-0 items-center gap-2">
               <Controller
                 control={control}
                 name="isSomeday"
                 render={({ field }) => (
-                  <label className="flex cursor-pointer items-center gap-1.5">
+                  <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
                     <input
                       type="checkbox"
                       checked={Boolean(field.value)}
@@ -822,13 +826,13 @@ export function CreateTaskModal({
                   </label>
                 )}
               />
-              <Button variant="ghost" size="sm" className="px-2" onClick={requestClose} aria-label="Close">
+              <Button variant="ghost" size="icon" onClick={requestClose} aria-label="Close">
                 ✕
               </Button>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col gap-3">
+          <div className="mt-2 flex flex-col gap-2.5">
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Title</div>
               <Input
@@ -840,13 +844,12 @@ export function CreateTaskModal({
                   }
                 }}
                 placeholder="e.g. Refactor Kanban column headers"
-                autoFocus
               />
             </label>
 
             <label className="text-sm">
               <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Description</div>
-              <textarea {...register('description')} className="cb-input w-full" rows={4} placeholder="Optional…" />
+              <textarea {...register('description')} className="cb-input w-full" rows={5} placeholder="Optional…" />
             </label>
 
             <label className="text-sm">
@@ -860,30 +863,7 @@ export function CreateTaskModal({
               />
             </label>
 
-            <label className="text-sm">
-              <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
-              <textarea {...register('blockedReason')} className="cb-input w-full" rows={2} placeholder="Optional…" />
-            </label>
-
             <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
-                <Controller
-                  control={control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <MenuSelect
-                      value={field.value ? String(field.value) : ''}
-                      onChange={(value) => field.onChange(value ? Number(value) : null)}
-                      options={[
-                        { value: '', label: '(unassigned)' },
-                        ...projects.map((p) => ({ value: String(p.id), label: p.name })),
-                      ]}
-                    />
-                  )}
-                />
-              </label>
-
               <label className="text-sm">
                 <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Status</div>
                 <Controller
@@ -897,32 +877,6 @@ export function CreateTaskModal({
                     />
                   )}
                 />
-              </label>
-
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
-                <Controller
-                  control={control}
-                  name="priority"
-                  render={({ field }) => (
-                    <MenuSelect
-                      value={field.value ?? ''}
-                      onChange={(value) => field.onChange((value || null) as TaskPriority)}
-                      options={[
-                        { value: '', label: '(none)' },
-                        { value: 'low', label: 'low' },
-                        { value: 'medium', label: 'medium' },
-                        { value: 'high', label: 'high' },
-                        { value: 'urgent', label: 'urgent' },
-                      ]}
-                    />
-                  )}
-                />
-              </label>
-
-              <label className="text-sm">
-                <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
-                <Input type="date" {...register('dueDate')} />
               </label>
 
               <label className="text-sm">
@@ -945,6 +899,71 @@ export function CreateTaskModal({
                 />
               </label>
             </div>
+
+            <div>
+              <button
+                type="button"
+                className="text-xs font-medium text-[rgb(var(--cb-accent))] hover:underline"
+                onClick={() => setShowAdvanced((prev) => !prev)}
+              >
+                {showAdvanced ? 'Hide advanced' : 'Show advanced'}
+              </button>
+            </div>
+
+            {showAdvanced ? (
+              <>
+                <label className="text-sm">
+                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+                  <textarea {...register('blockedReason')} className="cb-input w-full" rows={2} placeholder="Optional…" />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
+                    <Controller
+                      control={control}
+                      name="projectId"
+                      render={({ field }) => (
+                        <MenuSelect
+                          value={field.value ? String(field.value) : ''}
+                          onChange={(value) => field.onChange(value ? Number(value) : null)}
+                          options={[
+                            { value: '', label: '(unassigned)' },
+                            ...projects.map((p) => ({ value: String(p.id), label: p.name })),
+                          ]}
+                        />
+                      )}
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</div>
+                    <Controller
+                      control={control}
+                      name="priority"
+                      render={({ field }) => (
+                        <MenuSelect
+                          value={field.value ?? ''}
+                          onChange={(value) => field.onChange((value || null) as TaskPriority)}
+                          options={[
+                            { value: '', label: '(none)' },
+                            { value: 'low', label: 'low' },
+                            { value: 'medium', label: 'medium' },
+                            { value: 'high', label: 'high' },
+                            { value: 'urgent', label: 'urgent' },
+                          ]}
+                        />
+                      )}
+                    />
+                  </label>
+
+                  <label className="text-sm">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
+                    <Input type="date" {...register('dueDate')} />
+                  </label>
+                </div>
+              </>
+            ) : null}
 
             <div className="mt-2 flex justify-end gap-2">
               <Button variant="secondary" onClick={requestClose} disabled={saving}>
