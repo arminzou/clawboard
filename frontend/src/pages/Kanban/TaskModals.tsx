@@ -47,7 +47,7 @@ function TagPicker({
   availableTags,
   value,
   onChange,
-  placeholder = 'Search or add tag',
+  placeholder = 'Add tag (press Enter)',
 }: {
   availableTags: string[];
   value: string[];
@@ -58,17 +58,18 @@ function TagPicker({
   const normalizedQuery = normalizeTag(query);
   const selected = useMemo(() => mergeTags(value), [value]);
   const options = useMemo(() => mergeTags(availableTags), [availableTags]);
-
-  const filteredOptions = useMemo(() => {
+  const unselected = useMemo(() => options.filter((tag) => !hasTag(selected, tag)), [options, selected]);
+  const suggested = useMemo(() => {
     const needle = normalizedQuery.toLowerCase();
-    return options
-      .filter((tag) => !hasTag(selected, tag))
-      .filter((tag) => !needle || tag.toLowerCase().includes(needle))
-      .slice(0, 12);
-  }, [normalizedQuery, options, selected]);
-
-  const canCreate =
-    normalizedQuery.length > 0 && !hasTag(options, normalizedQuery) && !hasTag(selected, normalizedQuery);
+    const matches = unselected.filter((tag) => !needle || tag.toLowerCase().includes(needle));
+    // Keep the suggestions area stable: when query has no matches, fall back to default suggestions.
+    return (matches.length > 0 ? matches : unselected).slice(0, 8);
+  }, [normalizedQuery, unselected]);
+  const canCreate = normalizedQuery.length > 0 && !hasTag(options, normalizedQuery) && !hasTag(selected, normalizedQuery);
+  const exactMatch = useMemo(
+    () => unselected.find((tag) => tag.toLowerCase() === normalizedQuery.toLowerCase()) ?? null,
+    [normalizedQuery, unselected],
+  );
 
   function addTag(tag: string) {
     const normalized = normalizeTag(tag);
@@ -83,23 +84,28 @@ function TagPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <Input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter') return;
-          if (!normalizedQuery) return;
-          if (!canCreate) return;
-          e.preventDefault();
-          addTag(normalizedQuery);
-        }}
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            if (!normalizedQuery) return;
+            e.preventDefault();
+            if (exactMatch) {
+              addTag(exactMatch);
+              return;
+            }
+            if (canCreate) addTag(normalizedQuery);
+          }}
+        />
+      </div>
 
       {selected.length > 0 ? (
-        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto pr-1">
+        <div className="flex flex-wrap gap-1.5">
           {selected.map((tag) => (
-            <Chip key={tag} variant="soft" className="pr-1">
+            <Chip key={tag} variant="soft" className="shrink-0 pr-1">
               <span className="max-w-[140px] truncate" title={tag}>
                 {tag}
               </span>
@@ -114,32 +120,25 @@ function TagPicker({
             </Chip>
           ))}
         </div>
-      ) : (
-        <div className="text-xs text-[rgb(var(--cb-text-muted))]">No tags selected.</div>
-      )}
-
-      <div className="flex flex-wrap gap-1.5">
-        {filteredOptions.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            className="transition hover:scale-[1.02]"
-            onClick={() => addTag(tag)}
-            title={`Add tag ${tag}`}
-          >
-            <Chip variant="neutral">{tag}</Chip>
-          </button>
-        ))}
-        {canCreate ? (
-          <Button size="sm" variant="secondary" onClick={() => addTag(normalizedQuery)}>
-            Create “{normalizedQuery}”
-          </Button>
-        ) : null}
-      </div>
-
-      {filteredOptions.length === 0 && !canCreate ? (
-        <div className="text-xs text-[rgb(var(--cb-text-muted))]">No matches.</div>
       ) : null}
+
+      {suggested.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="shrink-0 text-xs text-[rgb(var(--cb-text-muted))]">Suggested:</span>
+          {suggested.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              className="transition hover:scale-[1.02]"
+              onClick={() => addTag(tag)}
+              title={`Add tag ${tag}`}
+            >
+              <Chip variant="neutral">{tag}</Chip>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
     </div>
   );
 }
