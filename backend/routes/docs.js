@@ -6,7 +6,7 @@ const { syncDocs } = require('../utils/syncDocs');
 // Get all tracked documents
 router.get('/', (req, res) => {
     const db = req.app.locals.db;
-    const { git_status, limit = 100, project_id } = req.query;
+    const { git_status, limit = 100 } = req.query;
     
     let query = 'SELECT * FROM documents';
     const conditions = [];
@@ -16,11 +16,6 @@ router.get('/', (req, res) => {
         conditions.push('git_status = ?');
         params.push(git_status);
     }
-    if (project_id) {
-        conditions.push('project_id = ?');
-        params.push(project_id);
-    }
-    
     if (conditions.length > 0) {
         query += ' WHERE ' + conditions.join(' AND ');
     }

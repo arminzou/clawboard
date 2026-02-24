@@ -19,7 +19,6 @@ export interface Task {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
-  position: number;
   archived_at: string | null;
   project_id: number | null;
   context_key: string | null;

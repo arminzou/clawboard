@@ -146,7 +146,7 @@ curl -X PATCH http://127.0.0.1:3001/api/tasks/ID \
 
 | Entity | Key Fields |
 |--------|------------|
-| Task | id, title, status, priority, tags (JSON string in DB, `string[]` in API), assigned_to, project_id, context_key, context_type, is_someday, blocked_reason, position |
+| Task | id, title, status, priority, tags (JSON string in DB, `string[]` in API), assigned_to, project_id, context_key, context_type, is_someday, blocked_reason |
 | Status | `backlog` \| `in_progress` \| `review` \| `done` |
 | Priority | `low` \| `medium` \| `high` \| `urgent` \| null |
 | Assignee | `tee` \| `fay` \| `armin` \| null |

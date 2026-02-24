@@ -711,7 +711,6 @@ export function CreateTaskModal({
     tags?: string[] | string;
     blocked_reason?: string | null;
     assigned_to?: Assignee | null;
-    position?: number;
     project_id?: number | null;
     is_someday?: boolean;
   }) => Promise<void>;

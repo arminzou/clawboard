@@ -15,7 +15,6 @@ export interface Task {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
-  position: number;
   archived_at?: string | null;
   project_id: number | null;
   context_key?: string | null;
@@ -175,7 +174,7 @@ export const api = {
   },
 
   async createTask(
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'project_id' | 'context_key' | 'context_type'>> & { title: string },
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'project_id' | 'context_key' | 'context_type'>> & { title: string },
   ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
@@ -188,7 +187,7 @@ export const api = {
 
   async updateTask(
     id: number,
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'position' | 'archived_at' | 'context_key' | 'context_type' | 'project_id'>>,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'archived_at' | 'context_key' | 'context_type' | 'project_id'>>,
   ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {

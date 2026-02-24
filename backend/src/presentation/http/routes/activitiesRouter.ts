@@ -15,14 +15,13 @@ export function createActivitiesRouter({ db, broadcast }: { db: Database; broadc
   // GET /api/activities
   router.get('/', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { agent, limit, offset, since, project_id } = req.query as Record<string, string | undefined>;
+      const { agent, limit, offset, since } = req.query as Record<string, string | undefined>;
 
       const activities = service.list({
         agent: agent as Agent | undefined,
         limit: limit != null ? parseInt(limit, 10) : undefined,
         offset: offset != null ? parseInt(offset, 10) : undefined,
         since,
-        project_id: project_id != null ? parseInt(project_id, 10) : undefined,
       });
       res.json(activities);
     } catch (err) {

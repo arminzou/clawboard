@@ -69,7 +69,6 @@ export type CreateTaskBody = {
   tags?: string[] | string;
   blocked_reason?: string | null;
   assigned_to?: Task['assigned_to'];
-  position?: number | null;
   project_id?: number | null;
   context_key?: string | null;
   context_type?: string | null;
@@ -85,7 +84,6 @@ export type UpdateTaskBody = Partial<
     | 'priority'
     | 'due_date'
     | 'assigned_to'
-    | 'position'
     | 'archived_at'
     | 'blocked_reason'
     | 'project_id'
@@ -169,7 +167,7 @@ export class TaskRepository {
 
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
 
-    query += ' ORDER BY position ASC, created_at DESC';
+    query += ' ORDER BY created_at ASC, id ASC';
 
     const rows = this.db.prepare(query).all(...values) as TaskRow[];
     return rows.map(hydrateTask);
@@ -196,14 +194,6 @@ export class TaskRepository {
     const context_type = typeof body.context_type === 'string' && body.context_type.trim() ? body.context_type.trim() : null;
     const is_someday = body.is_someday === true ? 1 : 0;
 
-    // If no explicit position, append to end of column for stable ordering.
-    const resolvedPosition =
-      body.position !== undefined && body.position !== null
-        ? body.position
-        : (this.db
-            .prepare('SELECT COALESCE(MAX(position), -1) + 1 as next FROM tasks WHERE status = ? AND archived_at IS NULL')
-            .get(status) as { next: number }).next;
-
     const completedAt = status === 'done' ? new Date().toISOString() : null;
 
     const result = this.db
@@ -211,10 +201,10 @@ export class TaskRepository {
         `
         INSERT INTO tasks (
           title, description, status, priority, due_date,
-          tags, blocked_reason, assigned_to, position, project_id,
+          tags, blocked_reason, assigned_to, project_id,
           context_key, context_type, completed_at, is_someday
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -226,7 +216,6 @@ export class TaskRepository {
         tagsJson,
         blocked_reason,
         assigned_to,
-        resolvedPosition,
         project_id,
         context_key,
         context_type,
@@ -285,10 +274,6 @@ export class TaskRepository {
     if (patch.assigned_to !== undefined) {
       updates.push('assigned_to = ?');
       values.push(patch.assigned_to);
-    }
-    if (patch.position !== undefined) {
-      updates.push('position = ?');
-      values.push(patch.position);
     }
     if (patch.archived_at !== undefined) {
       updates.push('archived_at = ?');

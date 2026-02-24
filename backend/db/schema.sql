@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
-    position INTEGER DEFAULT 0, -- for ordering within columns
     archived_at DATETIME,
     project_id INTEGER,
     context_key TEXT, -- e.g., 'projects/clawboard-ui-polish' or 'feature/branch-name'
@@ -43,8 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at);
 -- Tags table (global tag registry)
 CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    name TEXT NOT NULL UNIQUE
 );
 
 -- Agent activities table (timeline tracking)
@@ -69,8 +67,7 @@ CREATE TABLE IF NOT EXISTS documents (
     last_modified DATETIME,
     last_modified_by TEXT, -- 'tee', 'fay', 'armin', 'system'
     size_bytes INTEGER,
-    git_status TEXT, -- 'modified', 'added', 'deleted', 'untracked', 'clean'
-    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+    git_status TEXT -- 'modified', 'added', 'deleted', 'untracked', 'clean'
 );
 
 -- Indexes for common queries

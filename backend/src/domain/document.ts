@@ -6,5 +6,4 @@ export interface Document {
   last_modified_by: string | null;
   size_bytes: number | null;
   git_status: string | null;
-  first_seen: string;
 }

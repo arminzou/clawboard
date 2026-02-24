@@ -30,6 +30,9 @@ describe('Activities API', () => {
 
     const byAgent = await request(appCtx.app).get('/api/activities/agent/tee?limit=5').expect(200);
     expect(byAgent.body).toHaveLength(1);
+
+    // Unknown query params should not break listing.
+    await request(appCtx.app).get('/api/activities?project_id=1').expect(200);
   });
 
   it('rejects missing required fields', async () => {

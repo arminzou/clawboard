@@ -36,6 +36,9 @@ describe('Docs API', () => {
     const list = await request(appCtx.app).get('/api/docs?git_status=modified').expect(200);
     expect(list.body).toHaveLength(1);
 
+    // Unknown query params should not break listing.
+    await request(appCtx.app).get('/api/docs?project_id=1').expect(200);
+
     const stats = await request(appCtx.app).get('/api/docs/stats').expect(200);
     expect(stats.body.total).toBe(1);
   });

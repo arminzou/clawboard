@@ -6,7 +6,6 @@ export interface ListActivitiesParams {
   limit?: number;
   offset?: number;
   since?: string;
-  project_id?: number;
 }
 
 export interface CreateActivityBody {
@@ -29,7 +28,7 @@ export class ActivityRepository {
   constructor(public readonly db: Database) {}
 
   list(params: ListActivitiesParams = {}): Activity[] {
-    const { agent, limit = 50, offset = 0, since, project_id } = params;
+    const { agent, limit = 50, offset = 0, since } = params;
 
     let query = 'SELECT * FROM activities';
     const conditions: string[] = [];
@@ -43,11 +42,6 @@ export class ActivityRepository {
       conditions.push('timestamp >= ?');
       values.push(since);
     }
-    if (project_id != null) {
-      conditions.push('project_id = ?');
-      values.push(project_id);
-    }
-
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
 
     query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';

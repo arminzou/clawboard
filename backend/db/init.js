@@ -24,15 +24,15 @@ console.log('✓ Database initialized:', DB_PATH);
 
 // Insert sample data
 const insertTask = db.prepare(`
-    INSERT INTO tasks (title, description, status, priority, assigned_to, position)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks (title, description, status, priority, assigned_to)
+    VALUES (?, ?, ?, ?, ?)
 `);
 
 const sampleTasks = [
-    ['Set up backend server', 'Initialize Express server with SQLite integration', 'in_progress', 'high', 'tee', 0],
-    ['Design Kanban UI', 'Create React components for Kanban board', 'backlog', 'medium', 'fay', 0],
-    ['Implement activity parser', 'Parse session logs for agent activities', 'backlog', 'high', 'tee', 1],
-    ['Add WebSocket support', 'Real-time updates for dashboard', 'backlog', 'medium', null, 2],
+    ['Set up backend server', 'Initialize Express server with SQLite integration', 'in_progress', 'high', 'tee'],
+    ['Design Kanban UI', 'Create React components for Kanban board', 'backlog', 'medium', 'fay'],
+    ['Implement activity parser', 'Parse session logs for agent activities', 'backlog', 'high', 'tee'],
+    ['Add WebSocket support', 'Real-time updates for dashboard', 'backlog', 'medium', null],
 ];
 
 const insertActivity = db.prepare(`
