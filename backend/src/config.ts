@@ -21,11 +21,13 @@ function resolveDbPath(): string {
 const DB_DIR = path.join(BACKEND_ROOT, 'db');
 
 // OpenClaw detection
-const OPENCLAW_DIRS = [
-  process.env.OPENCLAW_HOME,
-  path.join(os.homedir(), '.openclaw'),
-  path.join(os.homedir(), '.config', 'openclaw'),
-].filter(Boolean);
+function resolveOpenClawDirs(): string[] {
+  return [
+    process.env.OPENCLAW_HOME,
+    path.join(os.homedir(), '.openclaw'),
+    path.join(os.homedir(), '.config', 'openclaw'),
+  ].filter((dir): dir is string => Boolean(dir));
+}
 
 type PersonaFlavor = 'methodical' | 'playful' | 'pragmatic';
 
@@ -42,14 +44,53 @@ export type AgentProfileHint = {
 export type AgentProfileMap = Record<string, AgentProfileHint>;
 export type AgentIncludeList = string[] | null;
 
+function detectAgentsFromOpenClawConfig(openclawHome: string): string[] {
+  const cfgPath = path.join(openclawHome, 'openclaw.json');
+  if (!fs.existsSync(cfgPath)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
+
+    const agents = (parsed as { agents?: unknown }).agents;
+    if (!agents || typeof agents !== 'object' || Array.isArray(agents)) return [];
+
+    const list = (agents as { list?: unknown }).list;
+    if (!Array.isArray(list)) return [];
+
+    const ids = list
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
+        const id = (entry as { id?: unknown }).id;
+        return typeof id === 'string' ? id : null;
+      })
+      .filter((id): id is string => Boolean(id));
+
+    return normalizeAgentIds(ids);
+  } catch (err) {
+    console.warn(`[config] Failed to parse OpenClaw config ${cfgPath}:`, err);
+    return [];
+  }
+}
+
+function detectAgentsFromWorkspaceDirs(openclawHome: string): string[] {
+  const entries = fs.readdirSync(openclawHome, { withFileTypes: true });
+  const rawIds = entries
+    .filter((e) => e.isDirectory())
+    .flatMap((e) => {
+      if (e.name === 'workspace') return ['main'];
+      if (e.name.startsWith('workspace-')) return [e.name.replace('workspace-', '')];
+      return [];
+    });
+  return normalizeAgentIds(rawIds);
+}
+
 function detectOpenClaw(): { detected: boolean; home: string | null; agents: string[] } {
-  for (const dir of OPENCLAW_DIRS) {
+  for (const dir of resolveOpenClawDirs()) {
     if (dir && fs.existsSync(dir)) {
-      // Detect agents by scanning workspace-*
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      const agents = entries
-        .filter((e) => e.isDirectory() && e.name.startsWith('workspace-'))
-        .map((e) => e.name.replace('workspace-', ''));
+      // Prefer explicit agent IDs from OpenClaw config; fall back to workspace dirs.
+      const fromConfig = detectAgentsFromOpenClawConfig(dir);
+      const fromWorkspaceDirs = fromConfig.length ? [] : detectAgentsFromWorkspaceDirs(dir);
+      const agents = fromConfig.length ? fromConfig : (fromWorkspaceDirs.length ? fromWorkspaceDirs : ['main']);
 
       console.log(`[config] OpenClaw detected at ${dir}, agents: ${agents.join(', ')}`);
       return { detected: true, home: dir, agents };
