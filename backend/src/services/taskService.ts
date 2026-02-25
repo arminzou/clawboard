@@ -69,9 +69,19 @@ export class TaskService {
 
   bulkAssignAssignee(ids: number[], assigneeRaw: unknown): { updated: number } {
     const uniqueIds = this.normalizeBulkIds(ids);
-    const allowed: Array<Task['assigned_to']> = ['tee', 'fay', 'armin', null];
-    const assignee = assigneeRaw as Task['assigned_to'];
-    if (!allowed.includes(assignee)) throw new HttpError(400, 'Invalid assignee');
+    let assignee: Task['assigned_to'] = null;
+    if (assigneeRaw == null || assigneeRaw === '') {
+      assignee = null;
+    } else if (typeof assigneeRaw === 'string') {
+      const normalized = assigneeRaw.trim().toLowerCase();
+      const allowed: Exclude<Task['assigned_to'], null>[] = ['tee', 'fay', 'armin'];
+      if (!allowed.includes(normalized as Exclude<Task['assigned_to'], null>)) {
+        throw new HttpError(400, 'Invalid assignee');
+      }
+      assignee = normalized as Exclude<Task['assigned_to'], null>;
+    } else {
+      throw new HttpError(400, 'Invalid assignee');
+    }
 
     return this.repo.bulkAssignAssignee({
       ids: uniqueIds,

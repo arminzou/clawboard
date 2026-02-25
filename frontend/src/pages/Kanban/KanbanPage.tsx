@@ -948,6 +948,23 @@ export function KanbanPage({
     [baseFiltered.length, viewCounts],
   );
 
+  const myAgentId = useMemo(() => {
+    try {
+      const raw =
+        window.localStorage.getItem('cb.activity.agent') ??
+        window.localStorage.getItem('pm.activity.agent') ??
+        '';
+      const fromStorage = raw.trim().toLowerCase();
+      if (fromStorage) return fromStorage;
+    } catch {
+      // ignore
+    }
+    const discovered = (initialAgentIds ?? [])
+      .map((id) => String(id).trim().toLowerCase())
+      .filter(Boolean);
+    return discovered.length === 1 ? discovered[0] : null;
+  }, [initialAgentIds]);
+
   const sidebar = (
     <Sidebar
       projectName={projectName}
@@ -1008,9 +1025,13 @@ export function KanbanPage({
         setContext('all');
       }}
       onMyTasks={() => {
-        // Switch to all projects and filter by tee
+        if (!myAgentId) {
+          toast.error('Could not determine current agent for My Tasks');
+          return;
+        }
+        // Switch to all projects and filter by current agent.
         setCurrentProjectId(null);
-        setAssignee('tee');
+        setAssignee(myAgentId);
         setView('all');
         setHideDone(false);
         setBlocked(false);
@@ -1020,7 +1041,7 @@ export function KanbanPage({
         setContext('all');
         setQ('');
       }}
-      myTasksCount={tasks.filter((t) => t.assigned_to === 'tee' && t.status !== 'done').length}
+      myTasksCount={myAgentId ? tasks.filter((t) => t.assigned_to === myAgentId && t.status !== 'done').length : undefined}
     />
   );
 
