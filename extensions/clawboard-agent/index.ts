@@ -4,6 +4,7 @@ interface AgentState {
   status: "thinking" | "idle" | "offline";
   timeoutHandle?: ReturnType<typeof setTimeout>;
   lastThought?: string;
+  turnCount: number;
 }
 
 export default function register(api: OpenClawPluginApi) {
@@ -23,7 +24,7 @@ export default function register(api: OpenClawPluginApi) {
   function getOrCreateState(agentId: string): AgentState {
     let state = agentStates.get(agentId);
     if (!state) {
-      state = { status: "idle" };
+      state = { status: "idle", turnCount: 0 };
       agentStates.set(agentId, state);
     }
     return state;
@@ -45,7 +46,8 @@ export default function register(api: OpenClawPluginApi) {
     {
       fireAndForget = false,
       thought,
-    }: { fireAndForget?: boolean; thought?: string } = {},
+      turnCount,
+    }: { fireAndForget?: boolean; thought?: string; turnCount?: number } = {},
   ) {
     if (!webhookUrl) return;
 
@@ -77,6 +79,7 @@ export default function register(api: OpenClawPluginApi) {
             agentId,
             status,
             thought: effectiveThought,
+            turnCount,
             timestamp: new Date().toISOString(),
           }),
           signal: controller.signal,
@@ -138,14 +141,14 @@ export default function register(api: OpenClawPluginApi) {
       return `Using ${normalized}...`;
   }
 
-  function updateThinkingThought(agentId: string, thought: string) {
+  function updateThinkingThought(agentId: string, thought: string, options: { forceEmit?: boolean } = {}) {
     const state = getOrCreateState(agentId);
     if (state.status !== "thinking") {
       state.status = "thinking";
     }
-    if (state.lastThought === thought) return;
+    if (state.lastThought === thought && !options.forceEmit) return;
     state.lastThought = thought;
-    void sendStatus(agentId, "thinking", { fireAndForget: true, thought });
+    void sendStatus(agentId, "thinking", { fireAndForget: true, thought, turnCount: state.turnCount });
   }
 
   logger.info(`[clawboard-agent] registered · webhookUrl=${webhookUrl ? "(set)" : "(not set)"} · idleTimeoutMs=${idleTimeoutMs}`);
@@ -158,19 +161,30 @@ export default function register(api: OpenClawPluginApi) {
     clearIdleTimer(agentId);
     const nextThought = "Planning response...";
 
+    // Reset turn count on new user message (assuming before_agent_start means new turn)
+    // Actually, OpenClaw might call this multiple times if it's a loop?
+    // Usually before_agent_start is once per user request.
+    state.turnCount = 1;
+
     if (state.status === "thinking" && state.lastThought === nextThought) return; // suppress duplicates
 
     state.status = "thinking";
     state.lastThought = nextThought;
-    logger.info(`[clawboard-agent] ${agentId} → thinking`);
-    await sendStatus(agentId, "thinking", { thought: nextThought });
+    logger.info(`[clawboard-agent] ${agentId} → thinking (turn 1)`);
+    await sendStatus(agentId, "thinking", { thought: nextThought, turnCount: state.turnCount });
   });
 
   // Modifying hook — runs before every tool execution.
   api.on("before_tool_call", async (event, ctx) => {
     const agentId = agentIdFrom(ctx);
+    const state = getOrCreateState(agentId);
     clearIdleTimer(agentId);
-    updateThinkingThought(agentId, toActionThought(event.toolName));
+    
+    // Increment turn count for each tool call
+    state.turnCount = (state.turnCount || 0) + 1;
+    
+    // Emit every tool phase even if thought text repeats, so turnCount stays in sync.
+    updateThinkingThought(agentId, toActionThought(event.toolName), { forceEmit: true });
     return undefined;
   });
 
@@ -194,6 +208,8 @@ export default function register(api: OpenClawPluginApi) {
         current.status = "idle";
         current.timeoutHandle = undefined;
         current.lastThought = undefined;
+        // Don't reset turnCount here, so we can see how many turns the last run took?
+        // But status is idle, so turnCount display might disappear.
         logger.info(`[clawboard-agent] ${agentId} → idle`);
         await sendStatus(agentId, "idle");
       }
@@ -207,6 +223,7 @@ export default function register(api: OpenClawPluginApi) {
     if (state.status !== "thinking") {
       state.status = "idle";
       state.lastThought = undefined;
+      state.turnCount = 0;
       await sendStatus(agentId, "idle");
     }
   });
@@ -218,6 +235,7 @@ export default function register(api: OpenClawPluginApi) {
         clearIdleTimer(agentId);
         state.status = "idle";
         state.lastThought = undefined;
+        state.turnCount = 0;
         await sendStatus(agentId, "idle");
       }
     } else {
@@ -235,6 +253,7 @@ export default function register(api: OpenClawPluginApi) {
         clearIdleTimer(agentId);
         state.status = "offline";
         state.lastThought = "Gateway offline";
+        state.turnCount = 0;
         void sendStatus(agentId, "offline", { fireAndForget: true });
       }
     } else {

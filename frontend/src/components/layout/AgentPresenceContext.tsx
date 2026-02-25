@@ -9,6 +9,7 @@ export interface AgentPresence {
   status: AgentStatus;
   lastActivity: string | null;
   agentThought: string | null;
+  turnCount?: number;
 }
 
 type AgentStatusEvent = {
@@ -16,6 +17,7 @@ type AgentStatusEvent = {
   status?: AgentStatus;
   lastActivity?: string;
   thought?: string;
+  turnCount?: number;
 };
 
 type AgentPresenceContextValue = {
@@ -31,6 +33,7 @@ const DEFAULT_PRESENCE: AgentPresence = {
   status: 'offline',
   lastActivity: null,
   agentThought: null,
+  turnCount: 0,
 };
 
 const AgentPresenceContext = createContext<AgentPresenceContextValue | null>(null);
@@ -116,10 +119,15 @@ export function AgentPresenceProvider({
               : status === 'idle'
                 ? (data.thought ?? null)
                 : (data.thought ?? current.agentThought);
+          const nextTurnCount =
+            data.turnCount !== undefined
+              ? data.turnCount
+              : (status === 'thinking' ? current.turnCount : 0);
           next[id] = {
             status,
             lastActivity: data.lastActivity ?? current.lastActivity,
             agentThought: nextThought,
+            turnCount: nextTurnCount,
           };
         }
         return next;
@@ -135,10 +143,15 @@ export function AgentPresenceProvider({
           : status === 'idle'
             ? (data.thought ?? null)
             : (data.thought ?? current.agentThought);
+      const nextTurnCount =
+        data.turnCount !== undefined
+          ? data.turnCount
+          : (status === 'thinking' ? current.turnCount : 0);
       next[normalizedId] = {
         status,
         lastActivity: data.lastActivity ?? current.lastActivity,
         agentThought: nextThought,
+        turnCount: nextTurnCount,
       };
       return next;
     });
@@ -155,6 +168,9 @@ export function AgentPresenceProvider({
       const nextThought = patch.agentThought !== undefined
         ? patch.agentThought
         : (nextStatus === 'thinking' ? current.agentThought : null);
+      const nextTurnCount = patch.turnCount !== undefined
+        ? patch.turnCount
+        : (nextStatus === 'thinking' ? current.turnCount : 0);
 
       return {
         ...prev,
@@ -162,6 +178,7 @@ export function AgentPresenceProvider({
           status: nextStatus,
           lastActivity: patch.lastActivity ?? new Date().toISOString(),
           agentThought: nextThought,
+          turnCount: nextTurnCount,
         },
       };
     });
@@ -180,6 +197,7 @@ export function AgentPresenceProvider({
             thought !== undefined
               ? thought
               : (status === 'thinking' ? current.agentThought : null),
+          turnCount: status === 'thinking' ? current.turnCount : 0,
         };
       }
       return next;

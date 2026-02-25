@@ -45,6 +45,7 @@ export function createWebhookRouter({ broadcast }: { broadcast: (data: unknown) 
           status,
           lastActivity: body.timestamp,
           thought: body.thought,
+          turnCount: body.turnCount,
         },
       });
 

@@ -38,6 +38,7 @@ describe('AgentPresenceStrip', () => {
           agentId: 'tee',
           status: 'thinking',
           thought: 'Running tests',
+          turnCount: 2,
           lastActivity: '2026-02-22T12:00:05.000Z',
         },
       }),
@@ -50,6 +51,7 @@ describe('AgentPresenceStrip', () => {
           agentId: 'tee',
           status: 'thinking',
           thought: 'Running tests',
+          turnCount: 3,
           lastActivity: '2026-02-22T12:00:10.000Z',
         },
       }),
@@ -57,6 +59,7 @@ describe('AgentPresenceStrip', () => {
 
     const updatedBubble = await screen.findByRole('status');
     expect(updatedBubble.textContent).toContain('Running tests');
+    expect(updatedBubble.textContent).toContain('Turn 3');
   });
 
   it('shows thought bubble on hover in horizontal bottom strip', async () => {
@@ -67,6 +70,7 @@ describe('AgentPresenceStrip', () => {
           agentId: 'tee',
           status: 'thinking',
           thought: 'Running tests',
+          turnCount: 4,
           lastActivity: '2026-02-22T12:00:10.000Z',
         },
       }),
@@ -77,5 +81,6 @@ describe('AgentPresenceStrip', () => {
 
     const bubble = await screen.findByRole('status');
     expect(bubble.textContent).toContain('Running tests');
+    expect(bubble.textContent).toContain('Turn 4');
   });
 });

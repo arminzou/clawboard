@@ -44,13 +44,14 @@ export function AgentPresenceStrip({
     const presence = presenceByAgent[previewAgentId];
     const status = presence?.status ?? 'offline';
     const thought = typeof presence?.agentThought === 'string' ? presence.agentThought.trim() : '';
+    const thinkingBase = thought || 'Thinking...';
     const text =
-      thought ||
-      (status === 'thinking'
-        ? 'Thinking...'
-        : status === 'idle'
-          ? 'Idle'
-          : 'Offline');
+      status === 'thinking'
+        ? (presence?.turnCount ? `${thinkingBase} (Turn ${presence.turnCount})` : thinkingBase)
+        : thought ||
+          (status === 'idle'
+            ? 'Idle'
+            : 'Offline');
     const displayName = profileForAgent(previewAgentId, profileSources).displayName;
     return { displayName, status, text };
   }, [previewAgentId, presenceByAgent, profileSources]);

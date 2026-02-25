@@ -39,10 +39,13 @@ export function AgentStatusRow({
   );
   const thought = presence.agentThought ?? (presence.status === 'idle' ? fallbackThought : null);
   const nowLine = useMemo(() => {
-    if (presence.status === 'thinking') return thought?.trim() || 'Thinking...';
+    if (presence.status === 'thinking') {
+      const base = thought?.trim() || 'Thinking...';
+      return presence.turnCount ? `${base} (Turn ${presence.turnCount})` : base;
+    }
     if (presence.status === 'idle') return 'Idle';
     return presence.lastActivity ? `Last active ${formatRelativeTime(presence.lastActivity)}` : 'Offline';
-  }, [presence.status, presence.lastActivity, thought]);
+  }, [presence.status, presence.lastActivity, thought, presence.turnCount]);
 
   return (
     <button

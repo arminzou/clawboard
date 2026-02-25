@@ -24,6 +24,7 @@ describe('AgentArcadePanel floating popover', () => {
           agentId: 'tee',
           status: 'thinking',
           thought: 'Running tests',
+          turnCount: 5,
           lastActivity: '2026-02-22T12:00:00.000Z',
         },
       }),
@@ -38,6 +39,7 @@ describe('AgentArcadePanel floating popover', () => {
     const popover = await screen.findByTestId('agent-rail-floating-popover');
     expect(popover.textContent).toContain('Tee');
     expect(popover.textContent).toContain('Running tests');
+    expect(popover.textContent).toContain('Turn 5');
 
     await userEvent.unhover(row);
     await waitFor(() => {
