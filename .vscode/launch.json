@@ -2,13 +2,48 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach to Chrome (Vite)",
-      "type": "pwa-chrome",
+      "name": "Backend: Debug (ts-node)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register",
+        "${workspaceFolder}/backend/server.ts"
+      ],
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Frontend: Chrome (Vite)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "dev:frontend",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMaps": true
+    },
+    {
+      "name": "Frontend: Attach Chrome (9222)",
+      "type": "chrome",
       "request": "attach",
       "port": 9222,
       "webRoot": "${workspaceFolder}/frontend",
-      "sourceMaps": true,
-      "url": "http://localhost:5173"
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack: Backend + Frontend",
+      "preLaunchTask": "dev:frontend",
+      "configurations": [
+        "Backend: Debug (ts-node)",
+        "Frontend: Chrome (Vite)"
+      ]
     }
   ]
 }
