@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, ChevronDown, Folder, User, Trash2, Pencil, Save, Sliders } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus, Project } from '../../lib/api';
+import { useAgents } from '../../hooks/useAgents';
 import { Chip } from '../ui/Chip';
 import { Button } from '../ui/Button';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -9,7 +10,7 @@ import { ModalShell } from '../ui/ModalShell';
 import { PromptModal } from '../ui/PromptModal';
 import { Select } from '../ui/Select';
 
-type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
+type AssigneeFilter = 'all' | (string & {});
 
 type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 
@@ -133,6 +134,8 @@ export function Sidebar({
   onMyTasks?: () => void;
   myTasksCount?: number;
 }) {
+  const { agents } = useAgents();
+
   // Count active filters (non-default values)
   const activeFilterCount = [
     assignee !== 'all',
@@ -203,9 +206,7 @@ export function Sidebar({
       onChange: (value) => onAssignee(value as AssigneeFilter),
       options: [
         { value: 'all', label: 'All' },
-        { value: 'tee', label: 'tee' },
-        { value: 'fay', label: 'fay' },
-        { value: 'armin', label: 'armin' },
+        ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
         { value: '', label: '(unassigned)' },
       ],
     },

@@ -1,4 +1,4 @@
-export type Agent = 'tee' | 'fay' | 'armin';
+export type Agent = string;
 
 export interface Activity {
   id: number;

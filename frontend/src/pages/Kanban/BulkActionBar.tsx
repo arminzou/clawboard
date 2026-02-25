@@ -3,6 +3,7 @@ import { Copy, Folder, Trash2, UserCheck, X, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Assignee, Project, TaskStatus } from '../../lib/api';
+import { useAgents } from '../../hooks/useAgents';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 type BulkActionBarProps = {
@@ -23,13 +24,6 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'done', label: 'Done' },
 ];
 
-const ASSIGNEE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: 'Unassigned' },
-  { value: 'tee', label: 'Tee' },
-  { value: 'fay', label: 'Fay' },
-  { value: 'armin', label: 'Armin' },
-];
-
 export function BulkActionBar({
   count,
   projects = [],
@@ -40,6 +34,7 @@ export function BulkActionBar({
   onBulkDelete,
   onBulkDuplicate,
 }: BulkActionBarProps) {
+  const { agents } = useAgents();
   const [busy, setBusy] = useState(false);
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -137,7 +132,7 @@ export function BulkActionBar({
         </button>
         {showAssignMenu ? (
           <div className="absolute bottom-full left-0 mb-2 min-w-40 cb-menu">
-            {ASSIGNEE_OPTIONS.map((opt) => (
+            {[{ value: '', label: 'Unassigned' }, ...agents.map((a) => ({ value: a.id, label: a.name }))].map((opt) => (
               <button
                 key={opt.value}
                 type="button"

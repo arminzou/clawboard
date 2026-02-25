@@ -233,7 +233,7 @@ describe('Tasks API', () => {
       .send({ title: 'A', status: 'backlog' })
       .expect(201);
 
-    // Invalid assignee IDs and invalid payload types should both be rejected.
+    // Any string is a valid assignee (dynamic agents), but malformed payloads should be rejected.
     await request(appCtx.app)
       .post('/api/tasks/bulk/assignee')
       .send({ ids: [], assigned_to: 'tee' })
@@ -241,7 +241,7 @@ describe('Tasks API', () => {
 
     await request(appCtx.app)
       .post('/api/tasks/bulk/assignee')
-      .send({ ids: [task.body.id], assigned_to: 'invalid-user' })
+      .send({ ids: [], assigned_to: 'invalid-user' })
       .expect(400);
 
     await request(appCtx.app)

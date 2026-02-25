@@ -31,7 +31,7 @@ const COLUMNS: { key: TaskStatus; title: string }[] = [
 
 type ViewFilter = 'all' | TaskStatus;
 
-type AssigneeFilter = 'all' | 'tee' | 'fay' | 'armin' | '';
+type AssigneeFilter = 'all' | (string & {});
 
 type DueFilter = 'any' | 'overdue' | 'soon' | 'has' | 'none';
 
@@ -248,7 +248,7 @@ export function KanbanPage({
   const [assignee, setAssignee] = useState<AssigneeFilter>(() => {
     try {
       const raw = window.localStorage.getItem('cb.v2.kanban.assignee') ?? 'all';
-      return (raw === 'all' || raw === 'tee' || raw === 'fay' || raw === 'armin' || raw === '' ? raw : 'all') as AssigneeFilter;
+      return (typeof raw === 'string' ? raw : 'all') as AssigneeFilter;
     } catch {
       return 'all';
     }
@@ -1170,7 +1170,7 @@ export function KanbanPage({
 	                if (!trimmed) return;
 
                 const assignedTo: Assignee | null =
-                  assignee === 'all' ? 'tee' : assignee === '' ? null : (assignee as Assignee);
+                  assignee === 'all' ? (myAgentId as Assignee | null) : assignee === '' ? null : (assignee as Assignee);
 
 	                await api.createTask({
 	                  title: trimmed,

@@ -73,12 +73,7 @@ export class TaskService {
     if (assigneeRaw == null || assigneeRaw === '') {
       assignee = null;
     } else if (typeof assigneeRaw === 'string') {
-      const normalized = assigneeRaw.trim().toLowerCase();
-      const allowed: Exclude<Task['assigned_to'], null>[] = ['tee', 'fay', 'armin'];
-      if (!allowed.includes(normalized as Exclude<Task['assigned_to'], null>)) {
-        throw new HttpError(400, 'Invalid assignee');
-      }
-      assignee = normalized as Exclude<Task['assigned_to'], null>;
+      assignee = assigneeRaw.trim().toLowerCase();
     } else {
       throw new HttpError(400, 'Invalid assignee');
     }

@@ -3,6 +3,7 @@ import { Calendar, CheckCircle2, ChevronDown, Clock } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import type { Assignee, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { formatDateTimeFull } from '../../lib/date';
+import { useAgents } from '../../hooks/useAgents';
 import { Button } from '../../components/ui/Button';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -338,6 +339,7 @@ export function EditTaskModal({
   tagOptions?: string[];
   projects?: Project[];
 }) {
+  const { agents } = useAgents();
   const modalRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -531,9 +533,7 @@ export function EditTaskModal({
                       onChange={(value) => field.onChange((value || null) as Assignee)}
                       options={[
                         { value: '', label: '(unassigned)' },
-                        { value: 'tee', label: 'tee' },
-                        { value: 'fay', label: 'fay' },
-                        { value: 'armin', label: 'armin' },
+                        ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
                       ]}
                     />
                   )}
@@ -719,6 +719,7 @@ export function CreateTaskModal({
   tagOptions?: string[];
   projects?: Project[];
 }) {
+  const { agents } = useAgents();
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
@@ -733,7 +734,7 @@ export function CreateTaskModal({
       priority: null,
       dueDate: '',
       tags: [],
-      assigned: 'tee',
+      assigned: null,
       blockedReason: '',
       projectId: initialProjectId ?? null,
       isSomeday: false,
@@ -890,9 +891,7 @@ export function CreateTaskModal({
                       onChange={(value) => field.onChange((value || null) as Assignee)}
                       options={[
                         { value: '', label: '(unassigned)' },
-                        { value: 'tee', label: 'tee' },
-                        { value: 'fay', label: 'fay' },
-                        { value: 'armin', label: 'armin' },
+                        ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
                       ]}
                     />
                   )}

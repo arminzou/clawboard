@@ -26,7 +26,7 @@ export function AgentStateTestPanel() {
   const [customThought, setCustomThought] = useState('');
   const [targetAgent, setTargetAgent] = useState('');
   const [targetStatus, setTargetStatus] = useState<AgentStatus>('thinking');
-  const ids = useMemo(() => (agentIds.length ? agentIds : ['tee', 'fay']), [agentIds]);
+  const ids = useMemo(() => (agentIds.length ? agentIds : ['agent']), [agentIds]);
   const activeTargetAgent = ids.includes(targetAgent) ? targetAgent : (ids[0] ?? '');
 
   if (!enabled) return null;

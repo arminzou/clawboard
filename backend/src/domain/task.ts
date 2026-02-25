@@ -1,6 +1,6 @@
 export type TaskStatus = 'backlog' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | null;
-export type Assignee = 'tee' | 'fay' | 'armin' | null;
+export type Assignee = string | null;
 
 /**
  * Canonical Task shape returned by the API.
