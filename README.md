@@ -88,7 +88,7 @@ Example:
 ```env
 API_BASE=http://192.168.20.10:3001
 WS_BASE=ws://192.168.20.10:3001/ws
-CLAWBOARD_API_KEY=mysecretkey
+CLAWBOARD_API_KEY=replace-with-strong-key
 ```
 
 Then restart frontend dev server.
