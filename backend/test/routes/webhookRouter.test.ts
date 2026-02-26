@@ -40,8 +40,74 @@ describe('Webhook API', () => {
         status: 'thinking',
         lastActivity: '2026-02-20T00:00:00.000Z',
         thought: 'working',
+        turnCount: undefined,
       },
     });
+  });
+
+  it('coerces timestamp + turnCount and accepts legacy aliases', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    await request(appCtx.app)
+      .post('/api/webhook/clawboard')
+      .send({
+        type: 'agent:idle',
+        agent: 'tee',
+        thought: '  ',
+        timestamp: '1708387200000',
+        turnCount: '12',
+      })
+      .expect(200);
+
+    expect(broadcast).toHaveBeenCalledTimes(1);
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'agent_status_updated',
+      data: {
+        agentId: 'tee',
+        status: 'idle',
+        lastActivity: '2024-02-20T00:00:00.000Z',
+        thought: undefined,
+        turnCount: 12,
+      },
+    });
+  });
+
+  it('returns 400 for malformed timestamp', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const res = await request(appCtx.app)
+      .post('/api/webhook/clawboard')
+      .send({
+        event: 'agent:thinking',
+        agentId: 'tee',
+        timestamp: 'not-a-date',
+      })
+      .expect(400);
+
+    expect(res.body).toEqual({ error: 'Invalid timestamp' });
+    expect(broadcast).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for malformed turnCount', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const res = await request(appCtx.app)
+      .post('/api/webhook/clawboard')
+      .send({
+        event: 'agent:thinking',
+        agentId: 'tee',
+        turnCount: '-1',
+      })
+      .expect(400);
+
+    expect(res.body).toEqual({ error: 'Invalid turnCount' });
+    expect(broadcast).not.toHaveBeenCalled();
   });
 
   it('ignores disallowed agents when include filter is configured', async () => {
