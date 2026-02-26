@@ -14,6 +14,8 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = String(process.env.HOST ?? '127.0.0.1');
+const BIND_RETRY_MAX_ATTEMPTS = Number(process.env.CLAWBOARD_BIND_RETRY_ATTEMPTS ?? 3);
+const BIND_RETRY_DELAY_MS = Number(process.env.CLAWBOARD_BIND_RETRY_DELAY_MS ?? 400);
 
 // Ensure DB directory exists (container may mount /app/data)
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
@@ -85,9 +87,29 @@ const { wss, broadcast } = createWebSocketHub({
 // Wire up broadcast to routes
 broadcastImpl = broadcast;
 
+let bindAttempts = 0;
+let startupComplete = false;
+
+function startListening() {
+    server.listen(PORT, HOST);
+}
+
 // Server error handling
 server.on('error', (err: NodeJS.ErrnoException) => {
     if (err?.code === 'EADDRINUSE') {
+        const canRetry = !startupComplete && bindAttempts < BIND_RETRY_MAX_ATTEMPTS;
+
+        if (canRetry) {
+            bindAttempts += 1;
+            console.warn(
+                `\n⚠️ Port ${PORT} is busy (attempt ${bindAttempts}/${BIND_RETRY_MAX_ATTEMPTS}). Retrying in ${BIND_RETRY_DELAY_MS}ms...`,
+            );
+            setTimeout(() => {
+                startListening();
+            }, BIND_RETRY_DELAY_MS);
+            return;
+        }
+
         console.error(`\n❌ Port ${PORT} is already in use.`);
         console.error(`👉 Try: PORT=${PORT + 1} npm run dev\n`);
         process.exit(1);
@@ -101,7 +123,9 @@ server.on('error', (err: NodeJS.ErrnoException) => {
 });
 
 // Start server
-server.listen(PORT, HOST, () => {
+server.on('listening', () => {
+    startupComplete = true;
+
     const baseUrl = `http://${HOST}:${PORT}`;
     const wsUrl = `ws://${HOST}:${PORT}/ws`;
     console.log(`\n🚀 Clawboard Backend running on ${baseUrl}`);
@@ -125,6 +149,8 @@ server.listen(PORT, HOST, () => {
         console.log('');
     }
 });
+
+startListening();
 
 // Graceful shutdown
 const shutdown = (signal: string) => {
