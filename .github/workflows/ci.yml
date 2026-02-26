@@ -39,6 +39,9 @@ jobs:
       - name: Run backend tests
         run: pnpm -C backend test:run
 
+      - name: Create .env for Docker Compose validation
+        run: cp .env.example .env
+
       - name: Validate Docker Compose files
         run: |
           if ! command -v docker >/dev/null 2>&1; then
