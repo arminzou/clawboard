@@ -58,6 +58,8 @@ export type ListTasksParams = {
   context_key?: string;
   context_type?: string;
   is_someday?: boolean;
+  limit?: number;
+  offset?: number;
 };
 
 export type CreateTaskBody = {
@@ -131,6 +133,8 @@ export class TaskRepository {
       context_key,
       context_type,
       is_someday,
+      limit,
+      offset,
     } = params;
 
     let query = 'SELECT * FROM tasks';
@@ -168,6 +172,20 @@ export class TaskRepository {
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
 
     query += ' ORDER BY created_at ASC, id ASC';
+
+    if (limit !== undefined) {
+      query += ' LIMIT ?';
+      values.push(limit);
+    }
+
+    if (offset !== undefined) {
+      if (limit === undefined) {
+        // SQLite requires LIMIT when OFFSET is present.
+        query += ' LIMIT -1';
+      }
+      query += ' OFFSET ?';
+      values.push(offset);
+    }
 
     const rows = this.db.prepare(query).all(...values) as TaskRow[];
     return rows.map(hydrateTask);
