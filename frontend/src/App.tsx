@@ -34,7 +34,7 @@ export default function App() {
     toast.show(msg);
   }, []);
 
-  const { lastMessage, status: wsStatus } = useWebSocket({
+  const { lastMessage, status: wsStatus, lastReceivedAt, reconnectAttempts } = useWebSocket({
     onMessage: (m) => {
       const t = String(m.type || '');
       if (t.startsWith('task_')) pushToast(`Tasks updated (${t})`);
@@ -42,6 +42,24 @@ export default function App() {
   });
 
   const wsSignal = useMemo(() => lastMessage, [lastMessage]);
+
+  const wsDiagnosticsText = useMemo(() => {
+    const parts: string[] = [`ws: ${wsStatus}`];
+
+    if (lastReceivedAt != null) {
+      const stamp = new Date(lastReceivedAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      parts.push(`last: ${stamp}`);
+    } else {
+      parts.push('last: —');
+    }
+
+    parts.push(`retry: ${reconnectAttempts}`);
+    return parts.join(' · ');
+  }, [wsStatus, lastReceivedAt, reconnectAttempts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +101,10 @@ export default function App() {
     <ErrorBoundary>
       <div className="h-full bg-[rgb(var(--cb-bg))]">
         <ToastContainer />
+
+        <div className="pointer-events-none fixed right-3 top-3 z-50 hidden rounded-md border border-slate-300 bg-white/90 px-2 py-1 text-[10px] font-medium text-slate-600 shadow-sm backdrop-blur sm:block">
+          {wsDiagnosticsText}
+        </div>
 
         <div className="flex h-full">
           <IconRail tab={tab} onTab={setTab} />

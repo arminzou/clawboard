@@ -38,6 +38,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const [status, setStatus] = useState<WsStatus>('connecting');
   const [lastMessage, setLastMessage] = useState<WsMessage | null>(null);
   const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef<((msg: WsMessage) => void) | undefined>(opts?.onMessage);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -73,6 +74,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
       ws.onopen = () => {
         everConnectedRef.current = true;
         attemptRef.current = 0;
+        setReconnectAttempts(0);
         setStatus('connected');
         wsDebug('connect:open');
       };
@@ -85,6 +87,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
         setStatus(everConnectedRef.current ? 'reconnecting' : 'disconnected');
 
         attemptRef.current += 1;
+        setReconnectAttempts(attemptRef.current);
         const backoffMs = Math.min(5000, 500 * Math.max(1, attemptRef.current));
         wsDebug('connect:retry_scheduled', { backoffMs, attempt: attemptRef.current });
         reconnectTimerRef.current = window.setTimeout(() => connect('reconnecting'), backoffMs);
@@ -123,5 +126,5 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
     };
   }, [url]);
 
-  return { status, connected: status === 'connected', lastMessage, lastReceivedAt };
+  return { status, connected: status === 'connected', lastMessage, lastReceivedAt, reconnectAttempts };
 }
