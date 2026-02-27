@@ -358,9 +358,11 @@ export function DocsView({
                   }
                 >
                   <td className="px-3 py-2 font-mono text-xs text-[rgb(var(--cb-text))]">
-                    <button
+                    <Button
                       type="button"
-                      className="text-left hover:underline"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto w-full justify-start rounded-md px-1 py-0.5 text-left font-mono text-xs text-[rgb(var(--cb-text))] hover:underline"
                       title="Click to copy"
                       onClick={async () => {
                         try {
@@ -371,7 +373,7 @@ export function DocsView({
                       }}
                     >
                       {d.file_path}
-                    </button>
+                    </Button>
                   </td>
                   <td className="px-3 py-2 text-xs">
                     {status ? <span className={`rounded px-2 py-0.5 ${statusClass}`}>{status}</span> : null}
