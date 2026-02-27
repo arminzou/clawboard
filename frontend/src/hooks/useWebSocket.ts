@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export type WsMessage = { type: string; data?: unknown };
 export type WsStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -39,6 +39,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const [lastMessage, setLastMessage] = useState<WsMessage | null>(null);
   const [lastReceivedAt, setLastReceivedAt] = useState<number | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [connectEpoch, setConnectEpoch] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef<((msg: WsMessage) => void) | undefined>(opts?.onMessage);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -46,6 +47,9 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
   const everConnectedRef = useRef(false);
 
   const url = useMemo(() => withApiKey(WS_BASE), []);
+  const reconnectNow = useCallback(() => {
+    setConnectEpoch((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     onMessageRef.current = opts?.onMessage;
@@ -124,7 +128,7 @@ export function useWebSocket(opts?: { onMessage?: (msg: WsMessage) => void }) {
       }
       wsRef.current = null;
     };
-  }, [url]);
+  }, [url, connectEpoch]);
 
-  return { status, connected: status === 'connected', lastMessage, lastReceivedAt, reconnectAttempts };
+  return { status, connected: status === 'connected', lastMessage, lastReceivedAt, reconnectAttempts, reconnectNow };
 }
