@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import type { Document as Doc, DocsStats } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
+import { Checkbox } from '../../components/ui/Checkbox';
 import { Input } from '../../components/ui/Input';
 import { Panel } from '../../components/ui/Panel';
 
@@ -278,14 +279,16 @@ export function DocsView({
             <option value="size">size</option>
           </select>
 
-          <label
-            className={
-              'flex items-center gap-2 rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-2 text-sm text-[rgb(var(--cb-text))]'
-            }
-          >
-            <input type="checkbox" checked={dirtyOnly} onChange={(e) => setDirtyOnly(e.target.checked)} />
-            dirty only
-          </label>
+          <div className="flex items-center rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-3 py-2">
+            <Checkbox
+              size="sm"
+              checked={dirtyOnly}
+              onChange={(e) => setDirtyOnly(e.target.checked)}
+              label="dirty only"
+              className="gap-2"
+              labelClassName="text-sm text-[rgb(var(--cb-text))]"
+            />
+          </div>
 
           <Button
             variant="secondary"

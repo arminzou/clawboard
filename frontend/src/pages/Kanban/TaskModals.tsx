@@ -5,6 +5,7 @@ import type { Assignee, Project, Task, TaskPriority, TaskStatus } from '../../li
 import { formatDateTimeFull } from '../../lib/date';
 import { useAgents } from '../../hooks/useAgents';
 import { Button } from '../../components/ui/Button';
+import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
 import { Panel } from '../../components/ui/Panel';
@@ -433,15 +434,16 @@ export function EditTaskModal({
                 control={control}
                 name="isSomeday"
                 render={({ field }) => (
-                  <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
-                    <input
-                      type="checkbox"
+                  <div className="inline-flex h-9 items-center rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
+                    <Checkbox
+                      size="sm"
                       checked={Boolean(field.value)}
                       onChange={(e) => field.onChange(e.target.checked)}
-                      className="h-4 w-4 rounded border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] text-[rgb(var(--cb-primary))] focus:ring-[rgb(var(--cb-primary))]"
+                      label="Save for later"
+                      className="gap-1.5"
+                      labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
                     />
-                    <span className="text-xs font-medium text-[rgb(var(--cb-text-muted))]">Save for later</span>
-                  </label>
+                  </div>
                 )}
               />
               <Button
@@ -804,15 +806,16 @@ export function CreateTaskModal({
                 control={control}
                 name="isSomeday"
                 render={({ field }) => (
-                  <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
-                    <input
-                      type="checkbox"
+                  <div className="inline-flex h-9 items-center rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
+                    <Checkbox
+                      size="sm"
                       checked={Boolean(field.value)}
                       onChange={(e) => field.onChange(e.target.checked)}
-                      className="h-4 w-4 rounded border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] text-[rgb(var(--cb-primary))] focus:ring-[rgb(var(--cb-primary))]"
+                      label="Save for later"
+                      className="gap-1.5"
+                      labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
                     />
-                    <span className="text-xs font-medium text-[rgb(var(--cb-text-muted))]">Save for later</span>
-                  </label>
+                  </div>
                 )}
               />
               <Button variant="ghost" size="icon" onClick={requestClose} aria-label="Close">

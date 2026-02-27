@@ -8,6 +8,8 @@ export interface CheckboxProps
   size?: 'sm' | 'md';
   /** Label text (optional, renders as sibling span) */
   label?: string;
+  /** Optional class for label text span */
+  labelClassName?: string;
 }
 
 /**
@@ -17,6 +19,7 @@ export interface CheckboxProps
 export function Checkbox({
   size = 'md',
   label,
+  labelClassName,
   className,
   checked,
   disabled,
@@ -46,10 +49,12 @@ export function Checkbox({
             sizeClasses,
             'flex items-center justify-center rounded border transition-colors',
             'border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))]',
-            'group-hover:border-[rgb(var(--cb-accent)/0.5)]',
+            'group-hover:border-[rgb(var(--cb-border)/0.95)] group-hover:bg-[rgb(var(--cb-surface-muted))]',
+            'dark:group-hover:border-[rgb(var(--cb-accent-text)/0.9)] dark:group-hover:bg-[rgb(var(--cb-accent-text)/0.12)]',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(var(--cb-accent)/0.45)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[rgb(var(--cb-surface))]',
             'peer-checked:border-[rgb(var(--cb-accent))] peer-checked:bg-[rgb(var(--cb-accent))]',
-            'peer-checked:group-hover:border-[rgb(var(--cb-accent))] peer-checked:group-hover:bg-[rgb(var(--cb-accent)/0.9)]',
+            'peer-checked:group-hover:border-[rgb(var(--cb-accent))] peer-checked:group-hover:bg-[rgb(var(--cb-accent)/0.9)] peer-checked:group-hover:shadow-[0_0_0_1px_rgb(var(--cb-accent)/0.24)]',
+            'dark:peer-checked:group-hover:shadow-[0_0_0_1px_rgb(var(--cb-accent-text)/0.45)]',
           )}
         >
           {checked ? (
@@ -58,7 +63,7 @@ export function Checkbox({
         </span>
       </span>
       {label ? (
-        <span className="text-sm text-[rgb(var(--cb-text))]">{label}</span>
+        <span className={clsx('text-sm text-[rgb(var(--cb-text))]', labelClassName)}>{label}</span>
       ) : null}
     </label>
   );
