@@ -486,7 +486,7 @@ const TaskCard = memo(
       <div
         data-testid={`task-card-${task.id}`}
         className={clsx(
-          'group w-full rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 text-left shadow-sm will-change-transform',
+          'group w-full rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 text-left shadow-sm will-change-transform hover:border-[rgb(var(--cb-accent)/0.34)] dark:hover:border-[rgb(var(--cb-accent-text)/0.40)]',
           dragging ? 'transition-none shadow-lg ring-1 ring-[rgb(var(--cb-border))]' : 'transition',
           isSelected ? 'ring-2 ring-[rgb(var(--cb-accent)/0.2)]' : '',
         )}
