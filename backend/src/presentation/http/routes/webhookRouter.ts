@@ -65,12 +65,20 @@ function coerceTimestamp(value: unknown): { value?: string; valid: boolean } {
 function coerceTurnCount(value: unknown): { value?: number; valid: boolean } {
   if (value == null) return { value: undefined, valid: true };
 
-  const asNumber = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(asNumber)) return { valid: false };
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) return { valid: false };
+    return { value, valid: true };
+  }
 
-  const integer = Math.trunc(asNumber);
-  if (integer < 0) return { valid: false };
-  return { value: integer, valid: true };
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed || !/^\d+$/.test(trimmed)) return { valid: false };
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isSafeInteger(parsed)) return { valid: false };
+    return { value: parsed, valid: true };
+  }
+
+  return { valid: false };
 }
 
 export function createWebhookRouter({ broadcast }: { broadcast: (data: unknown) => void }) {

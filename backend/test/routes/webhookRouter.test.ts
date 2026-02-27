@@ -97,16 +97,21 @@ describe('Webhook API', () => {
     const appCtx = createTestApp({ broadcast });
     db = appCtx.db;
 
-    const res = await request(appCtx.app)
-      .post('/api/webhook/clawboard')
-      .send({
-        event: 'agent:thinking',
-        agentId: 'tee',
-        turnCount: '-1',
-      })
-      .expect(400);
+    const invalidTurnCounts = ['-1', '1.5', '1e2', true];
 
-    expect(res.body).toEqual({ error: 'Invalid turnCount' });
+    for (const turnCount of invalidTurnCounts) {
+      const res = await request(appCtx.app)
+        .post('/api/webhook/clawboard')
+        .send({
+          event: 'agent:thinking',
+          agentId: 'tee',
+          turnCount,
+        })
+        .expect(400);
+
+      expect(res.body).toEqual({ error: 'Invalid turnCount' });
+    }
+
     expect(broadcast).not.toHaveBeenCalled();
   });
 
