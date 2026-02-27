@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { WsStatus } from '../../hooks/useWebSocket';
 
 function statusLabel(status: WsStatus): string {
@@ -40,6 +40,9 @@ export function WebSocketStatusIndicator({
   const dotClass = statusDotClass(status);
   const lastReceivedText = useMemo(() => formatLastReceived(lastReceivedAt), [lastReceivedAt]);
   const showIssueBanner = status === 'reconnecting' || status === 'disconnected';
+  const [isHoverOpen, setIsHoverOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const isPanelOpen = isHoverOpen;
 
   return (
     <>
@@ -66,41 +69,57 @@ export function WebSocketStatusIndicator({
       ) : null}
 
       <div className="fixed right-3 top-3 z-50">
-        <div className="group relative">
+        <div
+          ref={rootRef}
+          className="relative"
+          onMouseEnter={() => setIsHoverOpen(true)}
+          onMouseLeave={() => setIsHoverOpen(false)}
+          onFocusCapture={() => setIsHoverOpen(true)}
+          onBlurCapture={(event) => {
+            const next = event.relatedTarget as Node | null;
+            if (next && rootRef.current?.contains(next)) return;
+            setIsHoverOpen(false);
+          }}
+        >
           <button
             type="button"
-            className="rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur hover:bg-white"
+            className="cursor-pointer rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur transition-all duration-150 hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
             aria-label="WebSocket connection status"
+            aria-expanded={isPanelOpen}
           >
             <span className="inline-flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+              <span className={`h-2 w-2 rounded-full transition-transform duration-150 ${isPanelOpen ? 'scale-110' : ''} ${dotClass}`} />
               <span>{label}</span>
             </span>
           </button>
-          <div className="pointer-events-none absolute right-0 mt-2 w-64 translate-y-1 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700 opacity-0 shadow-lg transition duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100">
-            <div className="mb-2 font-semibold text-slate-800">WebSocket status</div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">State</span>
-                <span>{label}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Retry attempts</span>
-                <span>{reconnectAttempts}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Last message</span>
-                <span>{lastReceivedText}</span>
+          {isPanelOpen ? (
+            <div className="absolute right-0 top-full pt-2">
+              <div className="w-64 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700 shadow-lg">
+                <div className="mb-2 font-semibold text-slate-800">WebSocket status</div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">State</span>
+                    <span>{label}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Retry attempts</span>
+                    <span>{reconnectAttempts}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Last message</span>
+                    <span>{lastReceivedText}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onReconnect}
+                  className="mt-3 w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Reconnect
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onReconnect}
-              className="mt-3 w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Reconnect
-            </button>
-          </div>
+          ) : null}
         </div>
       </div>
     </>
