@@ -66,14 +66,18 @@ export function WebSocketStatusIndicator({
       ) : null}
 
       <div className="fixed right-3 top-3 z-50">
-        <details className="group relative">
-          <summary className="list-none rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur hover:bg-white">
+        <div className="group relative">
+          <button
+            type="button"
+            className="rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur hover:bg-white"
+            aria-label="WebSocket connection status"
+          >
             <span className="inline-flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${dotClass}`} />
               <span>{label}</span>
             </span>
-          </summary>
-          <div className="absolute right-0 mt-2 w-64 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700 shadow-lg">
+          </button>
+          <div className="pointer-events-none absolute right-0 mt-2 w-64 translate-y-1 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-700 opacity-0 shadow-lg transition duration-150 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100">
             <div className="mb-2 font-semibold text-slate-800">WebSocket status</div>
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
@@ -97,7 +101,7 @@ export function WebSocketStatusIndicator({
               Reconnect
             </button>
           </div>
-        </details>
+        </div>
       </div>
     </>
   );
