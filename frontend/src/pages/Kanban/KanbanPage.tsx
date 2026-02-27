@@ -763,6 +763,7 @@ export function KanbanPage({
   }, [openTaskId, tasks]);
 
   // WS updates (simple in-memory apply)
+  // Depend on the whole wsSignal object so consecutive same-type events are still processed.
   useEffect(() => {
     if (!wsSignal?.type) return;
 
@@ -799,7 +800,7 @@ export function KanbanPage({
       refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsSignal?.type]);
+  }, [wsSignal]);
 
   const baseFiltered = useMemo(() => {
     const query = q.trim().toLowerCase();
