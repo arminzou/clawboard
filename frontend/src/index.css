@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
   Clawboard base theme.
@@ -14,12 +15,16 @@
   /* Brand / focus */
   --cb-accent: 15 23 42; /* slate-900 */
   --cb-accent-soft: 241 245 249; /* slate-100 */
+  --cb-accent-text: 15 23 42; /* slate-900 */
+  --cb-on-accent: 248 250 252; /* slate-50 */
 
   /* Surfaces */
   --cb-bg: 241 245 249; /* slate-100 */
   --cb-surface: 255 255 255; /* white */
+  --cb-surface-2: 248 250 252; /* slate-50 */
   --cb-surface-muted: 248 250 252; /* slate-50 */
   --cb-border: 226 232 240; /* slate-200 */
+  --cb-column-border: 203 213 225; /* slate-300 */
 
   /* Typography */
   --cb-text: 15 23 42; /* slate-900 */
@@ -37,6 +42,30 @@
   --cb-shadow-md: 0 8px 20px rgb(15 23 42 / 0.10);
 }
 
+:root.dark {
+  color-scheme: dark;
+
+  /* Brand / focus */
+  --cb-accent: 30 41 59; /* slate-800 */
+  --cb-accent-soft: 51 65 85; /* slate-700 */
+  --cb-accent-text: 186 230 253; /* sky-200 */
+  --cb-on-accent: 241 245 249; /* slate-100 */
+
+  /* Surfaces */
+  --cb-bg: 2 6 23; /* slate-950 */
+  --cb-surface: 15 23 42; /* slate-900 */
+  --cb-surface-2: 30 41 59; /* slate-800 */
+  --cb-surface-muted: 30 41 59; /* slate-800 */
+  --cb-border: 51 65 85; /* slate-700 */
+  --cb-column-border: 100 116 139; /* slate-500 */
+
+  /* Typography */
+  --cb-text: 226 232 240; /* slate-200 */
+  --cb-text-muted: 148 163 184; /* slate-400 */
+
+  --cb-shadow-sm: 0 1px 2px rgb(2 6 23 / 0.5);
+  --cb-shadow-md: 0 8px 22px rgb(2 6 23 / 0.55);
+}
 
 @layer base {
   html,
@@ -58,6 +87,10 @@
   :focus-visible {
     outline: 2px solid rgb(var(--cb-accent) / 0.9);
     outline-offset: 2px;
+  }
+
+  .dark ::selection {
+    background: rgb(56 189 248 / 0.28);
   }
 }
 
@@ -250,6 +283,112 @@
 
   .cb-agent-card-slot .cb-agent-conn {
     min-height: 1rem;
+  }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    background-color: rgb(15 23 42) !important;
+  }
+
+  .dark .bg-white\/95 {
+    background-color: rgb(15 23 42 / 0.95) !important;
+  }
+
+  .dark .bg-white\/90 {
+    background-color: rgb(15 23 42 / 0.9) !important;
+  }
+
+  .dark .bg-white\/60 {
+    background-color: rgb(15 23 42 / 0.6) !important;
+  }
+
+  .dark .bg-slate-50 {
+    background-color: rgb(30 41 59) !important;
+  }
+
+  .dark .bg-slate-50\/60 {
+    background-color: rgb(30 41 59 / 0.6) !important;
+  }
+
+  .dark .bg-slate-100 {
+    background-color: rgb(51 65 85) !important;
+  }
+
+  .dark .bg-slate-100\/60 {
+    background-color: rgb(51 65 85 / 0.6) !important;
+  }
+
+  .dark .bg-slate-200 {
+    background-color: rgb(71 85 105) !important;
+  }
+
+  .dark .text-slate-900 {
+    color: rgb(241 245 249) !important;
+  }
+
+  .dark .text-slate-800 {
+    color: rgb(226 232 240) !important;
+  }
+
+  .dark .text-slate-700 {
+    color: rgb(203 213 225) !important;
+  }
+
+  .dark .text-slate-600 {
+    color: rgb(148 163 184) !important;
+  }
+
+  .dark .text-slate-500 {
+    color: rgb(148 163 184) !important;
+  }
+
+  .dark .text-slate-400 {
+    color: rgb(148 163 184) !important;
+  }
+
+  .dark .text-\[rgb\(var\(--cb-accent\)\)\] {
+    color: rgb(var(--cb-accent-text)) !important;
+  }
+
+  .dark .border-slate-100 {
+    border-color: rgb(51 65 85) !important;
+  }
+
+  .dark .border-slate-200 {
+    border-color: rgb(51 65 85) !important;
+  }
+
+  .dark .border-slate-300 {
+    border-color: rgb(71 85 105) !important;
+  }
+
+  .dark .ring-slate-200 {
+    --tw-ring-color: rgb(71 85 105) !important;
+  }
+
+  .dark .hover\:bg-white:hover {
+    background-color: rgb(30 41 59) !important;
+  }
+
+  .dark .hover\:bg-slate-50:hover {
+    background-color: rgb(51 65 85) !important;
+  }
+
+  .dark .hover\:bg-slate-100:hover {
+    background-color: rgb(71 85 105) !important;
+  }
+
+  .dark .hover\:bg-slate-200:hover {
+    background-color: rgb(100 116 139) !important;
+  }
+
+  .dark .hover\:border-slate-300:hover {
+    border-color: rgb(100 116 139) !important;
+  }
+
+  .dark .hover\:text-\[rgb\(var\(--cb-accent\)\)\]:hover {
+    color: rgb(var(--cb-accent-text)) !important;
   }
 }
 

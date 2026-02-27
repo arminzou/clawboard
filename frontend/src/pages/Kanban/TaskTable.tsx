@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Task, TaskStatus } from '../../lib/api';
+import { Button } from '../../components/ui/Button';
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
   backlog: 'Backlog',
@@ -43,12 +44,38 @@ function parseDate(raw: string | null | undefined): number {
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) {
-    return <ChevronsUpDown size={14} className="text-slate-400" />;
+    return <ChevronsUpDown size={14} className="text-[rgb(var(--cb-text-muted))]" />;
   }
   return dir === 'asc' ? (
-    <ChevronUp size={14} className="text-[rgb(var(--cb-accent))]" />
+    <ChevronUp size={14} className="text-[rgb(var(--cb-accent-text))]" />
   ) : (
-    <ChevronDown size={14} className="text-[rgb(var(--cb-accent))]" />
+    <ChevronDown size={14} className="text-[rgb(var(--cb-accent-text))]" />
+  );
+}
+
+function SortHeaderButton({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      aria-pressed={active}
+      className="-ml-1 h-7 gap-1 rounded-md px-1.5 py-0 text-xs font-semibold text-[rgb(var(--cb-text-muted))] hover:text-[rgb(var(--cb-text))]"
+      onClick={onClick}
+    >
+      {label}
+      <SortIcon active={active} dir={dir} />
+    </Button>
   );
 }
 
@@ -117,79 +144,31 @@ export function TaskTable({
     <div className="overflow-hidden rounded-2xl border border-[rgb(var(--cb-border))] bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-sm">
-          <thead className="bg-[rgb(var(--cb-surface-2))] text-left text-xs font-semibold text-slate-700">
+          <thead className="bg-[rgb(var(--cb-surface-2))] text-left text-xs font-semibold text-[rgb(var(--cb-text-muted))]">
             <tr>
               <th className="w-[80px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('id')}
-                >
-                  ID <SortIcon active={sortKey === 'id'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="ID" active={sortKey === 'id'} dir={sortDir} onClick={() => handleSort('id')} />
               </th>
               <th className="min-w-[320px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('title')}
-                >
-                  Title <SortIcon active={sortKey === 'title'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Title" active={sortKey === 'title'} dir={sortDir} onClick={() => handleSort('title')} />
               </th>
               <th className="w-[140px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('status')}
-                >
-                  Status <SortIcon active={sortKey === 'status'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Status" active={sortKey === 'status'} dir={sortDir} onClick={() => handleSort('status')} />
               </th>
               <th className="w-[140px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('assignee')}
-                >
-                  Assignee <SortIcon active={sortKey === 'assignee'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Assignee" active={sortKey === 'assignee'} dir={sortDir} onClick={() => handleSort('assignee')} />
               </th>
               <th className="w-[130px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('due')}
-                >
-                  Due <SortIcon active={sortKey === 'due'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Due" active={sortKey === 'due'} dir={sortDir} onClick={() => handleSort('due')} />
               </th>
               <th className="w-[120px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('priority')}
-                >
-                  Priority <SortIcon active={sortKey === 'priority'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Priority" active={sortKey === 'priority'} dir={sortDir} onClick={() => handleSort('priority')} />
               </th>
               <th className="min-w-[220px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('tags')}
-                >
-                  Tags <SortIcon active={sortKey === 'tags'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Tags" active={sortKey === 'tags'} dir={sortDir} onClick={() => handleSort('tags')} />
               </th>
               <th className="w-[140px] px-4 py-3">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 hover:text-[rgb(var(--cb-accent))]"
-                  onClick={() => handleSort('updated')}
-                >
-                  Updated <SortIcon active={sortKey === 'updated'} dir={sortDir} />
-                </button>
+                <SortHeaderButton label="Updated" active={sortKey === 'updated'} dir={sortDir} onClick={() => handleSort('updated')} />
               </th>
             </tr>
           </thead>

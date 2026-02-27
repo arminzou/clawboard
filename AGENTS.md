@@ -33,6 +33,24 @@ Use `pnpm` from repo root.
 - Prefer explicit types at API boundaries; validate untrusted inputs.
 - Run lint/tests before commit; avoid dead code and commented-out blocks.
 
+## Frontend UI Style Guidelines
+- Prefer shared primitives for controls:
+  - Use `frontend/src/components/ui/Button.tsx` for actions.
+  - Use `frontend/src/components/ui/Checkbox.tsx` for checkboxes.
+  - Avoid new raw `<button>` / checkbox styles unless there is a clear exception.
+- Keep interaction patterns consistent:
+  - Use token-based colors (`--cb-*`) for hover/focus/disabled states.
+  - Primary actions should keep subtle but visible hover cues (including border contrast in light/dark themes).
+  - Preserve focus-visible ring behavior from shared components.
+- Dark mode readability:
+  - Avoid low-contrast accent text on dark surfaces.
+  - Prefer `--cb-accent-text` / `--cb-on-accent` for legible emphasis.
+- Icons:
+  - Prefer `lucide-react` for UI/action icons.
+  - Do not introduce ad-hoc SVG icon implementations when a Lucide icon exists.
+- Validation for UI style changes:
+  - Run `pnpm -C frontend build` before marking related tasks done.
+
 ## Testing Guidelines
 - Backend: Vitest + Supertest, located in `backend/test`.
 - Frontend: Vitest + Testing Library, colocated under `frontend/src`.

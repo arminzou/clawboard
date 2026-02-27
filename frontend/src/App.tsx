@@ -8,9 +8,11 @@ import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
 import { DocsView } from './pages/Docs/DocsView';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useTheme } from './hooks/useTheme';
 import { toast } from './lib/toast';
 import { api } from './lib/api';
 import { normalizeAgentIds, normalizeProfileSources, type AgentProfileSources } from './components/layout/agentProfile';
+import { WebSocketStatusIndicator } from './components/layout/WebSocketStatusIndicator';
 import './index.css';
 
 type Tab = AppTab;
@@ -29,12 +31,13 @@ export default function App() {
   const [openTaskId, setOpenTaskId] = useState<number | null>(null);
   const [initialAgentIds, setInitialAgentIds] = useState<string[]>([]);
   const [agentProfileSources, setAgentProfileSources] = useState<AgentProfileSources>({});
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const pushToast = useCallback((msg: string) => {
     toast.show(msg);
   }, []);
 
-  const { lastMessage, status: wsStatus } = useWebSocket({
+  const { lastMessage, status: wsStatus, lastReceivedAt, reconnectAttempts, reconnectNow } = useWebSocket({
     onMessage: (m) => {
       const t = String(m.type || '');
       if (t.startsWith('task_')) pushToast(`Tasks updated (${t})`);
@@ -83,9 +86,15 @@ export default function App() {
     <ErrorBoundary>
       <div className="h-full bg-[rgb(var(--cb-bg))]">
         <ToastContainer />
+        <WebSocketStatusIndicator
+          status={wsStatus}
+          reconnectAttempts={reconnectAttempts}
+          lastReceivedAt={lastReceivedAt}
+          onReconnect={reconnectNow}
+        />
 
         <div className="flex h-full">
-          <IconRail tab={tab} onTab={setTab} />
+          <IconRail tab={tab} onTab={setTab} theme={resolvedTheme} onToggleTheme={toggleTheme} />
 
           <div className="min-w-0 flex-1">
             <Routes>

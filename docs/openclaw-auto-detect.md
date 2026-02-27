@@ -89,7 +89,7 @@ When Clawboard starts, it logs detection results:
 🚀 Clawboard Backend running on http://0.0.0.0:3001
 📊 WebSocket endpoint: ws://0.0.0.0:3001/ws
 💾 Database: /app/data/clawboard.db
-🔑 API Key: mysecretkey
+🔑 API Key: [redacted]
 📁 Projects: /app/workspace-projects
 🤖 OpenClaw: detected at /home/armin/.openclaw
 ```

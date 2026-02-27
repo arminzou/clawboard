@@ -11,11 +11,12 @@ import {
 import type { DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { AlertTriangle, Clock, Flag, FolderOpen, GripVertical, Hash, User } from 'lucide-react';
+import { AlertTriangle, Clock, Flag, FolderOpen, GripVertical, Hash, MoreHorizontal, Plus, User, X } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { api } from '../../lib/api';
 import type { Project, Task, TaskStatus } from '../../lib/api';
 import { formatDate, formatDateTimeSmart, formatRelativeTime } from '../../lib/date';
+import { Button } from '../../components/ui/Button';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { Chip } from '../../components/ui/Chip';
 import { Input } from '../../components/ui/Input';
@@ -279,7 +280,7 @@ function KanbanColumn({
   return (
     <div
       className={clsx(
-        'flex min-h-[20rem] flex-col rounded-xl bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
+        'flex min-h-[20rem] flex-col rounded-xl border border-[rgb(var(--cb-column-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
         showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.1)] shadow-md',
       )}
       data-testid={`kanban-column-${id}`}
@@ -290,9 +291,11 @@ function KanbanColumn({
           <div className="rounded-full bg-[rgb(var(--cb-accent-soft))] px-1.5 py-0.5 text-[11px] font-medium text-[rgb(var(--cb-text))]">{count}</div>
         </div>
         <div className="flex items-center gap-1">
-          <button
+          <Button
             type="button"
-            className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 rounded-lg text-[rgb(var(--cb-text-muted))] hover:text-[rgb(var(--cb-text))]"
             onClick={() => {
               setQuickOpen((v) => !v);
               setQuickTitle('');
@@ -300,8 +303,8 @@ function KanbanColumn({
             title={quickOpen ? `Close quick add` : `Quick add to ${title}`}
             aria-label={quickOpen ? `Close quick add` : `Quick add to ${title}`}
           >
-            {quickOpen ? '×' : '+'}
-          </button>
+            {quickOpen ? <X size={14} /> : <Plus size={14} />}
+          </Button>
           <Menu
             align="right"
             items={[
@@ -324,15 +327,17 @@ function KanbanColumn({
               },
             ]}
             trigger={({ toggle }) => (
-              <button
+              <Button
                 type="button"
-                className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2 py-1 text-sm text-[rgb(var(--cb-text-muted))] transition hover:bg-[rgb(var(--cb-accent-soft))] hover:text-[rgb(var(--cb-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--cb-accent)/0.45)] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--cb-surface))]"
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-[rgb(var(--cb-text-muted))] hover:text-[rgb(var(--cb-text))]"
                 title="Menu"
                 aria-label="Menu"
                 onClick={toggle}
               >
-                …
-              </button>
+                <MoreHorizontal size={14} />
+              </Button>
             )}
           />
         </div>
@@ -481,7 +486,7 @@ const TaskCard = memo(
       <div
         data-testid={`task-card-${task.id}`}
         className={clsx(
-          'group w-full rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 text-left shadow-sm will-change-transform',
+          'group w-full rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] p-2 text-left shadow-sm will-change-transform hover:border-[rgb(var(--cb-accent)/0.34)] dark:hover:border-[rgb(var(--cb-accent-text)/0.40)]',
           dragging ? 'transition-none shadow-lg ring-1 ring-[rgb(var(--cb-border))]' : 'transition',
           isSelected ? 'ring-2 ring-[rgb(var(--cb-accent)/0.2)]' : '',
         )}
@@ -505,18 +510,20 @@ const TaskCard = memo(
             {task.title}
           </button>
 
-          <button
+          <Button
             type="button"
-            data-testid={`task-drag-handle-${task.id}`}
             className={clsx(
-              'shrink-0 rounded-md p-1 text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))] cursor-grab active:cursor-grabbing'
+              'h-7 w-7 shrink-0 rounded-md p-0 text-[rgb(var(--cb-text-muted))] hover:text-[rgb(var(--cb-text))] cursor-grab active:cursor-grabbing'
             )}
+            variant="ghost"
+            size="icon"
             aria-label="Drag task"
             title="Drag task"
+            data-testid={`task-drag-handle-${task.id}`}
             {...dragHandleProps}
           >
             <GripVertical size={16} />
-          </button>
+          </Button>
         </div>
 
         <button

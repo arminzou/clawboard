@@ -1,104 +1,73 @@
 import type { ReactNode } from 'react';
+import { Activity as ActivityIcon, FileText, LayoutGrid, Moon, PawPrint, Settings, Sun } from 'lucide-react';
 import { IconButton } from '../ui/Button';
+import type { ResolvedTheme } from '../../hooks/useTheme';
 
 export type AppTab = 'kanban' | 'activity' | 'docs';
 
 export function IconRail({
   tab,
   onTab,
+  theme,
+  onToggleTheme,
 }: {
   tab: AppTab;
   onTab: (t: AppTab) => void;
+  theme: ResolvedTheme;
+  onToggleTheme: () => void;
 }) {
   const items: Array<{ key: AppTab; label: string; icon: ReactNode }> = [
-    { key: 'kanban', label: 'Projects', icon: <IconProjects /> },
-    { key: 'activity', label: 'Activity', icon: <IconActivity /> },
-    { key: 'docs', label: 'Docs', icon: <IconDocs /> },
+    { key: 'kanban', label: 'Projects', icon: <LayoutGrid size={18} strokeWidth={2} /> },
+    { key: 'activity', label: 'Activity', icon: <ActivityIcon size={18} strokeWidth={2} /> },
+    { key: 'docs', label: 'Docs', icon: <FileText size={18} strokeWidth={2} /> },
   ];
 
   return (
     <aside className="flex w-14 shrink-0 flex-col items-center gap-3 bg-[rgb(var(--cb-accent))] py-3">
       <button
         type="button"
-        className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--cb-surface)/0.12)] text-[rgb(var(--cb-surface))] transition hover:bg-[rgb(var(--cb-surface)/0.18)]"
+        className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/30 bg-white/16 text-sm font-black tracking-[0.08em] text-white shadow-[0_4px_14px_rgb(2_6_23/0.22)] transition hover:bg-white/22"
         title="Clawboard"
         aria-label="Clawboard"
         onClick={() => onTab('kanban')}
       >
-        C
+        <PawPrint size={18} strokeWidth={2.4} />
       </button>
 
       <div className="flex flex-1 flex-col items-center gap-2">
         {items.map((it) => (
-          <IconButton key={it.key} label={it.label} active={tab === it.key} onClick={() => onTab(it.key)}>
+          <IconButton
+            key={it.key}
+            label={it.label}
+            active={tab === it.key}
+            onClick={() => onTab(it.key)}
+            className={
+              tab === it.key
+                ? '!bg-white/24 !text-white ring-1 ring-white/35'
+                : '!text-white/78 hover:!bg-white/14 hover:!text-white'
+            }
+          >
             {it.icon}
           </IconButton>
         ))}
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        <IconButton label="Settings" disabled>
-          <IconSettings />
+        <IconButton
+          label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          onClick={onToggleTheme}
+          className="!text-white/78 hover:!bg-white/14 hover:!text-white"
+        >
+          {theme === 'dark' ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+        </IconButton>
+        <IconButton
+          label="Settings"
+          disabled
+          className="!bg-white/8 !text-white/65 ring-1 ring-white/20 disabled:!opacity-90"
+        >
+          <Settings size={18} strokeWidth={2} />
         </IconButton>
       </div>
     </aside>
-  );
-}
-
-function IconProjects() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path d="M8 5V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M16 5V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M4 10h16" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function IconActivity() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 12h4l2-4 4 8 2-4h4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function IconDocs() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M7 4h7l3 3v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path d="M14 4v4h4" stroke="currentColor" strokeWidth="2" />
-      <path d="M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8 16h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconSettings() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M19.4 15a7.9 7.9 0 0 0 .1-1 7.9 7.9 0 0 0-.1-1l2.1-1.6-2-3.4-2.5 1a8.1 8.1 0 0 0-1.7-1l-.4-2.7h-4l-.4 2.7a8.1 8.1 0 0 0-1.7 1l-2.5-1-2 3.4L4.6 13a7.9 7.9 0 0 0-.1 1 7.9 7.9 0 0 0 .1 1l-2.1 1.6 2 3.4 2.5-1a8.1 8.1 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8.1 8.1 0 0 0 1.7-1l2.5 1 2-3.4L19.4 15Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }

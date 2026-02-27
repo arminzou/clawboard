@@ -22,19 +22,40 @@ export function createTasksRouter({ db, broadcast }: { db: Database; broadcast?:
     return id;
   }
 
+  function parseNonNegativeInt(raw: unknown, field: string): number | undefined {
+    if (raw == null) return undefined;
+    const s = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof s !== 'string') throw new HttpError(400, `Invalid ${field}`);
+
+    const trimmed = s.trim();
+    if (!trimmed) throw new HttpError(400, `Invalid ${field}`);
+    if (!/^\d+$/.test(trimmed)) throw new HttpError(400, `Invalid ${field}`);
+
+    const value = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(value) || value < 0) throw new HttpError(400, `Invalid ${field}`);
+    return value;
+  }
+
   // GET /api/tasks
   router.get('/', (req: Request, res: Response, next: NextFunction) => {
-    const { status, assigned_to, include_archived, project_id, context_key, context_type, is_someday } = req.query as Record<string, string | undefined>;
+    const { status, assigned_to, include_archived, project_id, context_key, context_type, is_someday, limit, offset } = req.query as Record<string, string | undefined>;
 
     try {
+      const parsedProjectId = project_id != null ? Number(project_id) : undefined;
+      if (project_id != null && !Number.isFinite(parsedProjectId)) {
+        throw new HttpError(400, 'Invalid project_id');
+      }
+
       const tasks = service.list({
         status: status as TaskStatus | undefined,
         assigned_to,
         include_archived: include_archived === '1' || include_archived === 'true',
-        project_id: project_id != null ? Number(project_id) : undefined,
+        project_id: parsedProjectId,
         context_key,
         context_type,
         is_someday: is_someday === '1' || is_someday === 'true' ? true : is_someday === '0' || is_someday === 'false' ? false : undefined,
+        limit: parseNonNegativeInt(limit, 'limit'),
+        offset: parseNonNegativeInt(offset, 'offset'),
       });
       res.json(tasks);
     } catch (err) {

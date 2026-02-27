@@ -260,6 +260,37 @@ describe('Tasks API', () => {
       .expect(400);
   });
 
+  it('supports limit and offset pagination in list endpoint', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    await request(appCtx.app).post('/api/tasks').send({ title: 'A', status: 'backlog' }).expect(201);
+    await request(appCtx.app).post('/api/tasks').send({ title: 'B', status: 'backlog' }).expect(201);
+    await request(appCtx.app).post('/api/tasks').send({ title: 'C', status: 'backlog' }).expect(201);
+
+    const limited = await request(appCtx.app).get('/api/tasks?limit=2').expect(200);
+    expect(limited.body).toHaveLength(2);
+    expect(limited.body.map((t: TaskLike) => t.id)).toEqual([1, 2]);
+
+    const paged = await request(appCtx.app).get('/api/tasks?limit=1&offset=1').expect(200);
+    expect(paged.body).toHaveLength(1);
+    expect(paged.body[0].id).toBe(2);
+
+    const offsetOnly = await request(appCtx.app).get('/api/tasks?offset=2').expect(200);
+    expect(offsetOnly.body).toHaveLength(1);
+    expect(offsetOnly.body[0].id).toBe(3);
+  });
+
+  it('returns 400 for invalid pagination params', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    await request(appCtx.app).get('/api/tasks?limit=-1').expect(400);
+    await request(appCtx.app).get('/api/tasks?limit=abc').expect(400);
+    await request(appCtx.app).get('/api/tasks?offset=-1').expect(400);
+    await request(appCtx.app).get('/api/tasks?offset=1.5').expect(400);
+  });
+
   it('returns 400 for invalid id', async () => {
     const appCtx = createTestApp();
     db = appCtx.db;
