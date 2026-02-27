@@ -713,16 +713,12 @@ export function Sidebar({
 
 function IconChevron({ open }: { open: boolean }) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
+    <ChevronRight
+      size={14}
       aria-hidden="true"
       className={open ? 'rotate-90 transition' : 'transition'}
-    >
-      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+      strokeWidth={2}
+    />
   );
 }
 

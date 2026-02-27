@@ -279,7 +279,7 @@ function KanbanColumn({
   return (
     <div
       className={clsx(
-        'flex min-h-[20rem] flex-col rounded-xl bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
+        'flex min-h-[20rem] flex-col rounded-xl border border-[rgb(var(--cb-column-border))] bg-[rgb(var(--cb-surface-muted))] shadow-sm transition',
         showDropHint && 'ring-2 ring-[rgb(var(--cb-accent)/0.1)] shadow-md',
       )}
       data-testid={`kanban-column-${id}`}

@@ -13,7 +13,7 @@ export function Chip({
     soft: 'bg-[rgb(var(--cb-accent-soft))] text-[rgb(var(--cb-text))]',
     neutral:
       'border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] text-[rgb(var(--cb-text))]',
-    strong: 'bg-[rgb(var(--cb-accent))] text-[rgb(var(--cb-surface))]',
+    strong: 'bg-[rgb(var(--cb-accent))] text-[rgb(var(--cb-on-accent))]',
   };
 
   return (
