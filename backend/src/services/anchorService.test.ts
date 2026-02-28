@@ -127,4 +127,13 @@ describe('AnchorService', () => {
     expect(resolved.resolved_anchor).toBe('/tmp/task-wins');
     expect(resolved.anchor_source).toBe('task');
   });
+
+  it('ignores unresolved env vars in task anchor and falls back', () => {
+    const service = new AnchorService({ getById: () => null });
+    const task = taskFixture({ anchor: '$MISSING_ENV/path' });
+
+    const resolved = service.resolve(task);
+    expect(resolved.resolved_anchor).toBe('/tmp/clawboard-scratch');
+    expect(resolved.anchor_source).toBe('scratch');
+  });
 });

@@ -14,6 +14,7 @@ function syncProjects(db, broadcast = null) {
   ).split(path.delimiter);
 
   const discoveredProjects = new Map(); // Use a map to handle potential duplicates across roots
+  const discoveredPaths = new Set();
 
   for (const projectsPath of projectsRoots) {
     if (!fs.existsSync(projectsPath)) {
@@ -41,6 +42,7 @@ function syncProjects(db, broadcast = null) {
       if (discoveredProjects.has(slug)) continue; // Already found in a higher priority root
 
       const dirPath = path.resolve(path.join(projectsPath, slug)); // Use resolved absolute path
+      if (discoveredPaths.has(dirPath)) continue;
       const name = slug
         .split(/[-_]/)
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -60,12 +62,14 @@ function syncProjects(db, broadcast = null) {
       }
       
       discoveredProjects.set(slug, { name, slug, path: dirPath, description });
+      discoveredPaths.add(dirPath);
     }
   }
 
   // Read existing projects from DB
-  const existing = db.prepare('SELECT slug FROM projects').all();
+  const existing = db.prepare('SELECT slug, path FROM projects').all();
   const existingSlugs = new Set(existing.map((p) => p.slug));
+  const existingPaths = new Set(existing.map((p) => path.resolve(p.path)));
 
   const insertStmt = db.prepare(`
     INSERT INTO projects (name, slug, path, description, icon, color)
@@ -75,8 +79,10 @@ function syncProjects(db, broadcast = null) {
   let newlyDiscovered = 0;
   for (const [slug, project] of discoveredProjects.entries()) {
     if (existingSlugs.has(slug)) continue;
+    if (existingPaths.has(path.resolve(project.path))) continue;
 
     insertStmt.run(project.name, project.slug, project.path, project.description);
+    existingPaths.add(path.resolve(project.path));
     newlyDiscovered++;
   }
 

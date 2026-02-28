@@ -187,7 +187,15 @@ type ClawboardConfigFile = {
 function resolveClawboardConfigPath(): string {
   const raw = process.env.CLAWBOARD_CONFIG ?? process.env.CLAWBOARD_CONFIG_PATH;
   if (raw) return raw.startsWith('/') ? raw : path.resolve(BACKEND_ROOT, raw);
-  return path.join(getClawboardDir(), 'config.json');
+
+  const xdgDefault = path.join(os.homedir(), '.config', 'clawboard', 'config.json');
+  if (fs.existsSync(xdgDefault)) return xdgDefault;
+
+  // Backward-compatible fallback for existing installs.
+  const legacyDefault = path.join(getClawboardDir(), 'config.json');
+  if (fs.existsSync(legacyDefault)) return legacyDefault;
+
+  return xdgDefault;
 }
 
 function readClawboardConfigFile(filePath: string): ClawboardConfigFile {
@@ -226,11 +234,13 @@ function resolvePathValue(raw: string): string {
     value = path.join(os.homedir(), value.slice(1));
   }
 
-  value = value.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (_m, a, b) => {
+  value = value.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (match, a, b) => {
     const key = String(a || b || '');
-    return process.env[key] ?? '';
+    const resolved = process.env[key];
+    return resolved === undefined ? match : resolved;
   });
 
+  if (/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/i.test(value)) return '';
   return path.resolve(value);
 }
 

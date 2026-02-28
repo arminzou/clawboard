@@ -9,6 +9,9 @@ type AnchorResolution = {
   anchor_source: AnchorSource;
 };
 
+const ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi;
+const HAS_ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/i;
+
 function normalizePathInput(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
   let value = raw.trim();
@@ -18,12 +21,13 @@ function normalizePathInput(raw: string | null | undefined): string | null {
     value = path.join(os.homedir(), value.slice(1));
   }
 
-  value = value.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (_m, a, b) => {
+  value = value.replace(ENV_VAR_PATTERN, (match, a, b) => {
     const key = String(a || b || '');
-    return process.env[key] ?? '';
+    const resolved = process.env[key];
+    return resolved === undefined ? match : resolved;
   });
 
-  if (/\$\{?[A-Z0-9_]+\}?/i.test(value)) {
+  if (HAS_ENV_VAR_PATTERN.test(value)) {
     return null;
   }
 

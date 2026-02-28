@@ -1,16 +1,22 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { createTestApp } from '../utils/testApp';
 
 describe('Projects API', () => {
   let db: any;
+  let previousProjectsDir: string | undefined;
 
   beforeEach(() => {
     process.env.CLAWBOARD_API_KEY = '';
+    previousProjectsDir = process.env.CLAWBOARD_PROJECTS_DIR;
   });
 
   afterEach(() => {
     if (db) db.close();
+    process.env.CLAWBOARD_PROJECTS_DIR = previousProjectsDir;
   });
 
   it('lists, gets, updates, and deletes projects', async () => {
@@ -70,6 +76,27 @@ describe('Projects API', () => {
     expect(created.body.name).toBe('Manual Workspace');
     expect(created.body.slug).toBe('manual-workspace');
     expect(created.body.path).toBe('/tmp/manual-workspace');
+
+    const list = await request(appCtx.app).get('/api/projects').expect(200);
+    expect(list.body).toHaveLength(1);
+  });
+
+  it('discover skips directories already registered manually by path', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'clawboard-discover-'));
+    const discoveredDir = path.join(root, 'auto-project');
+    fs.mkdirSync(discoveredDir, { recursive: true });
+    process.env.CLAWBOARD_PROJECTS_DIR = root;
+
+    await request(appCtx.app)
+      .post('/api/projects')
+      .send({ name: 'Manual Project', path: discoveredDir })
+      .expect(201);
+
+    const discover = await request(appCtx.app).post('/api/projects/discover').expect(200);
+    expect(discover.body.discovered).toBe(0);
 
     const list = await request(appCtx.app).get('/api/projects').expect(200);
     expect(list.body).toHaveLength(1);

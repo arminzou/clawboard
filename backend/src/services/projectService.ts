@@ -17,17 +17,22 @@ function slugify(name: string): string {
   return base || 'project';
 }
 
-function expandPath(rawPath: string): string {
+const ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi;
+const HAS_ENV_VAR_PATTERN = /\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/i;
+
+function expandPath(rawPath: string): string | null {
   let out = rawPath;
   if (out.startsWith('~')) {
     out = path.join(os.homedir(), out.slice(1));
   }
 
-  out = out.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (_m, a, b) => {
+  out = out.replace(ENV_VAR_PATTERN, (match, a, b) => {
     const key = String(a || b || '');
-    return process.env[key] ?? '';
+    const resolved = process.env[key];
+    return resolved === undefined ? match : resolved;
   });
 
+  if (HAS_ENV_VAR_PATTERN.test(out)) return null;
   return path.resolve(out);
 }
 
@@ -56,6 +61,7 @@ export class ProjectService {
     if (!rawPath) throw new HttpError(400, 'path is required');
 
     const resolvedPath = expandPath(rawPath);
+    if (!resolvedPath) throw new HttpError(400, 'path contains unresolved environment variables');
     if (!path.isAbsolute(resolvedPath)) throw new HttpError(400, 'path must resolve to an absolute path');
 
     const existingByPath = this.repo.list().find((project) => project.path === resolvedPath);

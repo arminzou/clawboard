@@ -50,6 +50,15 @@ describe('ProjectService', () => {
     expect(created.path).toBe('/tmp/manual-project');
   });
 
+  it('rejects manual project path with unresolved env vars', () => {
+    expect(() => {
+      service.createManual({
+        name: 'Invalid Env',
+        path: '$MISSING_ENV/workspace',
+      });
+    }).toThrow(HttpError);
+  });
+
   it('deletes projects with cleanup', () => {
     db.prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)').run('Alpha', 'alpha', '/tmp/alpha');
     const project = repo.list()[0];
