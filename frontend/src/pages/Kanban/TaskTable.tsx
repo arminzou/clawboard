@@ -121,7 +121,7 @@ export function TaskTable({
           cmp = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
           break;
         case 'assignee':
-          cmp = (a.assigned_to ?? '').localeCompare(b.assigned_to ?? '');
+          cmp = (a.assigned_to_id ?? '').localeCompare(b.assigned_to_id ?? '');
           break;
         case 'due':
           cmp = parseDate(a.due_date) - parseDate(b.due_date);
@@ -196,7 +196,7 @@ export function TaskTable({
                     ) : null}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-700">{STATUS_LABEL[t.status as TaskStatus] ?? t.status}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-700">{t.assigned_to ?? '—'}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-700">{t.assigned_to_id ?? '—'}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-700">{due || '—'}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-700">{priority || '—'}</td>
                   <td className="px-4 py-3 text-slate-700">

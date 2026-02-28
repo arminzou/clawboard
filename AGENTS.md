@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+**More details about this repo:** see [CLAUDE.md](./CLAUDE.md).
+
 ## Project Structure & Module Organization
 Clawboard is a monorepo with separate backend and frontend apps.
 

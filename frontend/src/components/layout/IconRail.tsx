@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Activity as ActivityIcon, FileText, LayoutGrid, Moon, PawPrint, Settings, Sun } from 'lucide-react';
+import { Activity as ActivityIcon, CheckSquare, FileText, LayoutGrid, Moon, PawPrint, Settings, Sun } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import type { ResolvedTheme } from '../../hooks/useTheme';
 
-export type AppTab = 'kanban' | 'activity' | 'docs';
+export type AppTab = 'kanban' | 'inbox' | 'activity' | 'docs';
 
 export function IconRail({
   tab,
@@ -18,6 +18,7 @@ export function IconRail({
 }) {
   const items: Array<{ key: AppTab; label: string; icon: ReactNode }> = [
     { key: 'kanban', label: 'Projects', icon: <LayoutGrid size={18} strokeWidth={2} /> },
+    { key: 'inbox', label: 'Inbox', icon: <CheckSquare size={18} strokeWidth={2} /> },
     { key: 'activity', label: 'Activity', icon: <ActivityIcon size={18} strokeWidth={2} /> },
     { key: 'docs', label: 'Docs', icon: <FileText size={18} strokeWidth={2} /> },
   ];

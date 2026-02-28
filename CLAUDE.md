@@ -142,6 +142,10 @@ curl -X PATCH http://127.0.0.1:3001/api/tasks/ID \
 
 ---
 
+## Schema Changes
+
+All schema changes go through `backend/db/schema.sql` (source of truth) and `backend/db/migrate.js` (migration runner). Never modify the database directly. Run `node backend/db/migrate.js` after schema changes to apply migrations.
+
 ## Data Model
 
 | Entity | Key Fields |

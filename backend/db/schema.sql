@@ -25,7 +25,10 @@ CREATE TABLE IF NOT EXISTS tasks (
     due_date TEXT, -- ISO date (YYYY-MM-DD) or ISO datetime; nullable
     tags TEXT, -- JSON array of strings; nullable
     blocked_reason TEXT, -- nullable freeform text (why this task is blocked)
-    assigned_to TEXT, -- 'tee', 'fay', 'armin', or null
+    assigned_to_type TEXT CHECK(assigned_to_type IN ('agent', 'human') OR assigned_to_type IS NULL),
+    assigned_to_id TEXT,
+    non_agent INTEGER NOT NULL DEFAULT 0 CHECK(non_agent IN (0, 1)),
+    anchor TEXT, -- explicit task-level context anchor path
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     context_key TEXT, -- e.g., 'projects/clawboard-ui-polish' or 'feature/branch-name'
     context_type TEXT, -- 'worktree' or 'branch'
     is_someday INTEGER DEFAULT 0, -- saved for later / someday/maybe flag
+    CHECK (NOT (non_agent = 1 AND assigned_to_type = 'agent')),
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
@@ -72,7 +76,8 @@ CREATE TABLE IF NOT EXISTS documents (
 
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_non_agent ON tasks(non_agent);
 CREATE INDEX IF NOT EXISTS idx_activities_agent ON activities(agent);
 CREATE INDEX IF NOT EXISTS idx_activities_timestamp ON activities(timestamp);
 CREATE INDEX IF NOT EXISTS idx_activities_task ON activities(related_task_id);

@@ -1,12 +1,40 @@
+import os from 'os';
 import path from 'path';
 import { HttpError } from '../presentation/http/errors/httpError';
 import type { ProjectRepository } from '../repositories/projectRepository';
 import type { Project } from '../domain/project';
 
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function slugify(name: string): string {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return base || 'project';
+}
+
+function expandPath(rawPath: string): string {
+  let out = rawPath;
+  if (out.startsWith('~')) {
+    out = path.join(os.homedir(), out.slice(1));
+  }
+
+  out = out.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (_m, a, b) => {
+    const key = String(a || b || '');
+    return process.env[key] ?? '';
+  });
+
+  return path.resolve(out);
+}
+
 export class ProjectService {
   constructor(
     private readonly repo: ProjectRepository,
-    private readonly broadcast?: (data: unknown) => void
+    private readonly broadcast?: (data: unknown) => void,
   ) {}
 
   list(): Project[] {
@@ -17,6 +45,45 @@ export class ProjectService {
     const project = this.repo.getById(id);
     if (!project) throw new HttpError(404, 'Project not found');
     return project;
+  }
+
+  createManual(body: { name?: unknown; path?: unknown; description?: unknown }): Project {
+    const name = normalizeString(body.name);
+    const rawPath = normalizeString(body.path);
+    const description = normalizeString(body.description) || null;
+
+    if (!name) throw new HttpError(400, 'name is required');
+    if (!rawPath) throw new HttpError(400, 'path is required');
+
+    const resolvedPath = expandPath(rawPath);
+    if (!path.isAbsolute(resolvedPath)) throw new HttpError(400, 'path must resolve to an absolute path');
+
+    const existingByPath = this.repo.list().find((project) => project.path === resolvedPath);
+    if (existingByPath) throw new HttpError(409, 'Project path already registered');
+
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let suffix = 2;
+    while (this.repo.getBySlug(slug)) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+
+    try {
+      const created = this.repo.create({
+        name,
+        slug,
+        path: resolvedPath,
+        description,
+      });
+      this.broadcast?.({ type: 'projects_updated', data: { created: 1, project: created } });
+      return created;
+    } catch (err) {
+      if (err instanceof Error && /UNIQUE/i.test(err.message)) {
+        throw new HttpError(409, 'Project already exists');
+      }
+      throw err;
+    }
   }
 
   update(id: number, patch: Partial<Pick<Project, 'name' | 'description' | 'icon' | 'color'>>): Project {
@@ -52,7 +119,6 @@ export class ProjectService {
     // Interop with legacy JS utility
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { syncProjects } = require('../../utils/syncProjects');
-    // We need the raw db from the repo to pass to the utility
     const db = this.repo.db;
     const result = syncProjects(db, this.broadcast);
     const total = (db.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number }).count;
@@ -80,9 +146,8 @@ export class ProjectService {
 
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { getGitContext } = require('../../utils/gitContext');
-    
+
     try {
-      // The DB stores absolute paths from discovery
       return getGitContext(project.path);
     } catch (err) {
       console.error(`Failed to get git context for project ${id}:`, err);

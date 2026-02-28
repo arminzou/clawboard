@@ -38,6 +38,18 @@ describe('ProjectService', () => {
     expect(updated.description).toBe('Updated');
   });
 
+  it('creates manual project registration', () => {
+    const created = service.createManual({
+      name: 'Manual Project',
+      path: '/tmp/manual-project',
+      description: 'registered manually',
+    });
+
+    expect(created.name).toBe('Manual Project');
+    expect(created.slug).toBe('manual-project');
+    expect(created.path).toBe('/tmp/manual-project');
+  });
+
   it('deletes projects with cleanup', () => {
     db.prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)').run('Alpha', 'alpha', '/tmp/alpha');
     const project = repo.list()[0];

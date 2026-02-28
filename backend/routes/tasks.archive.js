@@ -4,20 +4,28 @@ const router = express.Router();
 // Bulk archive done tasks (optionally by assignee)
 router.post('/archive_done', (req, res) => {
   const db = req.app.locals.db;
-  const { assigned_to } = req.body ?? {};
+  const { assigned_to_id, assigned_to_type, assigned_to } = req.body ?? {};
 
   const conditions = ["status = 'done'", 'archived_at IS NULL'];
   const params = [];
 
-  // assigned_to semantics:
+  // assignee id semantics:
   // - undefined => all
   // - null => unassigned
   // - string => that assignee
-  if (assigned_to === null) {
-    conditions.push('assigned_to IS NULL');
-  } else if (assigned_to !== undefined && assigned_to !== 'all' && assigned_to !== '') {
-    conditions.push('assigned_to = ?');
-    params.push(assigned_to);
+  const assigneeId = assigned_to_id !== undefined ? assigned_to_id : assigned_to;
+  if (assigneeId === null) {
+    conditions.push('assigned_to_id IS NULL');
+  } else if (assigneeId !== undefined && assigneeId !== 'all' && assigneeId !== '') {
+    conditions.push('assigned_to_id = ?');
+    params.push(String(assigneeId).trim());
+  }
+
+  if (assigned_to_type === null) {
+    conditions.push('assigned_to_type IS NULL');
+  } else if (assigned_to_type !== undefined && assigned_to_type !== 'all' && assigned_to_type !== '') {
+    conditions.push('assigned_to_type = ?');
+    params.push(String(assigned_to_type).trim());
   }
 
   const now = new Date().toISOString();

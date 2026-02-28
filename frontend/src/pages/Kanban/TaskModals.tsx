@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, CheckCircle2, ChevronDown, Clock, Trash2 } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
-import type { Assignee, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
+import type { AssigneeType, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { formatDateTimeFull } from '../../lib/date';
 import { useAgents } from '../../hooks/useAgents';
 import { Button } from '../../components/ui/Button';
@@ -192,6 +192,23 @@ function MenuSelect({
   );
 }
 
+function encodeAssignee(type: AssigneeType, id: string | null): string {
+  if (!type || !id) return '';
+  return `${type}:${id}`;
+}
+
+function decodeAssignee(value: string): { type: AssigneeType; id: string | null } {
+  const trimmed = value.trim();
+  if (!trimmed) return { type: null, id: null };
+  const [type, ...rest] = trimmed.split(':');
+  const id = rest.join(':').trim();
+  if (!id) return { type: null, id: null };
+  if (type === 'agent' || type === 'human') {
+    return { type, id };
+  }
+  return { type: null, id: null };
+}
+
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
     'a[href]',
@@ -308,7 +325,10 @@ type EditTaskFormValues = {
   priority: TaskPriority;
   dueDate: string;
   tags: string[];
-  assigned: Assignee | null;
+  assignedType: AssigneeType;
+  assignedId: string | null;
+  nonAgent: boolean;
+  anchor: string;
   blockedReason: string;
   projectId: number | null;
   isSomeday: boolean;
@@ -331,7 +351,10 @@ export function EditTaskModal({
     priority?: TaskPriority;
     due_date?: string | null;
     tags?: string[] | string;
-    assigned_to?: Assignee | null;
+    assigned_to_type?: AssigneeType;
+    assigned_to_id?: string | null;
+    non_agent?: boolean;
+    anchor?: string | null;
     blocked_reason?: string | null;
     project_id?: number | null;
     is_someday?: boolean;
@@ -349,7 +372,7 @@ export function EditTaskModal({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
 
-  const { control, register, handleSubmit, watch, formState } = useForm<EditTaskFormValues>({
+  const { control, register, handleSubmit, watch, setValue, formState } = useForm<EditTaskFormValues>({
     defaultValues: {
       title: task.title,
       description: task.description ?? '',
@@ -357,7 +380,10 @@ export function EditTaskModal({
       priority: task.priority ?? null,
       dueDate: task.due_date ?? '',
       tags: mergeTags(Array.isArray(task.tags) ? task.tags : []),
-      assigned: task.assigned_to ?? null,
+      assignedType: task.assigned_to_type ?? null,
+      assignedId: task.assigned_to_id ?? null,
+      nonAgent: Boolean(task.non_agent),
+      anchor: task.anchor ?? '',
       blockedReason: task.blocked_reason ?? '',
       projectId: task.project_id ?? null,
       isSomeday: Boolean(task.is_someday),
@@ -365,6 +391,37 @@ export function EditTaskModal({
   });
 
   const status = watch('status');
+  const nonAgent = watch('nonAgent');
+  const assignedType = watch('assignedType');
+
+  const humanAssignees = useMemo(() => {
+    const ids = new Set<string>(['armin']);
+    if (task.assigned_to_type === 'human' && task.assigned_to_id) ids.add(task.assigned_to_id);
+    return Array.from(ids).sort();
+  }, [task.assigned_to_id, task.assigned_to_type]);
+
+  const assigneeOptions = useMemo<MenuOption[]>(
+    () => [
+      { value: '', label: '(unassigned)' },
+      ...agents.map((agent) => ({
+        value: encodeAssignee('agent', agent.id),
+        label: `${agent.name} (agent)`,
+        disabled: nonAgent,
+      })),
+      ...humanAssignees.map((id) => ({
+        value: encodeAssignee('human', id),
+        label: `${id} (human)`,
+      })),
+    ],
+    [agents, humanAssignees, nonAgent],
+  );
+
+  useEffect(() => {
+    if (!nonAgent) return;
+    if (assignedType !== 'agent') return;
+    setValue('assignedType', null, { shouldDirty: true });
+    setValue('assignedId', null, { shouldDirty: true });
+  }, [assignedType, nonAgent, setValue]);
 
   const requestClose = useCallback(() => {
     if (saving || deleting) return;
@@ -390,7 +447,10 @@ export function EditTaskModal({
           priority: values.priority,
           due_date: values.dueDate.trim() ? values.dueDate.trim() : null,
           tags: mergeTags(values.tags),
-          assigned_to: values.assigned,
+          assigned_to_type: values.assignedType,
+          assigned_to_id: values.assignedId,
+          non_agent: values.nonAgent,
+          anchor: values.anchor.trim() ? values.anchor.trim() : null,
           blocked_reason: values.blockedReason.trim() ? values.blockedReason : null,
           project_id: values.projectId,
           is_someday: values.isSomeday,
@@ -440,6 +500,22 @@ export function EditTaskModal({
                       checked={Boolean(field.value)}
                       onChange={(e) => field.onChange(e.target.checked)}
                       label="Save for later"
+                      className="gap-1.5"
+                      labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
+                    />
+                  </div>
+                )}
+              />
+              <Controller
+                control={control}
+                name="nonAgent"
+                render={({ field }) => (
+                  <div className="ml-1 inline-flex h-9 items-center rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
+                    <Checkbox
+                      size="sm"
+                      checked={Boolean(field.value)}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      label="Personal reminder"
                       className="gap-1.5"
                       labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
                     />
@@ -516,15 +592,16 @@ export function EditTaskModal({
                 <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
                 <Controller
                   control={control}
-                  name="assigned"
+                  name="assignedId"
                   render={({ field }) => (
                     <MenuSelect
-                      value={field.value ?? ''}
-                      onChange={(value) => field.onChange((value || null) as Assignee)}
-                      options={[
-                        { value: '', label: '(unassigned)' },
-                        ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
-                      ]}
+                      value={encodeAssignee(watch('assignedType'), field.value ?? null)}
+                      onChange={(value) => {
+                        const decoded = decodeAssignee(value);
+                        setValue('assignedType', decoded.type, { shouldDirty: true });
+                        field.onChange(decoded.id);
+                      }}
+                      options={assigneeOptions}
                     />
                   )}
                 />
@@ -596,6 +673,11 @@ export function EditTaskModal({
                   <label className="text-sm">
                     <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
                     <Input type="date" {...register('dueDate')} />
+                  </label>
+
+                  <label className="text-sm col-span-2">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Anchor (optional)</div>
+                    <Input {...register('anchor')} placeholder="/path/to/context" />
                   </label>
                 </div>
 
@@ -702,7 +784,10 @@ export function CreateTaskModal({
     due_date?: string | null;
     tags?: string[] | string;
     blocked_reason?: string | null;
-    assigned_to?: Assignee | null;
+    assigned_to_type?: AssigneeType;
+    assigned_to_id?: string | null;
+    non_agent?: boolean;
+    anchor?: string | null;
     project_id?: number | null;
     is_someday?: boolean;
   }) => Promise<void>;
@@ -724,7 +809,10 @@ export function CreateTaskModal({
       priority: null,
       dueDate: '',
       tags: [],
-      assigned: null,
+      assignedType: null,
+      assignedId: null,
+      nonAgent: false,
+      anchor: '',
       blockedReason: '',
       projectId: initialProjectId ?? null,
       isSomeday: false,
@@ -747,7 +835,32 @@ export function CreateTaskModal({
   useFocusTrap({ containerRef: modalRef, active: true, onEscape: requestClose });
 
   const title = watch('title');
+  const nonAgent = watch('nonAgent');
+  const assignedType = watch('assignedType');
+  const humanAssignees = useMemo(() => ['armin'], []);
+  const assigneeOptions = useMemo<MenuOption[]>(
+    () => [
+      { value: '', label: '(unassigned)' },
+      ...agents.map((agent) => ({
+        value: encodeAssignee('agent', agent.id),
+        label: `${agent.name} (agent)`,
+        disabled: nonAgent,
+      })),
+      ...humanAssignees.map((id) => ({
+        value: encodeAssignee('human', id),
+        label: `${id} (human)`,
+      })),
+    ],
+    [agents, humanAssignees, nonAgent],
+  );
   const canCreate = title.trim().length > 0 && !saving;
+
+  useEffect(() => {
+    if (!nonAgent) return;
+    if (assignedType !== 'agent') return;
+    setValue('assignedType', null, { shouldDirty: true });
+    setValue('assignedId', null, { shouldDirty: true });
+  }, [assignedType, nonAgent, setValue]);
 
   const create = useCallback(() => {
     void handleSubmit(async (values) => {
@@ -764,7 +877,10 @@ export function CreateTaskModal({
           due_date: values.dueDate.trim() ? values.dueDate.trim() : null,
           tags: mergeTags(values.tags),
           blocked_reason: values.blockedReason.trim() ? values.blockedReason : null,
-          assigned_to: values.assigned,
+          assigned_to_type: values.assignedType,
+          assigned_to_id: values.assignedId,
+          non_agent: values.nonAgent,
+          anchor: values.anchor.trim() ? values.anchor.trim() : null,
           project_id: values.projectId,
           is_someday: values.isSomeday,
         });
@@ -812,6 +928,22 @@ export function CreateTaskModal({
                       checked={Boolean(field.value)}
                       onChange={(e) => field.onChange(e.target.checked)}
                       label="Save for later"
+                      className="gap-1.5"
+                      labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
+                    />
+                  </div>
+                )}
+              />
+              <Controller
+                control={control}
+                name="nonAgent"
+                render={({ field }) => (
+                  <div className="inline-flex h-9 items-center rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface))] px-2.5">
+                    <Checkbox
+                      size="sm"
+                      checked={Boolean(field.value)}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      label="Personal reminder"
                       className="gap-1.5"
                       labelClassName="text-xs font-medium text-[rgb(var(--cb-text-muted))]"
                     />
@@ -875,15 +1007,16 @@ export function CreateTaskModal({
                 <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Assignee</div>
                 <Controller
                   control={control}
-                  name="assigned"
+                  name="assignedId"
                   render={({ field }) => (
                     <MenuSelect
-                      value={field.value ?? ''}
-                      onChange={(value) => field.onChange((value || null) as Assignee)}
-                      options={[
-                        { value: '', label: '(unassigned)' },
-                        ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
-                      ]}
+                      value={encodeAssignee(watch('assignedType'), field.value ?? null)}
+                      onChange={(value) => {
+                        const decoded = decodeAssignee(value);
+                        setValue('assignedType', decoded.type, { shouldDirty: true });
+                        field.onChange(decoded.id);
+                      }}
+                      options={assigneeOptions}
                     />
                   )}
                 />
@@ -950,6 +1083,11 @@ export function CreateTaskModal({
                   <label className="text-sm">
                     <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Due date</div>
                     <Input type="date" {...register('dueDate')} />
+                  </label>
+
+                  <label className="text-sm col-span-2">
+                    <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Anchor (optional)</div>
+                    <Input {...register('anchor')} placeholder="/path/to/context" />
                   </label>
                 </div>
               </>

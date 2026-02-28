@@ -1,9 +1,8 @@
 import type { Database } from 'better-sqlite3';
-import type { Task, TaskRow, TaskStatus } from '../domain/task';
+import type { AssigneeType, Task, TaskRow, TaskStatus } from '../domain/task';
 
 function normalizeTags(input: unknown): string[] {
-  if (input === undefined) return [];
-  if (input === null) return [];
+  if (input === undefined || input === null) return [];
 
   if (Array.isArray(input)) {
     return input.map(String).map((t) => t.trim()).filter(Boolean);
@@ -13,7 +12,6 @@ function normalizeTags(input: unknown): string[] {
     const trimmed = input.trim();
     if (!trimmed) return [];
 
-    // Accept JSON array string.
     if (trimmed.startsWith('[')) {
       try {
         const parsed = JSON.parse(trimmed) as unknown;
@@ -23,7 +21,6 @@ function normalizeTags(input: unknown): string[] {
       }
     }
 
-    // Accept comma-separated.
     return trimmed
       .split(',')
       .map((t) => t.trim())
@@ -33,13 +30,22 @@ function normalizeTags(input: unknown): string[] {
   return [];
 }
 
+function normalizeNullableString(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  return s ? s : null;
+}
+
 function hydrateTask(row: TaskRow): Task {
   return {
     ...row,
     description: row.description ?? null,
     due_date: row.due_date ?? null,
     blocked_reason: row.blocked_reason ?? null,
-    assigned_to: (row.assigned_to ?? null) as Task['assigned_to'],
+    assigned_to_type: (row.assigned_to_type ?? null) as AssigneeType,
+    assigned_to_id: row.assigned_to_id ?? null,
+    non_agent: Boolean(row.non_agent),
+    anchor: row.anchor ?? null,
     completed_at: row.completed_at ?? null,
     archived_at: row.archived_at ?? null,
     project_id: row.project_id ?? null,
@@ -47,12 +53,16 @@ function hydrateTask(row: TaskRow): Task {
     context_type: row.context_type ?? null,
     tags: normalizeTags(row.tags),
     is_someday: Boolean(row.is_someday),
+    resolved_anchor: null,
+    anchor_source: null,
   };
 }
 
 export type ListTasksParams = {
   status?: TaskStatus;
-  assigned_to?: string;
+  assigned_to_type?: AssigneeType;
+  assigned_to_id?: string | null;
+  non_agent?: boolean;
   include_archived?: boolean;
   project_id?: number;
   context_key?: string;
@@ -70,7 +80,10 @@ export type CreateTaskBody = {
   due_date?: string | null;
   tags?: string[] | string;
   blocked_reason?: string | null;
-  assigned_to?: Task['assigned_to'];
+  assigned_to_type?: AssigneeType;
+  assigned_to_id?: string | null;
+  non_agent?: boolean;
+  anchor?: string | null;
   project_id?: number | null;
   context_key?: string | null;
   context_type?: string | null;
@@ -85,7 +98,10 @@ export type UpdateTaskBody = Partial<
     | 'status'
     | 'priority'
     | 'due_date'
-    | 'assigned_to'
+    | 'assigned_to_type'
+    | 'assigned_to_id'
+    | 'non_agent'
+    | 'anchor'
     | 'archived_at'
     | 'blocked_reason'
     | 'project_id'
@@ -104,7 +120,8 @@ export type BulkAssignProjectInput = {
 
 export type BulkAssignAssigneeInput = {
   ids: number[];
-  assigned_to: Task['assigned_to'];
+  assigned_to_type: AssigneeType;
+  assigned_to_id: string | null;
 };
 
 export type BulkUpdateStatusInput = {
@@ -127,7 +144,9 @@ export class TaskRepository {
   list(params: ListTasksParams = {}): Task[] {
     const {
       status,
-      assigned_to,
+      assigned_to_type,
+      assigned_to_id,
+      non_agent,
       include_archived,
       project_id,
       context_key,
@@ -141,35 +160,57 @@ export class TaskRepository {
     const conditions: string[] = [];
     const values: unknown[] = [];
 
-    const includeArchived = include_archived === true;
-    if (!includeArchived) conditions.push('archived_at IS NULL');
+    if (include_archived !== true) conditions.push('archived_at IS NULL');
 
     if (status) {
       conditions.push('status = ?');
       values.push(status);
     }
-    if (assigned_to) {
-      conditions.push('assigned_to = ?');
-      values.push(assigned_to);
+
+    if (assigned_to_type !== undefined) {
+      if (assigned_to_type === null) {
+        conditions.push('assigned_to_type IS NULL');
+      } else {
+        conditions.push('assigned_to_type = ?');
+        values.push(assigned_to_type);
+      }
     }
+
+    if (assigned_to_id !== undefined) {
+      if (assigned_to_id === null) {
+        conditions.push('assigned_to_id IS NULL');
+      } else {
+        conditions.push('assigned_to_id = ?');
+        values.push(assigned_to_id);
+      }
+    }
+
+    if (non_agent !== undefined) {
+      conditions.push('non_agent = ?');
+      values.push(non_agent ? 1 : 0);
+    }
+
     if (project_id != null) {
       conditions.push('project_id = ?');
       values.push(project_id);
     }
+
     if (context_key) {
       conditions.push('context_key = ?');
       values.push(context_key);
     }
+
     if (context_type) {
       conditions.push('context_type = ?');
       values.push(context_type);
     }
+
     if (is_someday !== undefined) {
       conditions.push('is_someday = ?');
       values.push(is_someday ? 1 : 0);
     }
 
-    if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
+    if (conditions.length > 0) query += ` WHERE ${conditions.join(' AND ')}`;
 
     query += ' ORDER BY created_at ASC, id ASC';
 
@@ -179,10 +220,7 @@ export class TaskRepository {
     }
 
     if (offset !== undefined) {
-      if (limit === undefined) {
-        // SQLite requires LIMIT when OFFSET is present.
-        query += ' LIMIT -1';
-      }
+      if (limit === undefined) query += ' LIMIT -1';
       query += ' OFFSET ?';
       values.push(offset);
     }
@@ -198,18 +236,21 @@ export class TaskRepository {
 
   create(body: CreateTaskBody): Task {
     const title = body.title;
-    const description = body.description ?? null;
+    const description = normalizeNullableString(body.description);
     const status = body.status ?? 'backlog';
     const priority = body.priority ?? null;
-    const due_date = typeof body.due_date === 'string' && body.due_date.trim() ? body.due_date.trim() : null;
+    const due_date = normalizeNullableString(body.due_date);
     const normalizedTags = body.tags === undefined ? undefined : normalizeTags(body.tags);
     const tagsJson = normalizedTags === undefined ? null : JSON.stringify(normalizedTags);
     if (normalizedTags) this.ensureTags(normalizedTags);
-    const blocked_reason = typeof body.blocked_reason === 'string' && body.blocked_reason.trim() ? body.blocked_reason.trim() : null;
-    const assigned_to = body.assigned_to ?? null;
+    const blocked_reason = normalizeNullableString(body.blocked_reason);
+    const assigned_to_type = body.assigned_to_type ?? null;
+    const assigned_to_id = normalizeNullableString(body.assigned_to_id);
+    const non_agent = body.non_agent === true ? 1 : 0;
+    const anchor = normalizeNullableString(body.anchor);
     const project_id = body.project_id != null ? Number(body.project_id) : null;
-    const context_key = typeof body.context_key === 'string' && body.context_key.trim() ? body.context_key.trim() : null;
-    const context_type = typeof body.context_type === 'string' && body.context_type.trim() ? body.context_type.trim() : null;
+    const context_key = normalizeNullableString(body.context_key);
+    const context_type = normalizeNullableString(body.context_type);
     const is_someday = body.is_someday === true ? 1 : 0;
 
     const completedAt = status === 'done' ? new Date().toISOString() : null;
@@ -219,10 +260,11 @@ export class TaskRepository {
         `
         INSERT INTO tasks (
           title, description, status, priority, due_date,
-          tags, blocked_reason, assigned_to, project_id,
+          tags, blocked_reason, assigned_to_type, assigned_to_id,
+          non_agent, anchor, project_id,
           context_key, context_type, completed_at, is_someday
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -233,7 +275,10 @@ export class TaskRepository {
         due_date,
         tagsJson,
         blocked_reason,
-        assigned_to,
+        assigned_to_type,
+        assigned_to_id,
+        non_agent,
+        anchor,
         project_id,
         context_key,
         context_type,
@@ -257,7 +302,7 @@ export class TaskRepository {
     }
     if (patch.description !== undefined) {
       updates.push('description = ?');
-      values.push(patch.description);
+      values.push(normalizeNullableString(patch.description));
     }
     if (patch.status !== undefined) {
       updates.push('status = ?');
@@ -277,21 +322,33 @@ export class TaskRepository {
     }
     if (patch.due_date !== undefined) {
       updates.push('due_date = ?');
-      values.push(typeof patch.due_date === 'string' && patch.due_date.trim() ? patch.due_date.trim() : null);
+      values.push(normalizeNullableString(patch.due_date));
     }
     if (patch.tags !== undefined) {
       const normalized = normalizeTags(patch.tags);
       updates.push('tags = ?');
-      values.push(JSON.stringify(normalized ?? []));
+      values.push(JSON.stringify(normalized));
       this.ensureTags(normalized);
     }
     if (patch.blocked_reason !== undefined) {
       updates.push('blocked_reason = ?');
-      values.push(typeof patch.blocked_reason === 'string' && patch.blocked_reason.trim() ? patch.blocked_reason.trim() : null);
+      values.push(normalizeNullableString(patch.blocked_reason));
     }
-    if (patch.assigned_to !== undefined) {
-      updates.push('assigned_to = ?');
-      values.push(patch.assigned_to);
+    if (patch.assigned_to_type !== undefined) {
+      updates.push('assigned_to_type = ?');
+      values.push(patch.assigned_to_type);
+    }
+    if (patch.assigned_to_id !== undefined) {
+      updates.push('assigned_to_id = ?');
+      values.push(normalizeNullableString(patch.assigned_to_id));
+    }
+    if (patch.non_agent !== undefined) {
+      updates.push('non_agent = ?');
+      values.push(patch.non_agent ? 1 : 0);
+    }
+    if (patch.anchor !== undefined) {
+      updates.push('anchor = ?');
+      values.push(normalizeNullableString(patch.anchor));
     }
     if (patch.archived_at !== undefined) {
       updates.push('archived_at = ?');
@@ -303,11 +360,11 @@ export class TaskRepository {
     }
     if (patch.context_key !== undefined) {
       updates.push('context_key = ?');
-      values.push(typeof patch.context_key === 'string' && patch.context_key.trim() ? patch.context_key.trim() : null);
+      values.push(normalizeNullableString(patch.context_key));
     }
     if (patch.context_type !== undefined) {
       updates.push('context_type = ?');
-      values.push(typeof patch.context_type === 'string' && patch.context_type.trim() ? patch.context_type.trim() : null);
+      values.push(normalizeNullableString(patch.context_type));
     }
     if (patch.is_someday !== undefined) {
       updates.push('is_someday = ?');
@@ -352,12 +409,12 @@ export class TaskRepository {
     if (!uniqueIds.length) return { updated: 0 };
 
     const now = new Date().toISOString();
-    const stmt = this.db.prepare('UPDATE tasks SET assigned_to = ?, updated_at = ? WHERE id = ?');
+    const stmt = this.db.prepare('UPDATE tasks SET assigned_to_type = ?, assigned_to_id = ?, updated_at = ? WHERE id = ?');
 
     const tx = this.db.transaction((ids: number[]) => {
       let updated = 0;
       for (const id of ids) {
-        const result = stmt.run(input.assigned_to, now, id) as { changes: number };
+        const result = stmt.run(input.assigned_to_type, normalizeNullableString(input.assigned_to_id), now, id) as { changes: number };
         updated += result.changes;
       }
       return updated;
@@ -379,10 +436,9 @@ export class TaskRepository {
         const existing = this.getById(id);
         if (!existing) continue;
 
-        const completedAt =
-          input.status === 'done'
-            ? (existing.status === 'done' ? existing.completed_at : now)
-            : null;
+        const completedAt = input.status === 'done'
+          ? (existing.status === 'done' ? existing.completed_at : now)
+          : null;
         const result = stmt.run(input.status, completedAt, now, id) as { changes: number };
         updated += result.changes;
       }

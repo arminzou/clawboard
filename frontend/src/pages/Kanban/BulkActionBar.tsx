@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { Copy, Folder, Trash2, UserCheck, X, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Assignee, Project, TaskStatus } from '../../lib/api';
+import type { Project, TaskStatus } from '../../lib/api';
 import { useAgents } from '../../hooks/useAgents';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
@@ -10,7 +10,7 @@ type BulkActionBarProps = {
   count: number;
   projects?: Project[];
   onClearSelection: () => void;
-  onBulkAssign: (assignee: Assignee | null) => Promise<void>;
+  onBulkAssign: (assigneeId: string | null) => Promise<void>;
   onBulkStatus: (status: TaskStatus) => Promise<void>;
   onBulkProject?: (projectId: number | null) => Promise<void>;
   onBulkDelete: () => Promise<void>;
@@ -45,7 +45,7 @@ export function BulkActionBar({
     setShowAssignMenu(false);
     setBusy(true);
     try {
-      await onBulkAssign(value === '' ? null : (value as Assignee));
+      await onBulkAssign(value === '' ? null : value);
     } finally {
       setBusy(false);
     }

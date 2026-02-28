@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
-import type { Assignee, Task, TaskStatus } from '../../lib/api';
+import type { Task, TaskStatus } from '../../lib/api';
 import { toast } from '../../lib/toast';
 import { BulkActionBar } from './BulkActionBar';
 import { KanbanBoard, type KanbanSortDir, type KanbanSortKey } from './KanbanBoard';
@@ -405,16 +405,20 @@ export function KanbanPage({
     });
   }, [tasks]);
 
-  async function handleBulkAssign(assignee: Assignee | null) {
+  async function handleBulkAssign(assigneeId: string | null) {
     const ids = Array.from(selectedIds);
     if (!ids.length) return;
 
     try {
-      const { updated } = await api.bulkAssignAssignee(ids, assignee);
+      const { updated } = await api.bulkAssignAssignee(
+        ids,
+        assigneeId ? 'agent' : null,
+        assigneeId,
+      );
       clearSelection();
       await refresh();
 
-      const assigneeLabel = assignee ?? 'Unassigned';
+      const assigneeLabel = assigneeId ?? 'Unassigned';
       toast.success(`Assigned ${updated} task${updated === 1 ? '' : 's'} to ${assigneeLabel}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -804,7 +808,7 @@ export function KanbanPage({
 
   const baseFiltered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    const wantAssignee: Assignee | 'all' = assignee === 'all' ? 'all' : assignee === '' ? null : assignee;
+    const wantAssignee: string | null | 'all' = assignee === 'all' ? 'all' : assignee === '' ? null : assignee;
     const wantTag = (tag ?? 'all') === 'all' ? 'all' : String(tag);
 
     const now = new Date();
@@ -820,7 +824,7 @@ export function KanbanPage({
     }
 
     return tasks.filter((t) => {
-      if (wantAssignee !== 'all' && (t.assigned_to ?? null) !== wantAssignee) return false;
+      if (wantAssignee !== 'all' && (t.assigned_to_id ?? null) !== wantAssignee) return false;
       if (wantTag !== 'all' && !(Array.isArray(t.tags) && t.tags.includes(wantTag))) return false;
       if (hideDone && t.status === 'done') return false;
       if (blocked && !t.blocked_reason) return false;
@@ -852,7 +856,7 @@ export function KanbanPage({
       }
 
       if (!query) return true;
-      const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
+      const hay = `${t.title}\n${t.description ?? ''}\n${t.id}\n${t.status}\n${t.assigned_to_id ?? ''}\n${Array.isArray(t.tags) ? t.tags.join(' ') : ''}`.toLowerCase();
       return hay.includes(query);
     });
   }, [assignee, tag, hideDone, blocked, showSomeday, q, tasks, due, context, currentContextKey]);
@@ -1042,7 +1046,7 @@ export function KanbanPage({
         setContext('all');
         setQ('');
       }}
-      myTasksCount={myAgentId ? tasks.filter((t) => t.assigned_to === myAgentId && t.status !== 'done').length : undefined}
+      myTasksCount={myAgentId ? tasks.filter((t) => t.assigned_to_id === myAgentId && t.status !== 'done').length : undefined}
     />
   );
 
@@ -1166,19 +1170,20 @@ export function KanbanPage({
               onSetTasks={setTasks}
               onRefresh={refresh}
               onEditTask={(t) => setEditTask(t)}
-	              onQuickCreate={async (status, title) => {
-	                const trimmed = title.trim();
-	                if (!trimmed) return;
+              onQuickCreate={async (status, title) => {
+                const trimmed = title.trim();
+                if (!trimmed) return;
 
-                const assignedTo: Assignee | null =
-                  assignee === 'all' ? (myAgentId as Assignee | null) : assignee === '' ? null : (assignee as Assignee);
+                const assignedToId =
+                  assignee === 'all' ? (myAgentId ?? null) : assignee === '' ? null : assignee;
 
-	                await api.createTask({
-	                  title: trimmed,
-	                  status,
-	                  assigned_to: assignedTo,
-	                  project_id: currentProjectId ?? undefined,
-	                });
+                await api.createTask({
+                  title: trimmed,
+                  status,
+                  assigned_to_type: assignedToId ? 'agent' : null,
+                  assigned_to_id: assignedToId,
+                  project_id: currentProjectId ?? undefined,
+                });
                 await refresh();
               }}
               selectedIds={selectedIds}
@@ -1273,7 +1278,12 @@ export function KanbanPage({
             if (archiveBusy) return;
             setArchiveBusy(true);
             try {
-              const body = assignee === 'all' ? undefined : { assigned_to: assignee === '' ? null : (assignee as Assignee) };
+              const body = assignee === 'all'
+                ? undefined
+                : {
+                    assigned_to_type: assignee === '' ? null : ('agent' as const),
+                    assigned_to_id: assignee === '' ? null : assignee,
+                  };
               await api.archiveDone(body);
               await refresh();
               setShowArchiveConfirm(false);

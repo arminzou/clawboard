@@ -6,6 +6,7 @@ import { AppShell } from './components/layout/AppShell';
 import { TopbarLite } from './components/layout/TopbarLite';
 import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
 import { DocsView } from './pages/Docs/DocsView';
+import { InboxPage } from './pages/Inbox/InboxPage';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTheme } from './hooks/useTheme';
@@ -23,6 +24,7 @@ export default function App() {
 
   const tab = useMemo(() => {
     const p = location.pathname;
+    if (p.startsWith('/inbox')) return 'inbox';
     if (p.startsWith('/activity')) return 'activity';
     if (p.startsWith('/docs')) return 'docs';
     return 'kanban';
@@ -77,7 +79,8 @@ export default function App() {
   }, []);
 
   const setTab = useCallback((t: Tab) => {
-    if (t === 'activity') navigate('/activity');
+    if (t === 'inbox') navigate('/inbox');
+    else if (t === 'activity') navigate('/activity');
     else if (t === 'docs') navigate('/docs');
     else navigate('/');
   }, [navigate]);
@@ -141,6 +144,20 @@ export default function App() {
                         navigate('/');
                       }}
                     />
+                  </AppShell>
+                }
+              />
+              <Route
+                path="/inbox"
+                element={
+                  <AppShell
+                    topbar={<TopbarLite title="Inbox" subtitle="Personal reminders and checklist tasks" />}
+                    wsSignal={wsSignal}
+                    wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
+                  >
+                    <InboxPage wsSignal={wsSignal} />
                   </AppShell>
                 }
               />

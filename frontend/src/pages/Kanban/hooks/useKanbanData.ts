@@ -24,7 +24,10 @@ export function useKanbanData({
     try {
       await api.discoverProjects();
       await refreshProjects();
-      const params: { include_archived?: boolean; project_id?: number } = { include_archived: showArchived };
+      const params: { include_archived?: boolean; project_id?: number; non_agent?: boolean } = {
+        include_archived: showArchived,
+        non_agent: false,
+      };
       if (currentProjectId !== null) params.project_id = currentProjectId;
       const all = await api.listTasks(params);
       if (requestIdRef.current !== requestId) return;

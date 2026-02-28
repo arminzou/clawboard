@@ -57,4 +57,21 @@ describe('Projects API', () => {
     const stats = await request(appCtx.app).get(`/api/projects/${project.id}/stats`).expect(200);
     expect(stats.body.project_id).toBe(project.id);
   });
+
+  it('creates a manual project via POST /api/projects', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const created = await request(appCtx.app)
+      .post('/api/projects')
+      .send({ name: 'Manual Workspace', path: '/tmp/manual-workspace', description: 'manual' })
+      .expect(201);
+
+    expect(created.body.name).toBe('Manual Workspace');
+    expect(created.body.slug).toBe('manual-workspace');
+    expect(created.body.path).toBe('/tmp/manual-workspace');
+
+    const list = await request(appCtx.app).get('/api/projects').expect(200);
+    expect(list.body).toHaveLength(1);
+  });
 });

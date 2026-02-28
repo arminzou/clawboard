@@ -1,6 +1,42 @@
-import type { Task, TaskStatus } from '../domain/task';
+import type { AssigneeType, Task, TaskStatus } from '../domain/task';
 import type { CreateTaskBody, ListTasksParams, TaskRepository, UpdateTaskBody } from '../repositories/taskRepository';
 import { HttpError } from '../presentation/http/errors/httpError';
+
+const ALLOWED_STATUSES: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
+const ALLOWED_ASSIGNEE_TYPES: AssigneeType[] = ['agent', 'human', null];
+
+type AssigneePair = {
+  type: AssigneeType;
+  id: string | null;
+};
+
+function normalizeNullableString(input: unknown): string | null {
+  if (input == null) return null;
+  const value = String(input).trim();
+  return value ? value : null;
+}
+
+function normalizeAssigneeType(input: unknown): AssigneeType {
+  if (input == null || input === '') return null;
+  if (typeof input !== 'string') throw new HttpError(400, 'Invalid assigned_to_type');
+  const normalized = input.trim().toLowerCase();
+  if (normalized !== 'agent' && normalized !== 'human') throw new HttpError(400, 'Invalid assigned_to_type');
+  return normalized;
+}
+
+function validateAssigneePair(pair: AssigneePair): void {
+  if (!ALLOWED_ASSIGNEE_TYPES.includes(pair.type)) {
+    throw new HttpError(400, 'Invalid assigned_to_type');
+  }
+
+  if (pair.type === null && pair.id !== null) {
+    throw new HttpError(400, 'assigned_to_id requires assigned_to_type');
+  }
+
+  if (pair.type !== null && pair.id === null) {
+    throw new HttpError(400, 'assigned_to_id is required when assigned_to_type is set');
+  }
+}
 
 export class TaskService {
   constructor(private readonly repo: TaskRepository) {}
@@ -10,6 +46,13 @@ export class TaskService {
     const uniqueIds = Array.from(new Set(ids.map((raw) => Number(raw))));
     if (uniqueIds.some((id) => !Number.isFinite(id))) throw new HttpError(400, 'Invalid task id');
     return uniqueIds;
+  }
+
+  private enforceAssigneeCompatibility(nonAgent: boolean, pair: AssigneePair): void {
+    validateAssigneePair(pair);
+    if (nonAgent && pair.type === 'agent') {
+      throw new HttpError(400, 'non_agent tasks cannot be assigned to agents');
+    }
   }
 
   list(params: ListTasksParams = {}): Task[] {
@@ -24,22 +67,63 @@ export class TaskService {
 
   create(body: CreateTaskBody): Task {
     if (!body.title || !body.title.trim()) throw new HttpError(400, 'Title is required');
-    return this.repo.create({ ...body, title: body.title.trim() });
+
+    if (body.status && !ALLOWED_STATUSES.includes(body.status)) {
+      throw new HttpError(400, 'Invalid status');
+    }
+
+    const assigneeType = normalizeAssigneeType(body.assigned_to_type);
+    const assigneeId = normalizeNullableString(body.assigned_to_id);
+    const nonAgent = body.non_agent === true;
+    this.enforceAssigneeCompatibility(nonAgent, { type: assigneeType, id: assigneeId });
+
+    return this.repo.create({
+      ...body,
+      title: body.title.trim(),
+      due_date: normalizeNullableString(body.due_date),
+      assigned_to_type: assigneeType,
+      assigned_to_id: assigneeId,
+      non_agent: nonAgent,
+      anchor: normalizeNullableString(body.anchor),
+    });
   }
 
   update(id: number, patch: UpdateTaskBody): Task {
     if (!patch || Object.keys(patch).length === 0) throw new HttpError(400, 'No fields to update');
 
-    // Normalize common string fields.
+    const existing = this.getById(id);
+
     const normalized: UpdateTaskBody = { ...patch };
     if (typeof normalized.title === 'string') normalized.title = normalized.title.trim();
     if (typeof normalized.due_date === 'string') normalized.due_date = normalized.due_date.trim();
+    if (typeof normalized.anchor === 'string') normalized.anchor = normalized.anchor.trim();
 
-    // Enforce status domain.
-    if (normalized.status) {
-      const allowed: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
-      if (!allowed.includes(normalized.status)) throw new HttpError(400, 'Invalid status');
+    if (normalized.status && !ALLOWED_STATUSES.includes(normalized.status)) {
+      throw new HttpError(400, 'Invalid status');
     }
+
+    const hasTypePatch = Object.prototype.hasOwnProperty.call(normalized, 'assigned_to_type');
+    const hasIdPatch = Object.prototype.hasOwnProperty.call(normalized, 'assigned_to_id');
+
+    const nextType = hasTypePatch ? normalizeAssigneeType(normalized.assigned_to_type) : existing.assigned_to_type;
+    const nextId = hasIdPatch ? normalizeNullableString(normalized.assigned_to_id) : existing.assigned_to_id;
+
+    if (hasTypePatch) normalized.assigned_to_type = nextType;
+    if (hasIdPatch) normalized.assigned_to_id = nextId;
+
+    if (hasTypePatch && !hasIdPatch && nextType === null) {
+      normalized.assigned_to_id = null;
+    }
+
+    const finalPair: AssigneePair = {
+      type: hasTypePatch ? (normalized.assigned_to_type ?? null) : nextType,
+      id: Object.prototype.hasOwnProperty.call(normalized, 'assigned_to_id')
+        ? normalizeNullableString(normalized.assigned_to_id)
+        : nextId,
+    };
+
+    const finalNonAgent = normalized.non_agent ?? existing.non_agent;
+    this.enforceAssigneeCompatibility(finalNonAgent, finalPair);
 
     try {
       return this.repo.update(id, normalized);
@@ -67,28 +151,34 @@ export class TaskService {
     });
   }
 
-  bulkAssignAssignee(ids: number[], assigneeRaw: unknown): { updated: number } {
+  bulkAssignAssignee(ids: number[], assigneeTypeRaw: unknown, assigneeIdRaw: unknown): { updated: number } {
     const uniqueIds = this.normalizeBulkIds(ids);
-    let assignee: Task['assigned_to'] = null;
-    if (assigneeRaw == null || assigneeRaw === '') {
-      assignee = null;
-    } else if (typeof assigneeRaw === 'string') {
-      assignee = assigneeRaw.trim().toLowerCase();
-    } else {
-      throw new HttpError(400, 'Invalid assignee');
+    const pair: AssigneePair = {
+      type: normalizeAssigneeType(assigneeTypeRaw),
+      id: normalizeNullableString(assigneeIdRaw),
+    };
+    validateAssigneePair(pair);
+
+    if (pair.type === 'agent') {
+      for (const id of uniqueIds) {
+        const task = this.repo.getById(id);
+        if (task?.non_agent) {
+          throw new HttpError(400, 'Cannot assign agents to non_agent tasks');
+        }
+      }
     }
 
     return this.repo.bulkAssignAssignee({
       ids: uniqueIds,
-      assigned_to: assignee,
+      assigned_to_type: pair.type,
+      assigned_to_id: pair.id,
     });
   }
 
   bulkUpdateStatus(ids: number[], statusRaw: unknown): { updated: number } {
     const uniqueIds = this.normalizeBulkIds(ids);
-    const allowed: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
     const status = statusRaw as TaskStatus;
-    if (!allowed.includes(status)) throw new HttpError(400, 'Invalid status');
+    if (!ALLOWED_STATUSES.includes(status)) throw new HttpError(400, 'Invalid status');
 
     return this.repo.bulkUpdateStatus({
       ids: uniqueIds,

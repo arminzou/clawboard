@@ -1,6 +1,7 @@
 export type TaskStatus = 'backlog' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent' | null;
-export type Assignee = string | null;
+export type AssigneeType = 'agent' | 'human' | null;
+export type AnchorSource = 'task' | 'project' | 'category' | 'scratch' | null;
 
 export interface Task {
   id: number;
@@ -8,18 +9,23 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  assigned_to: Assignee;
-  due_date?: string | null;
-  tags?: string[];
-  blocked_reason?: string | null;
+  assigned_to_type: AssigneeType;
+  assigned_to_id: string | null;
+  non_agent: boolean;
+  anchor: string | null;
+  due_date: string | null;
+  tags: string[];
+  blocked_reason: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
-  archived_at?: string | null;
+  archived_at: string | null;
   project_id: number | null;
-  context_key?: string | null;
-  context_type?: string | null;
-  is_someday?: boolean;
+  context_key: string | null;
+  context_type: string | null;
+  is_someday: boolean;
+  resolved_anchor: string | null;
+  anchor_source: AnchorSource;
 }
 
 export interface Activity {
@@ -89,7 +95,7 @@ export interface ProjectStats {
     total: number;
     by_status: Array<{ status: string; count: number }>;
     by_priority: Array<{ priority: string | null; count: number }>;
-    by_assignee: Array<{ assigned_to: string | null; count: number }>;
+    by_assignee: Array<{ assigned_to_id: string | null; count: number }>;
     overdue: number;
     completed_last_7d: number;
   };
@@ -144,7 +150,9 @@ export const api = {
 
   async listTasks(params?: { 
     status?: TaskStatus; 
-    assigned_to?: string; 
+    assigned_to_type?: AssigneeType;
+    assigned_to_id?: string | null;
+    non_agent?: boolean;
     include_archived?: boolean; 
     project_id?: number;
     context_key?: string;
@@ -153,7 +161,9 @@ export const api = {
   }) {
     const usp = new URLSearchParams();
     if (params?.status) usp.set('status', params.status);
-    if (params?.assigned_to) usp.set('assigned_to', params.assigned_to);
+    if (params?.assigned_to_type) usp.set('assigned_to_type', params.assigned_to_type);
+    if (params?.assigned_to_id !== undefined) usp.set('assigned_to_id', params.assigned_to_id ?? '');
+    if (params?.non_agent !== undefined) usp.set('non_agent', params.non_agent ? '1' : '0');
     if (params?.include_archived) usp.set('include_archived', '1');
     if (params?.project_id) usp.set('project_id', String(params.project_id));
     if (params?.context_key) usp.set('context_key', params.context_key);
@@ -163,7 +173,7 @@ export const api = {
     return json<Task[]>(await fetch(url, { headers: authHeaders() }));
   },
 
-  async archiveDone(body?: { assigned_to?: string | null }) {
+  async archiveDone(body?: { assigned_to_type?: AssigneeType | null; assigned_to_id?: string | null }) {
     return json<{ archived: number }>(
       await fetch(withBase('/api/tasks/archive_done'), {
         method: 'POST',
@@ -174,7 +184,7 @@ export const api = {
   },
 
   async createTask(
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'project_id' | 'context_key' | 'context_type'>> & { title: string },
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'project_id' | 'context_key' | 'context_type' | 'is_someday'>> & { title: string },
   ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
@@ -187,7 +197,7 @@ export const api = {
 
   async updateTask(
     id: number,
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to' | 'archived_at' | 'context_key' | 'context_type' | 'project_id'>>,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'archived_at' | 'context_key' | 'context_type' | 'project_id' | 'is_someday'>>,
   ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
@@ -208,12 +218,12 @@ export const api = {
     );
   },
 
-  async bulkAssignAssignee(ids: number[], assignee: Assignee) {
+  async bulkAssignAssignee(ids: number[], assigned_to_type: AssigneeType, assigned_to_id: string | null) {
     return json<{ updated: number }>(
       await fetch(withBase('/api/tasks/bulk/assignee'), {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ ids, assigned_to: assignee }),
+        body: JSON.stringify({ ids, assigned_to_type, assigned_to_id }),
       }),
     );
   },
@@ -253,10 +263,14 @@ export const api = {
       due_date: task.due_date ?? undefined,
       tags: task.tags,
       blocked_reason: task.blocked_reason ?? undefined,
-      assigned_to: task.assigned_to,
+      assigned_to_type: task.assigned_to_type ?? undefined,
+      assigned_to_id: task.assigned_to_id ?? undefined,
+      non_agent: task.non_agent,
+      anchor: task.anchor ?? undefined,
       project_id: task.project_id ?? undefined,
       context_key: task.context_key ?? undefined,
       context_type: task.context_type ?? undefined,
+      is_someday: task.is_someday,
     });
   },
 
@@ -318,6 +332,16 @@ export const api = {
 
   async listProjects() {
     return json<Project[]>(await fetch(withBase('/api/projects'), { headers: authHeaders() }));
+  },
+
+  async createProject(body: { name: string; path: string; description?: string }) {
+    return json<Project>(
+      await fetch(withBase('/api/projects'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
   },
 
   async discoverProjects() {

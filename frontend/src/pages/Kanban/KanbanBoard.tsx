@@ -475,6 +475,13 @@ const TaskCard = memo(
     const dueLabel = formatDate(task.due_date);
     const updatedRelative = formatRelativeTime(task.updated_at ?? task.created_at);
     const updatedTitle = formatDateTimeSmart(task.updated_at ?? task.created_at);
+    const assigneeLabel = task.assigned_to_id ?? '—';
+    const anchorDisplay = (() => {
+      if (!task.resolved_anchor) return null;
+      const parts = task.resolved_anchor.split('/').filter(Boolean);
+      if (parts.length <= 2) return task.resolved_anchor;
+      return `.../${parts.slice(-2).join('/')}`;
+    })();
 
     function handleCheckboxClick(e: React.MouseEvent) {
       e.preventDefault();
@@ -550,8 +557,16 @@ const TaskCard = memo(
 
           <div className="mt-2 flex flex-col gap-1">
             <MetaRow icon={<Hash size={14} />} label="Task ID" value={`#${task.id}`} mono />
-            <MetaRow icon={<User size={14} />} label="Assignee" value={task.assigned_to ?? '—'} />
+            <MetaRow icon={<User size={14} />} label="Assignee" value={assigneeLabel} />
             {projectLabel ? <MetaRow icon={<FolderOpen size={14} />} label="Project" value={projectLabel} /> : null}
+            {anchorDisplay ? (
+              <MetaRow
+                icon={<span className="text-[10px] font-bold opacity-70">ANC</span>}
+                label={`Anchor (${task.anchor_source ?? 'path'})`}
+                value={anchorDisplay}
+                title={task.resolved_anchor ?? undefined}
+              />
+            ) : null}
             {task.context_key ? (
               <MetaRow
                 icon={<span className="text-[10px] font-bold opacity-70">CTX</span>}

@@ -36,6 +36,16 @@ export function createProjectsRouter({ db, broadcast }: { db: Database; broadcas
     }
   });
 
+  // POST /api/projects
+  router.post('/', (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const project = service.createManual(req.body ?? {});
+      res.status(201).json(project);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // GET /api/projects/:id
   router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
     try {

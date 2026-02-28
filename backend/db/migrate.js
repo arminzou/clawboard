@@ -148,6 +148,9 @@ function migrate(db) {
   // - documents.first_seen
   if (v < 8) {
     const hasTaskPosition = hasColumn('tasks', 'position');
+    const hasTaskContextKey = hasColumn('tasks', 'context_key');
+    const hasTaskContextType = hasColumn('tasks', 'context_type');
+    const hasTaskIsSomeday = hasColumn('tasks', 'is_someday');
     const hasTagCreatedAt = hasColumn('tags', 'created_at');
     const hasDocumentFirstSeen = hasColumn('documents', 'first_seen');
 
@@ -155,6 +158,10 @@ function migrate(db) {
       db.pragma('foreign_keys = OFF');
       const tx = db.transaction(() => {
         if (hasTaskPosition) {
+          const contextKeyExpr = hasTaskContextKey ? 'context_key' : 'NULL AS context_key';
+          const contextTypeExpr = hasTaskContextType ? 'context_type' : 'NULL AS context_type';
+          const isSomedayExpr = hasTaskIsSomeday ? 'is_someday' : '0 AS is_someday';
+
           db.exec(`
             CREATE TABLE tasks_new (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,7 +191,7 @@ function migrate(db) {
             )
             SELECT
               id, title, description, status, priority, due_date, tags, blocked_reason, assigned_to,
-              created_at, updated_at, completed_at, archived_at, project_id, context_key, context_type, is_someday
+              created_at, updated_at, completed_at, archived_at, project_id, ${contextKeyExpr}, ${contextTypeExpr}, ${isSomedayExpr}
             FROM tasks;
           `);
           db.exec('DROP TABLE tasks');
@@ -243,6 +250,150 @@ function migrate(db) {
   }
 
   // Keep schema.sql aligned for fresh init
+
+  // 8 -> 9: add inbox/context-anchor task fields and typed assignee columns
+  if (v < 9) {
+    const hasAssignedToType = hasColumn('tasks', 'assigned_to_type');
+    if (!hasAssignedToType) {
+      db.exec("ALTER TABLE tasks ADD COLUMN assigned_to_type TEXT CHECK(assigned_to_type IN ('agent', 'human') OR assigned_to_type IS NULL)");
+    }
+
+    const hasAssignedToId = hasColumn('tasks', 'assigned_to_id');
+    if (!hasAssignedToId) {
+      db.exec('ALTER TABLE tasks ADD COLUMN assigned_to_id TEXT');
+    }
+
+    const hasNonAgent = hasColumn('tasks', 'non_agent');
+    if (!hasNonAgent) {
+      db.exec('ALTER TABLE tasks ADD COLUMN non_agent INTEGER NOT NULL DEFAULT 0 CHECK(non_agent IN (0, 1))');
+    }
+
+    const hasAnchor = hasColumn('tasks', 'anchor');
+    if (!hasAnchor) {
+      db.exec('ALTER TABLE tasks ADD COLUMN anchor TEXT');
+    }
+
+    const hasLegacyAssignedTo = hasColumn('tasks', 'assigned_to');
+    const hasCategory = hasColumn('tasks', 'category');
+
+    if (hasLegacyAssignedTo) {
+      // Backfill assignee id from legacy flat assignee column.
+      db.exec(`
+        UPDATE tasks
+        SET assigned_to_id = assigned_to
+        WHERE assigned_to IS NOT NULL
+          AND TRIM(assigned_to) != ''
+          AND (assigned_to_id IS NULL OR TRIM(assigned_to_id) = '')
+      `);
+
+      // Promote known agents (seen in activity stream) to agent assignee type.
+      const knownAgents = db
+        .prepare(`
+          SELECT DISTINCT LOWER(TRIM(agent)) AS agent
+          FROM activities
+          WHERE agent IS NOT NULL
+            AND TRIM(agent) != ''
+        `)
+        .all()
+        .map((row) => row.agent)
+        .filter(Boolean);
+
+      if (knownAgents.length > 0) {
+        const placeholders = knownAgents.map(() => '?').join(', ');
+        db.prepare(`
+          UPDATE tasks
+          SET assigned_to_type = 'agent'
+          WHERE assigned_to_id IS NOT NULL
+            AND TRIM(assigned_to_id) != ''
+            AND LOWER(TRIM(assigned_to_id)) IN (${placeholders})
+            AND (assigned_to_type IS NULL OR TRIM(assigned_to_type) = '')
+        `).run(...knownAgents);
+      }
+    }
+
+    // Any remaining assignees are treated as human assignees.
+    db.exec(`
+      UPDATE tasks
+      SET assigned_to_type = 'human'
+      WHERE assigned_to_id IS NOT NULL
+        AND TRIM(assigned_to_id) != ''
+        AND (assigned_to_type IS NULL OR TRIM(assigned_to_type) = '')
+    `);
+
+    // Rebuild tasks to drop legacy compatibility columns and enforce final constraints.
+    if (hasLegacyAssignedTo || hasCategory) {
+      const assignedToIdExpr = hasLegacyAssignedTo
+        ? "COALESCE(NULLIF(TRIM(assigned_to_id), ''), NULLIF(TRIM(assigned_to), ''))"
+        : "NULLIF(TRIM(assigned_to_id), '')";
+
+      db.pragma('foreign_keys = OFF');
+      const tx = db.transaction(() => {
+        db.exec(`
+          CREATE TABLE tasks_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL CHECK(status IN ('backlog', 'in_progress', 'review', 'done')),
+            priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'urgent')),
+            due_date TEXT,
+            tags TEXT,
+            blocked_reason TEXT,
+            assigned_to_type TEXT CHECK(assigned_to_type IN ('agent', 'human') OR assigned_to_type IS NULL),
+            assigned_to_id TEXT,
+            non_agent INTEGER NOT NULL DEFAULT 0 CHECK(non_agent IN (0, 1)),
+            anchor TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            completed_at DATETIME,
+            archived_at DATETIME,
+            project_id INTEGER,
+            context_key TEXT,
+            context_type TEXT,
+            is_someday INTEGER DEFAULT 0,
+            CHECK (NOT (non_agent = 1 AND assigned_to_type = 'agent')),
+            FOREIGN KEY (project_id) REFERENCES projects(id)
+          );
+        `);
+
+        db.exec(`
+          INSERT INTO tasks_new (
+            id, title, description, status, priority, due_date, tags, blocked_reason,
+            assigned_to_type, assigned_to_id, non_agent, anchor,
+            created_at, updated_at, completed_at, archived_at,
+            project_id, context_key, context_type, is_someday
+          )
+          SELECT
+            id, title, description, status, priority, due_date, tags, blocked_reason,
+            CASE
+              WHEN assigned_to_type IN ('agent', 'human') THEN assigned_to_type
+              ELSE NULL
+            END,
+            ${assignedToIdExpr},
+            CASE WHEN non_agent = 1 THEN 1 ELSE 0 END,
+            NULLIF(TRIM(anchor), ''),
+            created_at, updated_at, completed_at, archived_at,
+            project_id, context_key, context_type, is_someday
+          FROM tasks
+        `);
+
+        db.exec('DROP TABLE tasks');
+        db.exec('ALTER TABLE tasks_new RENAME TO tasks');
+      });
+
+      try {
+        tx();
+      } finally {
+        db.pragma('foreign_keys = ON');
+      }
+    }
+
+    db.exec('DROP INDEX IF EXISTS idx_tasks_assigned');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_archived_at ON tasks(archived_at)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_tasks_non_agent ON tasks(non_agent)');
+    db.pragma('user_version = 9');
+  }
 }
 
 module.exports = { migrate };

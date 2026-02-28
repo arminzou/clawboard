@@ -8,7 +8,7 @@ export interface ProjectStats {
     total: number;
     by_status: Array<{ status: string; count: number }>;
     by_priority: Array<{ priority: string | null; count: number }>;
-    by_assignee: Array<{ assigned_to: string | null; count: number }>;
+    by_assignee: Array<{ assigned_to_id: string | null; count: number }>;
     overdue: number;
     completed_last_7d: number;
   };
@@ -35,6 +35,39 @@ export class ProjectRepository {
 
   getById(id: number): Project | null {
     return (this.db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project) ?? null;
+  }
+
+  getBySlug(slug: string): Project | null {
+    return (this.db.prepare('SELECT * FROM projects WHERE slug = ?').get(slug) as Project) ?? null;
+  }
+
+  create(input: {
+    name: string;
+    slug: string;
+    path: string;
+    description?: string | null;
+    icon?: string | null;
+    color?: string | null;
+  }): Project {
+    const result = this.db
+      .prepare(
+        `
+        INSERT INTO projects (name, slug, path, description, icon, color)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      )
+      .run(
+        input.name,
+        input.slug,
+        input.path,
+        input.description ?? null,
+        input.icon ?? null,
+        input.color ?? null,
+      ) as { lastInsertRowid: number };
+
+    const created = this.getById(Number(result.lastInsertRowid));
+    if (!created) throw new Error('Failed to create project');
+    return created;
   }
 
   update(id: number, patch: Partial<Pick<Project, 'name' | 'description' | 'icon' | 'color'>>): Project {
@@ -114,10 +147,10 @@ export class ProjectRepository {
           GROUP BY priority
         `).all(id) as any,
         by_assignee: this.db.prepare(`
-          SELECT assigned_to, COUNT(*) as count 
+          SELECT assigned_to_id, COUNT(*) as count
           FROM tasks 
           WHERE project_id = ? AND archived_at IS NULL
-          GROUP BY assigned_to
+          GROUP BY assigned_to_id
         `).all(id) as any,
         overdue: (this.db.prepare(`
           SELECT COUNT(*) as count 

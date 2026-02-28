@@ -176,10 +176,16 @@ type ClawboardConfigFile = {
     include?: unknown;
   };
   includeAgents?: unknown;
+  category_defaults?: unknown;
+  scratch_root?: unknown;
+  allow_scratch_fallback?: unknown;
+  scratch_per_task?: unknown;
+  scratch_cleanup_mode?: unknown;
+  scratch_ttl_days?: unknown;
 };
 
 function resolveClawboardConfigPath(): string {
-  const raw = process.env.CLAWBOARD_CONFIG_PATH;
+  const raw = process.env.CLAWBOARD_CONFIG ?? process.env.CLAWBOARD_CONFIG_PATH;
   if (raw) return raw.startsWith('/') ? raw : path.resolve(BACKEND_ROOT, raw);
   return path.join(getClawboardDir(), 'config.json');
 }
@@ -212,11 +218,83 @@ function parseAgentIncludeListFromConfigFile(cfg: ClawboardConfigFile): AgentInc
   return normalizeAgentIds(candidate.filter((v): v is string => typeof v === 'string'));
 }
 
+function resolvePathValue(raw: string): string {
+  let value = raw.trim();
+  if (!value) return '';
+
+  if (value.startsWith('~')) {
+    value = path.join(os.homedir(), value.slice(1));
+  }
+
+  value = value.replace(/\$\{([A-Z0-9_]+)\}|\$([A-Z0-9_]+)/gi, (_m, a, b) => {
+    const key = String(a || b || '');
+    return process.env[key] ?? '';
+  });
+
+  return path.resolve(value);
+}
+
+function parseCategoryDefaults(cfg: ClawboardConfigFile): Record<string, string> {
+  const raw = cfg.category_defaults;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+
+  const entries = Object.entries(raw as Record<string, unknown>);
+  const out: Record<string, string> = {};
+  for (const [rawKey, rawValue] of entries) {
+    const key = String(rawKey).trim().toLowerCase();
+    if (!key || typeof rawValue !== 'string') continue;
+    const resolved = resolvePathValue(rawValue);
+    if (!resolved) continue;
+    out[key] = resolved;
+  }
+  return out;
+}
+
+function parseScratchRoot(cfg: ClawboardConfigFile): string {
+  const raw = cfg.scratch_root;
+  if (typeof raw === 'string' && raw.trim()) {
+    const resolved = resolvePathValue(raw);
+    if (resolved) return resolved;
+  }
+  return path.join(os.homedir(), '.local', 'share', 'clawboard', '_misc');
+}
+
+function parseAllowScratchFallback(cfg: ClawboardConfigFile): boolean {
+  if (typeof cfg.allow_scratch_fallback === 'boolean') return cfg.allow_scratch_fallback;
+  return true;
+}
+
+function parseScratchPerTask(cfg: ClawboardConfigFile): boolean {
+  if (typeof cfg.scratch_per_task === 'boolean') return cfg.scratch_per_task;
+  return false;
+}
+
+function parseScratchCleanupMode(cfg: ClawboardConfigFile): 'manual' | 'ttl' {
+  return cfg.scratch_cleanup_mode === 'ttl' ? 'ttl' : 'manual';
+}
+
+function parseScratchTtlDays(cfg: ClawboardConfigFile): number | null {
+  const mode = parseScratchCleanupMode(cfg);
+  if (mode !== 'ttl') return null;
+  const raw = cfg.scratch_ttl_days;
+  if (typeof raw === 'number' && Number.isInteger(raw) && raw > 0) return raw;
+  return null;
+}
+
+let _clawboardConfigFile: ClawboardConfigFile | null = null;
+
+function getClawboardConfigFile(): ClawboardConfigFile {
+  if (_clawboardConfigFile == null) {
+    _clawboardConfigFile = readClawboardConfigFile(resolveClawboardConfigPath());
+  }
+  return _clawboardConfigFile;
+}
+
 function resolveAgentIncludeList(): AgentIncludeList {
   const fromEnv = parseAgentIncludeListFromEnv();
   if (fromEnv !== null) return fromEnv;
 
-  const cfg = readClawboardConfigFile(resolveClawboardConfigPath());
+  const cfg = getClawboardConfigFile();
   return parseAgentIncludeListFromConfigFile(cfg);
 }
 
@@ -274,12 +352,25 @@ let _openclaw: ReturnType<typeof detectOpenClaw> | null = null;
 let _agentProfiles: AgentProfileMap | null = null;
 let _pluginAgentProfiles: AgentProfileMap | null = null;
 let _includedAgents: AgentIncludeList | undefined;
+let _categoryDefaults: Record<string, string> | null = null;
+let _scratchRoot: string | null = null;
+let _allowScratchFallback: boolean | undefined;
+let _scratchPerTask: boolean | undefined;
+let _scratchCleanupMode: 'manual' | 'ttl' | undefined;
+let _scratchTtlDays: number | null | undefined;
 
 export function resetConfigCacheForTests() {
   _openclaw = null;
   _agentProfiles = null;
   _pluginAgentProfiles = null;
   _includedAgents = undefined;
+  _clawboardConfigFile = null;
+  _categoryDefaults = null;
+  _scratchRoot = null;
+  _allowScratchFallback = undefined;
+  _scratchPerTask = undefined;
+  _scratchCleanupMode = undefined;
+  _scratchTtlDays = undefined;
 }
 
 export const config = {
@@ -327,6 +418,48 @@ export const config = {
       _includedAgents = resolveAgentIncludeList();
     }
     return _includedAgents;
+  },
+
+  get categoryDefaults(): Record<string, string> {
+    if (_categoryDefaults == null) {
+      _categoryDefaults = parseCategoryDefaults(getClawboardConfigFile());
+    }
+    return _categoryDefaults;
+  },
+
+  get scratchRoot(): string {
+    if (_scratchRoot == null) {
+      _scratchRoot = parseScratchRoot(getClawboardConfigFile());
+    }
+    return _scratchRoot;
+  },
+
+  get allowScratchFallback(): boolean {
+    if (_allowScratchFallback === undefined) {
+      _allowScratchFallback = parseAllowScratchFallback(getClawboardConfigFile());
+    }
+    return _allowScratchFallback;
+  },
+
+  get scratchPerTask(): boolean {
+    if (_scratchPerTask === undefined) {
+      _scratchPerTask = parseScratchPerTask(getClawboardConfigFile());
+    }
+    return _scratchPerTask;
+  },
+
+  get scratchCleanupMode(): 'manual' | 'ttl' {
+    if (_scratchCleanupMode === undefined) {
+      _scratchCleanupMode = parseScratchCleanupMode(getClawboardConfigFile());
+    }
+    return _scratchCleanupMode;
+  },
+
+  get scratchTtlDays(): number | null {
+    if (_scratchTtlDays === undefined) {
+      _scratchTtlDays = parseScratchTtlDays(getClawboardConfigFile());
+    }
+    return _scratchTtlDays;
   },
 
   isAgentIncluded(agentId: string): boolean {
