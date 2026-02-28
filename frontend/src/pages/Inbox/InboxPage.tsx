@@ -7,9 +7,14 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { EditTaskModal } from '../Kanban/TaskModals';
 import { formatDate } from '../../lib/date';
+import { toast } from '../../lib/toast';
 
 type StatusFilter = 'all' | 'backlog' | 'done';
 type SortMode = 'created' | 'due';
+
+function toErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 export function InboxPage({ wsSignal }: { wsSignal?: { type?: string; data?: unknown } | null }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -88,6 +93,10 @@ export function InboxPage({ wsSignal }: { wsSignal?: { type?: string; data?: unk
       });
       setQuickTitle('');
       await refresh();
+    } catch (err) {
+      const message = toErrorMessage(err);
+      setError(message);
+      toast.error(`Failed to create task: ${message}`);
     } finally {
       setCreating(false);
     }
@@ -95,8 +104,14 @@ export function InboxPage({ wsSignal }: { wsSignal?: { type?: string; data?: unk
 
   async function toggleDone(task: Task) {
     const nextStatus: TaskStatus = task.status === 'done' ? 'backlog' : 'done';
-    await api.updateTask(task.id, { status: nextStatus });
-    await refresh();
+    try {
+      await api.updateTask(task.id, { status: nextStatus });
+      await refresh();
+    } catch (err) {
+      const message = toErrorMessage(err);
+      setError(message);
+      toast.error(`Failed to update task #${task.id}: ${message}`);
+    }
   }
 
   return (
@@ -237,15 +252,26 @@ export function InboxPage({ wsSignal }: { wsSignal?: { type?: string; data?: unk
                   .map((tag) => tag.trim())
                   .filter(Boolean)
               : patch.tags;
-
-            await api.updateTask(editTask.id, { ...patch, tags: normalizedTags });
-            setEditTask(null);
-            await refresh();
+            try {
+              await api.updateTask(editTask.id, { ...patch, tags: normalizedTags });
+              setEditTask(null);
+              await refresh();
+            } catch (err) {
+              const message = toErrorMessage(err);
+              setError(message);
+              toast.error(`Failed to save task #${editTask.id}: ${message}`);
+            }
           }}
           onDelete={async () => {
-            await api.deleteTask(editTask.id);
-            setEditTask(null);
-            await refresh();
+            try {
+              await api.deleteTask(editTask.id);
+              setEditTask(null);
+              await refresh();
+            } catch (err) {
+              const message = toErrorMessage(err);
+              setError(message);
+              toast.error(`Failed to delete task #${editTask.id}: ${message}`);
+            }
           }}
         />
       ) : null}

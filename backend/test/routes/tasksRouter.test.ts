@@ -173,6 +173,107 @@ describe('Tasks API', () => {
     expect(mapped.get(taskB.body.id)?.assigned_to_id).toBe('tee');
   });
 
+  it('assigns project for multiple tasks in one request', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const project = appCtx.db
+      .prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)')
+      .run('Clawboard', 'clawboard', '/tmp/clawboard-project');
+    const projectId = Number(project.lastInsertRowid);
+
+    const taskA = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'A', status: 'backlog' })
+      .expect(201);
+
+    const taskB = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'B', status: 'backlog' })
+      .expect(201);
+
+    const assign = await request(appCtx.app)
+      .post('/api/tasks/bulk/project')
+      .send({ ids: [taskA.body.id, taskB.body.id], project_id: projectId })
+      .expect(200);
+
+    expect(assign.body).toEqual({ updated: 2 });
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'tasks_bulk_updated',
+      data: { project_assigned: 2, project_id: projectId },
+    });
+
+    const tasks = await request(appCtx.app).get('/api/tasks').expect(200);
+    const mapped = new Map((tasks.body as TaskLike[]).map((t) => [t.id, t]));
+    expect(mapped.get(taskA.body.id)?.project_id).toBe(projectId);
+    expect(mapped.get(taskB.body.id)?.project_id).toBe(projectId);
+  });
+
+  it('updates status for multiple tasks in one request', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const taskA = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'A', status: 'backlog' })
+      .expect(201);
+
+    const taskB = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'B', status: 'in_progress' })
+      .expect(201);
+
+    const update = await request(appCtx.app)
+      .post('/api/tasks/bulk/status')
+      .send({ ids: [taskA.body.id, taskB.body.id], status: 'done' })
+      .expect(200);
+
+    expect(update.body).toEqual({ updated: 2 });
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'tasks_bulk_updated',
+      data: { status_updated: 2, status: 'done' },
+    });
+
+    const tasks = await request(appCtx.app).get('/api/tasks').expect(200);
+    const mapped = new Map((tasks.body as TaskLike[]).map((t) => [t.id, t]));
+    expect(mapped.get(taskA.body.id)?.status).toBe('done');
+    expect(mapped.get(taskB.body.id)?.status).toBe('done');
+    expect(mapped.get(taskA.body.id)?.completed_at).toBeTruthy();
+    expect(mapped.get(taskB.body.id)?.completed_at).toBeTruthy();
+  });
+
+  it('deletes multiple tasks in one request', async () => {
+    const broadcast = vi.fn();
+    const appCtx = createTestApp({ broadcast });
+    db = appCtx.db;
+
+    const taskA = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'A', status: 'backlog' })
+      .expect(201);
+
+    const taskB = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'B', status: 'backlog' })
+      .expect(201);
+
+    const result = await request(appCtx.app)
+      .post('/api/tasks/bulk/delete')
+      .send({ ids: [taskA.body.id, taskB.body.id] })
+      .expect(200);
+
+    expect(result.body).toEqual({ deleted: 2 });
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'tasks_bulk_updated',
+      data: { deleted: 2 },
+    });
+
+    const tasks = await request(appCtx.app).get('/api/tasks').expect(200);
+    expect(tasks.body).toHaveLength(0);
+  });
+
   it('returns 400 for invalid bulk assignee payload', async () => {
     const appCtx = createTestApp();
     db = appCtx.db;
@@ -195,6 +296,11 @@ describe('Tasks API', () => {
     await request(appCtx.app)
       .post('/api/tasks/bulk/assignee')
       .send({ ids: [task.body.id], assigned_to_type: null, assigned_to_id: 'tee' })
+      .expect(400);
+
+    await request(appCtx.app)
+      .post('/api/tasks/bulk/status')
+      .send({ ids: [task.body.id], status: 'invalid' })
       .expect(400);
   });
 
