@@ -43,7 +43,7 @@ export class ActivityRepository {
       values.push(agent);
     }
     if (since) {
-      conditions.push('activities.timestamp >= ?');
+      conditions.push('datetime(activities.timestamp) >= datetime(?)');
       values.push(since);
     }
     if (related_task_id != null) {
@@ -55,11 +55,11 @@ export class ActivityRepository {
       values.push(project_id);
     }
     if (date_from) {
-      conditions.push('activities.timestamp >= ?');
+      conditions.push('datetime(activities.timestamp) >= datetime(?)');
       values.push(date_from);
     }
     if (date_to) {
-      conditions.push('activities.timestamp <= ?');
+      conditions.push('datetime(activities.timestamp) <= datetime(?)');
       values.push(date_to);
     }
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
