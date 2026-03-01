@@ -24,6 +24,9 @@ export interface Task {
   context_key: string | null;
   context_type: string | null;
   is_someday: boolean;
+  blocked_by_task_ids: number[];
+  blocks_task_ids: number[];
+  is_dependency_blocked: boolean;
   resolved_anchor: string | null;
   anchor_source: AnchorSource;
 }
@@ -37,6 +40,14 @@ export interface Activity {
   session_key: string | null;
   timestamp: string;
   related_task_id: number | null;
+}
+
+export interface AgentSettingsProfile {
+  id: string;
+  display_name: string;
+  avatar: string;
+  description: string;
+  source: 'config' | 'plugin' | 'generated';
 }
 
 export interface OpenClawStatus {
@@ -70,10 +81,13 @@ export interface Document {
   id: number;
   file_path: string;
   file_type: string | null;
+  doc_type_tag: string | null;
   last_modified: string | null;
   last_modified_by: string | null;
+  last_accessed_at: string | null;
   size_bytes: number | null;
   git_status: string | null;
+  linked_tasks?: Array<{ id: number; title: string; status: string }>;
 }
 
 export interface Project {
@@ -116,8 +130,34 @@ export interface SummaryStats {
 export interface DocsStats {
   total: number;
   by_type: Array<{ file_type: string | null; count: number }>;
+  by_doc_type_tag?: Array<{ doc_type_tag: string | null; count: number }>;
   by_status: Array<{ git_status: string | null; count: number }>;
   by_author: Array<{ last_modified_by: string; count: number }>;
+}
+
+export interface ClaudeNativeTask {
+  id: string;
+  title: string;
+  status: string;
+  updated_at: string | null;
+  dependencies: string[];
+  source_file: string;
+  mapped_task_id: number | null;
+  mapped_task_title: string | null;
+  mapped_task_status: string | null;
+}
+
+export interface ClaudeTaskWorkspace {
+  workspace_id: string;
+  path: string;
+  updated_at: string | null;
+  highwatermark: number | null;
+}
+
+export interface ClaudeTasksResponse {
+  base_dir: string;
+  workspaces: ClaudeTaskWorkspace[];
+  tasks: ClaudeNativeTask[];
 }
 
 const API_BASE = ((import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE) ?? '';
@@ -184,7 +224,7 @@ export const api = {
   },
 
   async createTask(
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'project_id' | 'context_key' | 'context_type' | 'is_someday'>> & { title: string },
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'project_id' | 'context_key' | 'context_type' | 'is_someday' | 'blocked_by_task_ids'>> & { title: string },
   ) {
     return json<Task>(
       await fetch(withBase('/api/tasks'), {
@@ -197,7 +237,7 @@ export const api = {
 
   async updateTask(
     id: number,
-    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'archived_at' | 'context_key' | 'context_type' | 'project_id' | 'is_someday'>>,
+    body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'due_date' | 'tags' | 'blocked_reason' | 'assigned_to_type' | 'assigned_to_id' | 'non_agent' | 'anchor' | 'archived_at' | 'context_key' | 'context_type' | 'project_id' | 'is_someday' | 'blocked_by_task_ids'>>,
   ) {
     return json<Task>(
       await fetch(withBase(`/api/tasks/${id}`), {
@@ -271,6 +311,7 @@ export const api = {
       context_key: task.context_key ?? undefined,
       context_type: task.context_type ?? undefined,
       is_someday: task.is_someday,
+      blocked_by_task_ids: task.blocked_by_task_ids,
     });
   },
 
@@ -278,10 +319,23 @@ export const api = {
     return json<string[]>(await fetch(withBase('/api/tags'), { headers: authHeaders() }));
   },
 
-  async listActivities(params?: { agent?: string; limit?: number; offset?: number; since?: string }) {
+  async listActivities(params?: {
+    agent?: string;
+    limit?: number;
+    offset?: number;
+    since?: string;
+    task_id?: number;
+    project_id?: number;
+    date_from?: string;
+    date_to?: string;
+  }) {
     const usp = new URLSearchParams();
     if (params?.agent) usp.set('agent', params.agent);
     if (params?.since) usp.set('since', params.since);
+    if (params?.task_id != null) usp.set('task_id', String(params.task_id));
+    if (params?.project_id != null) usp.set('project_id', String(params.project_id));
+    if (params?.date_from) usp.set('date_from', params.date_from);
+    if (params?.date_to) usp.set('date_to', params.date_to);
     if (params?.limit != null) usp.set('limit', String(params.limit));
     if (params?.offset != null) usp.set('offset', String(params.offset));
     const url = `${withBase('/api/activities')}${usp.toString() ? `?${usp.toString()}` : ''}`;
@@ -298,9 +352,10 @@ export const api = {
     );
   },
 
-  async listDocs(params?: { git_status?: string; limit?: number }) {
+  async listDocs(params?: { git_status?: string; doc_type_tag?: string; limit?: number }) {
     const usp = new URLSearchParams();
     if (params?.git_status) usp.set('git_status', params.git_status);
+    if (params?.doc_type_tag) usp.set('doc_type_tag', params.doc_type_tag);
     if (params?.limit != null) usp.set('limit', String(params.limit));
     const url = `${withBase('/api/docs')}${usp.toString() ? `?${usp.toString()}` : ''}`;
     return json<Document[]>(await fetch(url, { headers: authHeaders() }));
@@ -326,6 +381,35 @@ export const api = {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async markDocAccessed(id: number) {
+    return json<Document>(
+      await fetch(withBase(`/api/docs/${id}/accessed`), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+      }),
+    );
+  },
+
+  async updateDoc(id: number, body: { doc_type_tag?: string | null }) {
+    return json<Document>(
+      await fetch(withBase(`/api/docs/${id}`), {
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async attachDocToTask(id: number, taskId: number) {
+    return json<Document>(
+      await fetch(withBase(`/api/docs/${id}/attach-task`), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ task_id: taskId }),
       }),
     );
   },
@@ -401,5 +485,25 @@ export const api = {
 
   async getOpenClawStatus() {
     return json<OpenClawStatus>(await fetch(withBase('/api/openclaw/status'), { headers: authHeaders() }));
+  },
+
+  async listAgentSettings() {
+    return json<{ agents: AgentSettingsProfile[] }>(
+      await fetch(withBase('/api/settings/agents'), { headers: authHeaders() }),
+    );
+  },
+
+  async updateAgentSetting(agentId: string, body: { display_name?: string | null; avatar?: string | null; description?: string | null }) {
+    return json<AgentSettingsProfile>(
+      await fetch(withBase(`/api/settings/agents/${encodeURIComponent(agentId)}`), {
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async listClaudeTasks() {
+    return json<ClaudeTasksResponse>(await fetch(withBase('/api/claude/tasks'), { headers: authHeaders() }));
   },
 };

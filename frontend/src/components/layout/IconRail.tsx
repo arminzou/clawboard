@@ -3,7 +3,7 @@ import { Activity as ActivityIcon, CheckSquare, FileText, LayoutGrid, Moon, PawP
 import { IconButton } from '../ui/Button';
 import type { ResolvedTheme } from '../../hooks/useTheme';
 
-export type AppTab = 'kanban' | 'inbox' | 'activity' | 'docs';
+export type AppTab = 'kanban' | 'inbox' | 'activity' | 'docs' | 'settings';
 
 export function IconRail({
   tab,
@@ -63,8 +63,13 @@ export function IconRail({
         </IconButton>
         <IconButton
           label="Settings"
-          disabled
-          className="!bg-white/8 !text-white/65 ring-1 ring-white/20 disabled:!opacity-90"
+          active={tab === 'settings'}
+          onClick={() => onTab('settings')}
+          className={
+            tab === 'settings'
+              ? '!bg-white/24 !text-white ring-1 ring-white/35'
+              : '!text-white/78 hover:!bg-white/14 hover:!text-white'
+          }
         >
           <Settings size={18} strokeWidth={2} />
         </IconButton>

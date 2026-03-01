@@ -7,6 +7,7 @@ import { TopbarLite } from './components/layout/TopbarLite';
 import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
 import { DocsView } from './pages/Docs/DocsView';
 import { InboxPage } from './pages/Inbox/InboxPage';
+import { SettingsPage } from './pages/Settings/SettingsPage';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTheme } from './hooks/useTheme';
@@ -27,6 +28,7 @@ export default function App() {
     if (p.startsWith('/inbox')) return 'inbox';
     if (p.startsWith('/activity')) return 'activity';
     if (p.startsWith('/docs')) return 'docs';
+    if (p.startsWith('/settings')) return 'settings';
     return 'kanban';
   }, [location.pathname]);
 
@@ -42,6 +44,17 @@ export default function App() {
   const { lastMessage, status: wsStatus, lastReceivedAt, reconnectAttempts, reconnectNow } = useWebSocket({
     onMessage: (m) => {
       const t = String(m.type || '');
+      if (t === 'tasks_newly_unblocked') {
+        const dependents = Array.isArray((m.data as { dependents?: unknown })?.dependents)
+          ? ((m.data as { dependents?: Array<{ title?: string; id?: number }> }).dependents ?? [])
+          : [];
+        if (dependents.length > 0) {
+          const labels = dependents.slice(0, 2).map((d) => d.title ?? `#${d.id ?? '?'}`);
+          const suffix = dependents.length > 2 ? ` +${dependents.length - 2} more` : '';
+          pushToast(`Newly unblocked: ${labels.join(', ')}${suffix}`);
+          return;
+        }
+      }
       if (t.startsWith('task_')) pushToast(`Tasks updated (${t})`);
     },
   });
@@ -82,6 +95,7 @@ export default function App() {
     if (t === 'inbox') navigate('/inbox');
     else if (t === 'activity') navigate('/activity');
     else if (t === 'docs') navigate('/docs');
+    else if (t === 'settings') navigate('/settings');
     else navigate('/');
   }, [navigate]);
 
@@ -172,6 +186,20 @@ export default function App() {
                     agentProfileSources={agentProfileSources}
                   >
                     <DocsView wsSignal={wsSignal} />
+                  </AppShell>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <AppShell
+                    topbar={<TopbarLite title="Settings" subtitle="Workspace and agent preferences" />}
+                    wsSignal={wsSignal}
+                    wsStatus={wsStatus}
+                    initialAgentIds={initialAgentIds}
+                    agentProfileSources={agentProfileSources}
+                  >
+                    <SettingsPage />
                   </AppShell>
                 }
               />

@@ -34,6 +34,7 @@ type PersonaFlavor = 'methodical' | 'playful' | 'pragmatic';
 export type AgentProfileHint = {
   displayName?: string;
   avatar?: string;
+  description?: string;
   accent?: string;
   borderColor?: string;
   insetShadow?: string;
@@ -131,6 +132,7 @@ function readAgentProfileFile(filePath: string | null): AgentProfileMap {
 
       if (typeof value.displayName === 'string' && value.displayName.trim()) hint.displayName = value.displayName.trim();
       if (typeof value.avatar === 'string' && value.avatar.trim()) hint.avatar = value.avatar.trim();
+      if (typeof value.description === 'string' && value.description.trim()) hint.description = value.description.trim();
       if (typeof value.accent === 'string' && value.accent.trim()) hint.accent = value.accent.trim();
       if (typeof value.borderColor === 'string' && value.borderColor.trim()) hint.borderColor = value.borderColor.trim();
       if (typeof value.insetShadow === 'string' && value.insetShadow.trim()) hint.insetShadow = value.insetShadow.trim();
@@ -169,6 +171,35 @@ function resolvePluginAgentProfilesPath(): string | null {
   }
   if (!config.openclaw.home) return null;
   return path.join(config.openclaw.home, 'agent-profiles.json');
+}
+
+type AgentProfileEditablePatch = {
+  displayName?: string | null;
+  avatar?: string | null;
+  description?: string | null;
+};
+
+function normalizeEditableString(input: unknown): string | null {
+  if (input == null) return null;
+  const value = String(input).trim();
+  return value ? value : null;
+}
+
+function readJsonObjectFile(filePath: string): Record<string, unknown> {
+  if (!fs.existsSync(filePath)) return {};
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as Record<string, unknown>;
+  } catch (err) {
+    console.warn(`[config] Failed to parse JSON object file ${filePath}:`, err);
+    return {};
+  }
+}
+
+function writeJsonFile(filePath: string, payload: unknown): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
 type ClawboardConfigFile = {
@@ -476,3 +507,61 @@ export const config = {
     return isAgentIncluded(agentId, config.includedAgents);
   },
 };
+
+export function listKnownAgentIdsForSettings(): string[] {
+  const ids = new Set<string>();
+  for (const id of config.openclaw.agents) ids.add(normalizeAgentId(id));
+  for (const id of Object.keys(config.pluginAgentProfiles)) ids.add(normalizeAgentId(id));
+  for (const id of Object.keys(config.agentProfiles)) ids.add(normalizeAgentId(id));
+
+  const filtered = Array.from(ids).filter(Boolean);
+  const include = config.includedAgents;
+  if (include == null) return filtered.sort();
+
+  const includeSet = new Set(include.map((id) => normalizeAgentId(id)));
+  return filtered.filter((id) => includeSet.has(id)).sort();
+}
+
+export function updateClawboardAgentProfile(agentIdRaw: string, patch: AgentProfileEditablePatch): AgentProfileHint {
+  const agentId = normalizeAgentId(agentIdRaw);
+  if (!agentId) throw new Error('Invalid agent id');
+
+  const filePath = resolveClawboardAgentProfilesPath();
+  const existingRaw = readJsonObjectFile(filePath);
+  const current = (
+    existingRaw[agentId] && typeof existingRaw[agentId] === 'object' && !Array.isArray(existingRaw[agentId])
+      ? (existingRaw[agentId] as Record<string, unknown>)
+      : {}
+  );
+
+  const next = { ...current } as Record<string, unknown>;
+  if (Object.prototype.hasOwnProperty.call(patch, 'displayName')) {
+    const displayName = normalizeEditableString(patch.displayName);
+    if (displayName === null) delete next.displayName;
+    else next.displayName = displayName;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'avatar')) {
+    const avatar = normalizeEditableString(patch.avatar);
+    if (avatar === null) delete next.avatar;
+    else next.avatar = avatar;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'description')) {
+    const description = normalizeEditableString(patch.description);
+    if (description === null) delete next.description;
+    else next.description = description;
+  }
+
+  const hasAnyValue = Object.keys(next).length > 0;
+  if (hasAnyValue) {
+    existingRaw[agentId] = next;
+  } else {
+    delete existingRaw[agentId];
+  }
+
+  writeJsonFile(filePath, existingRaw);
+  _agentProfiles = null;
+
+  return config.agentProfiles[agentId] ?? {};
+}
