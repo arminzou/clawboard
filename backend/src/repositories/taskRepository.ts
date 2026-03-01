@@ -158,6 +158,11 @@ type DependencyEdgeRow = {
   dependent_id: number;
 };
 
+type ExistingTaskState = {
+  status: TaskStatus;
+  completed_at: string | null;
+};
+
 export type DependencyTaskSummary = {
   id: number;
   title: string;
@@ -239,36 +244,183 @@ export class TaskRepository {
     });
   }
 
-  replaceDependencies(taskId: number, blockedByTaskIds: number[]): number[] {
+  private getTaskState(id: number): ExistingTaskState | null {
+    const row = this.db
+      .prepare('SELECT status, completed_at FROM tasks WHERE id = ?')
+      .get(id) as ExistingTaskState | undefined;
+    return row ?? null;
+  }
+
+  private assertDependencyTasksExist(normalizedDependencyIds: number[]): void {
+    if (normalizedDependencyIds.length === 0) return;
+    const placeholders = normalizedDependencyIds.map(() => '?').join(', ');
+    const existingRows = this.db
+      .prepare(`SELECT id FROM tasks WHERE id IN (${placeholders})`)
+      .all(...normalizedDependencyIds) as Array<{ id: number }>;
+    if (existingRows.length !== normalizedDependencyIds.length) {
+      throw new Error('Dependency task not found');
+    }
+  }
+
+  private dependencyCreatesCycle(taskId: number, dependencyId: number): boolean {
+    if (dependencyId === taskId) return true;
+    const row = this.db
+      .prepare(
+        `
+        WITH RECURSIVE dependency_path(depends_on_task_id) AS (
+          SELECT depends_on_task_id
+          FROM task_dependencies
+          WHERE task_id = ?
+          UNION
+          SELECT td.depends_on_task_id
+          FROM task_dependencies td
+          JOIN dependency_path dp ON td.task_id = dp.depends_on_task_id
+        )
+        SELECT 1 AS has_cycle
+        FROM dependency_path
+        WHERE depends_on_task_id = ?
+        LIMIT 1
+      `,
+      )
+      .get(dependencyId, taskId) as { has_cycle: number } | undefined;
+    return Boolean(row);
+  }
+
+  private assertNoDependencyCycles(taskId: number, normalizedDependencyIds: number[]): void {
+    for (const dependencyId of normalizedDependencyIds) {
+      if (this.dependencyCreatesCycle(taskId, dependencyId)) {
+        throw new Error('Dependency cycle detected');
+      }
+    }
+  }
+
+  private replaceDependenciesWithinTransaction(
+    taskId: number,
+    blockedByTaskIds: number[],
+    now: string,
+    touchUpdatedAt: boolean,
+  ): number[] {
     const normalized = normalizeDependencyIds(blockedByTaskIds).filter((id) => id !== taskId);
+    const taskExists = this.db.prepare('SELECT 1 FROM tasks WHERE id = ?').get(taskId);
+    if (!taskExists) throw new Error('Task not found');
+
+    this.assertDependencyTasksExist(normalized);
+    this.assertNoDependencyCycles(taskId, normalized);
+
+    this.db.prepare('DELETE FROM task_dependencies WHERE task_id = ?').run(taskId);
+    if (normalized.length > 0) {
+      const insert = this.db.prepare(
+        'INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)',
+      );
+      for (const dependencyId of normalized) {
+        insert.run(taskId, dependencyId);
+      }
+    }
+
+    if (touchUpdatedAt) {
+      this.db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?').run(now, taskId);
+    }
+
+    return normalized;
+  }
+
+  private applyPatchWithinTransaction(
+    id: number,
+    patch: UpdateTaskBody,
+    now: string,
+    existing: ExistingTaskState,
+  ): void {
+    const updates: string[] = [];
+    const values: unknown[] = [];
+
+    if (patch.title !== undefined) {
+      updates.push('title = ?');
+      values.push(patch.title);
+    }
+    if (patch.description !== undefined) {
+      updates.push('description = ?');
+      values.push(normalizeNullableString(patch.description));
+    }
+    if (patch.status !== undefined) {
+      updates.push('status = ?');
+      values.push(patch.status);
+      if (patch.status === 'done') {
+        const existingCompleted = existing.status === 'done' ? existing.completed_at : null;
+        updates.push('completed_at = ?');
+        values.push(existingCompleted ?? now);
+      } else {
+        updates.push('completed_at = ?');
+        values.push(null);
+      }
+    }
+    if (patch.priority !== undefined) {
+      updates.push('priority = ?');
+      values.push(patch.priority);
+    }
+    if (patch.due_date !== undefined) {
+      updates.push('due_date = ?');
+      values.push(normalizeNullableString(patch.due_date));
+    }
+    if (patch.tags !== undefined) {
+      const normalized = normalizeTags(patch.tags);
+      updates.push('tags = ?');
+      values.push(JSON.stringify(normalized));
+      this.ensureTags(normalized);
+    }
+    if (patch.blocked_reason !== undefined) {
+      updates.push('blocked_reason = ?');
+      values.push(normalizeNullableString(patch.blocked_reason));
+    }
+    if (patch.assigned_to_type !== undefined) {
+      updates.push('assigned_to_type = ?');
+      values.push(patch.assigned_to_type);
+    }
+    if (patch.assigned_to_id !== undefined) {
+      updates.push('assigned_to_id = ?');
+      values.push(normalizeNullableString(patch.assigned_to_id));
+    }
+    if (patch.non_agent !== undefined) {
+      updates.push('non_agent = ?');
+      values.push(patch.non_agent ? 1 : 0);
+    }
+    if (patch.anchor !== undefined) {
+      updates.push('anchor = ?');
+      values.push(normalizeNullableString(patch.anchor));
+    }
+    if (patch.archived_at !== undefined) {
+      updates.push('archived_at = ?');
+      values.push(patch.archived_at);
+    }
+    if (patch.project_id !== undefined) {
+      updates.push('project_id = ?');
+      values.push(patch.project_id != null ? Number(patch.project_id) : null);
+    }
+    if (patch.context_key !== undefined) {
+      updates.push('context_key = ?');
+      values.push(normalizeNullableString(patch.context_key));
+    }
+    if (patch.context_type !== undefined) {
+      updates.push('context_type = ?');
+      values.push(normalizeNullableString(patch.context_type));
+    }
+    if (patch.is_someday !== undefined) {
+      updates.push('is_someday = ?');
+      values.push(patch.is_someday ? 1 : 0);
+    }
+
+    if (updates.length === 0) throw new Error('No fields to update');
+
+    updates.push('updated_at = ?');
+    values.push(now);
+    values.push(id);
+
+    this.db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  replaceDependencies(taskId: number, blockedByTaskIds: number[]): number[] {
     const now = new Date().toISOString();
 
-    const tx = this.db.transaction(() => {
-      if (normalized.length > 0) {
-        const placeholders = normalized.map(() => '?').join(', ');
-        const existingRows = this.db
-          .prepare(`SELECT id FROM tasks WHERE id IN (${placeholders})`)
-          .all(...normalized) as Array<{ id: number }>;
-        if (existingRows.length !== normalized.length) {
-          throw new Error('Dependency task not found');
-        }
-      }
-
-      this.db.prepare('DELETE FROM task_dependencies WHERE task_id = ?').run(taskId);
-      if (normalized.length > 0) {
-        const insert = this.db.prepare(
-          'INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)',
-        );
-        for (const dependencyId of normalized) {
-          insert.run(taskId, dependencyId);
-        }
-      }
-
-      this.db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?').run(now, taskId);
-    });
-
-    tx();
-    return normalized;
+    return this.db.transaction(() => this.replaceDependenciesWithinTransaction(taskId, blockedByTaskIds, now, true))();
   }
 
   listNewlyUnblockedDependents(prerequisiteTaskId: number): DependencyTaskSummary[] {
@@ -407,138 +559,75 @@ export class TaskRepository {
 
     const completedAt = status === 'done' ? new Date().toISOString() : null;
 
-    const result = this.db
-      .prepare(
-        `
-        INSERT INTO tasks (
-          title, description, status, priority, due_date,
-          tags, blocked_reason, assigned_to_type, assigned_to_id,
-          non_agent, anchor, project_id,
-          context_key, context_type, completed_at, is_someday
+    let createdId = 0;
+    this.db.transaction(() => {
+      const result = this.db
+        .prepare(
+          `
+          INSERT INTO tasks (
+            title, description, status, priority, due_date,
+            tags, blocked_reason, assigned_to_type, assigned_to_id,
+            non_agent, anchor, project_id,
+            context_key, context_type, completed_at, is_someday
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      )
-      .run(
-        title,
-        description,
-        status,
-        priority,
-        due_date,
-        tagsJson,
-        blocked_reason,
-        assigned_to_type,
-        assigned_to_id,
-        non_agent,
-        anchor,
-        project_id,
-        context_key,
-        context_type,
-        completedAt,
-        is_someday,
-      );
+        .run(
+          title,
+          description,
+          status,
+          priority,
+          due_date,
+          tagsJson,
+          blocked_reason,
+          assigned_to_type,
+          assigned_to_id,
+          non_agent,
+          anchor,
+          project_id,
+          context_key,
+          context_type,
+          completedAt,
+          is_someday,
+        );
 
-    const createdId = Number(result.lastInsertRowid);
-    if (Array.isArray(body.blocked_by_task_ids)) {
-      this.replaceDependencies(createdId, body.blocked_by_task_ids);
-    }
+      createdId = Number(result.lastInsertRowid);
+      if (Array.isArray(body.blocked_by_task_ids)) {
+        this.replaceDependenciesWithinTransaction(createdId, body.blocked_by_task_ids, new Date().toISOString(), true);
+      }
+    })();
 
     const created = this.getById(createdId);
     if (!created) throw new Error('Failed to create task');
     return created;
   }
 
-  update(id: number, patch: UpdateTaskBody): Task {
-    const updates: string[] = [];
-    const values: unknown[] = [];
-    const existing = this.getById(id);
+  updateWithDependencies(id: number, patch: UpdateTaskBody, blockedByTaskIds?: number[]): Task {
+    const hasFieldPatch = Object.keys(patch).length > 0;
+    const hasDependencyPatch = blockedByTaskIds !== undefined;
+    if (!hasFieldPatch && !hasDependencyPatch) throw new Error('No fields to update');
 
-    if (patch.title !== undefined) {
-      updates.push('title = ?');
-      values.push(patch.title);
-    }
-    if (patch.description !== undefined) {
-      updates.push('description = ?');
-      values.push(normalizeNullableString(patch.description));
-    }
-    if (patch.status !== undefined) {
-      updates.push('status = ?');
-      values.push(patch.status);
-      if (patch.status === 'done') {
-        const existingCompleted = existing?.status === 'done' ? existing.completed_at : null;
-        updates.push('completed_at = ?');
-        values.push(existingCompleted ?? new Date().toISOString());
-      } else {
-        updates.push('completed_at = ?');
-        values.push(null);
+    const now = new Date().toISOString();
+    this.db.transaction(() => {
+      const existing = this.getTaskState(id);
+      if (!existing) throw new Error('Task not found');
+
+      if (hasFieldPatch) {
+        this.applyPatchWithinTransaction(id, patch, now, existing);
       }
-    }
-    if (patch.priority !== undefined) {
-      updates.push('priority = ?');
-      values.push(patch.priority);
-    }
-    if (patch.due_date !== undefined) {
-      updates.push('due_date = ?');
-      values.push(normalizeNullableString(patch.due_date));
-    }
-    if (patch.tags !== undefined) {
-      const normalized = normalizeTags(patch.tags);
-      updates.push('tags = ?');
-      values.push(JSON.stringify(normalized));
-      this.ensureTags(normalized);
-    }
-    if (patch.blocked_reason !== undefined) {
-      updates.push('blocked_reason = ?');
-      values.push(normalizeNullableString(patch.blocked_reason));
-    }
-    if (patch.assigned_to_type !== undefined) {
-      updates.push('assigned_to_type = ?');
-      values.push(patch.assigned_to_type);
-    }
-    if (patch.assigned_to_id !== undefined) {
-      updates.push('assigned_to_id = ?');
-      values.push(normalizeNullableString(patch.assigned_to_id));
-    }
-    if (patch.non_agent !== undefined) {
-      updates.push('non_agent = ?');
-      values.push(patch.non_agent ? 1 : 0);
-    }
-    if (patch.anchor !== undefined) {
-      updates.push('anchor = ?');
-      values.push(normalizeNullableString(patch.anchor));
-    }
-    if (patch.archived_at !== undefined) {
-      updates.push('archived_at = ?');
-      values.push(patch.archived_at);
-    }
-    if (patch.project_id !== undefined) {
-      updates.push('project_id = ?');
-      values.push(patch.project_id != null ? Number(patch.project_id) : null);
-    }
-    if (patch.context_key !== undefined) {
-      updates.push('context_key = ?');
-      values.push(normalizeNullableString(patch.context_key));
-    }
-    if (patch.context_type !== undefined) {
-      updates.push('context_type = ?');
-      values.push(normalizeNullableString(patch.context_type));
-    }
-    if (patch.is_someday !== undefined) {
-      updates.push('is_someday = ?');
-      values.push(patch.is_someday ? 1 : 0);
-    }
-
-    if (updates.length === 0) throw new Error('No fields to update');
-
-    updates.push('updated_at = ?');
-    values.push(new Date().toISOString());
-    values.push(id);
-
-    this.db.prepare(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+      if (hasDependencyPatch) {
+        this.replaceDependenciesWithinTransaction(id, blockedByTaskIds ?? [], now, !hasFieldPatch);
+      }
+    })();
 
     const updated = this.getById(id);
     if (!updated) throw new Error('Task not found');
     return updated;
+  }
+
+  update(id: number, patch: UpdateTaskBody): Task {
+    return this.updateWithDependencies(id, patch);
   }
 
   bulkAssignProject(input: BulkAssignProjectInput): { updated: number } {

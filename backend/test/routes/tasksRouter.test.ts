@@ -364,6 +364,73 @@ describe('Tasks API', () => {
     expect(dependentTask?.is_dependency_blocked).toBe(true);
   });
 
+  it('does not create a task when dependency ids are invalid', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    await request(appCtx.app)
+      .post('/api/tasks')
+      .send({
+        title: 'Should Roll Back',
+        status: 'backlog',
+        blocked_by_task_ids: [999999],
+      })
+      .expect(400);
+
+    const list = await request(appCtx.app).get('/api/tasks').expect(200);
+    expect(list.body).toHaveLength(0);
+  });
+
+  it('does not persist non-dependency fields when dependency update fails', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const task = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'Mixed Patch Target', status: 'backlog' })
+      .expect(201);
+
+    await request(appCtx.app)
+      .patch(`/api/tasks/${task.body.id}`)
+      .send({
+        status: 'done',
+        blocked_by_task_ids: [999999],
+      })
+      .expect(400);
+
+    const after = await request(appCtx.app).get(`/api/tasks/${task.body.id}`).expect(200);
+    expect(after.body.status).toBe('backlog');
+    expect(after.body.completed_at).toBeNull();
+    expect(after.body.blocked_by_task_ids).toEqual([]);
+  });
+
+  it('rejects cycles in task dependency graph', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const taskA = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'Task A', status: 'backlog' })
+      .expect(201);
+    const taskB = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'Task B', status: 'backlog' })
+      .expect(201);
+
+    await request(appCtx.app)
+      .patch(`/api/tasks/${taskA.body.id}`)
+      .send({ blocked_by_task_ids: [taskB.body.id] })
+      .expect(200);
+
+    await request(appCtx.app)
+      .patch(`/api/tasks/${taskB.body.id}`)
+      .send({ blocked_by_task_ids: [taskA.body.id] })
+      .expect(400);
+
+    const afterB = await request(appCtx.app).get(`/api/tasks/${taskB.body.id}`).expect(200);
+    expect(afterB.body.blocked_by_task_ids).toEqual([]);
+  });
+
   it('broadcasts newly unblocked dependents when a prerequisite is completed', async () => {
     const broadcast = vi.fn();
     const appCtx = createTestApp({ broadcast });

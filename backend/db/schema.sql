@@ -97,6 +97,54 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     FOREIGN KEY (depends_on_task_id) REFERENCES tasks(id)
 );
 
+-- Prevent dependency cycles (A -> ... -> B and B -> A).
+CREATE TRIGGER IF NOT EXISTS trg_task_dependencies_prevent_cycle_insert
+BEFORE INSERT ON task_dependencies
+FOR EACH ROW
+BEGIN
+  SELECT RAISE(ABORT, 'Dependency cycle detected')
+  WHERE NEW.task_id = NEW.depends_on_task_id
+    OR EXISTS (
+      WITH RECURSIVE dependency_path(depends_on_task_id) AS (
+        SELECT depends_on_task_id
+        FROM task_dependencies
+        WHERE task_id = NEW.depends_on_task_id
+        UNION
+        SELECT td.depends_on_task_id
+        FROM task_dependencies td
+        JOIN dependency_path dp ON td.task_id = dp.depends_on_task_id
+      )
+      SELECT 1
+      FROM dependency_path
+      WHERE depends_on_task_id = NEW.task_id
+      LIMIT 1
+    );
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_task_dependencies_prevent_cycle_update
+BEFORE UPDATE OF task_id, depends_on_task_id ON task_dependencies
+FOR EACH ROW
+BEGIN
+  SELECT RAISE(ABORT, 'Dependency cycle detected')
+  WHERE NEW.task_id = NEW.depends_on_task_id
+    OR EXISTS (
+      WITH RECURSIVE dependency_path(depends_on_task_id) AS (
+        SELECT depends_on_task_id
+        FROM task_dependencies
+        WHERE task_id = NEW.depends_on_task_id
+          AND NOT (task_id = OLD.task_id AND depends_on_task_id = OLD.depends_on_task_id)
+        UNION
+        SELECT td.depends_on_task_id
+        FROM task_dependencies td
+        JOIN dependency_path dp ON td.task_id = dp.depends_on_task_id
+      )
+      SELECT 1
+      FROM dependency_path
+      WHERE depends_on_task_id = NEW.task_id
+      LIMIT 1
+    );
+END;
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to_id);

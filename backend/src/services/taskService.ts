@@ -109,6 +109,7 @@ export class TaskService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'Dependency task not found') throw new HttpError(400, 'Dependency task not found');
+      if (msg === 'Dependency cycle detected') throw new HttpError(400, 'Dependency cycle detected');
       throw err;
     }
   }
@@ -160,29 +161,14 @@ export class TaskService {
 
     delete (normalized as UpdateTaskBody & { blocked_by_task_ids?: number[] }).blocked_by_task_ids;
 
-    if (Object.keys(normalized).length === 0 && dependencies !== undefined) {
-      try {
-        this.repo.replaceDependencies(id, dependencies);
-        return this.getById(id);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg === 'Dependency task not found') throw new HttpError(400, 'Dependency task not found');
-        throw err;
-      }
-    }
-
     try {
-      const updated = this.repo.update(id, normalized);
-      if (dependencies !== undefined) {
-        this.repo.replaceDependencies(id, dependencies);
-        return this.getById(id);
-      }
-      return updated;
+      return this.repo.updateWithDependencies(id, normalized, dependencies);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'Task not found') throw new HttpError(404, 'Task not found');
       if (msg === 'No fields to update') throw new HttpError(400, 'No fields to update');
       if (msg === 'Dependency task not found') throw new HttpError(400, 'Dependency task not found');
+      if (msg === 'Dependency cycle detected') throw new HttpError(400, 'Dependency cycle detected');
       throw err;
     }
   }

@@ -439,6 +439,65 @@ function migrate(db) {
 
     db.pragma('user_version = 10');
   }
+
+  // 10 -> 11: enforce DAG constraint for task dependencies via triggers
+  if (v < 11) {
+    db.exec('DROP TRIGGER IF EXISTS trg_task_dependencies_prevent_cycle_insert');
+    db.exec('DROP TRIGGER IF EXISTS trg_task_dependencies_prevent_cycle_update');
+
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS trg_task_dependencies_prevent_cycle_insert
+      BEFORE INSERT ON task_dependencies
+      FOR EACH ROW
+      BEGIN
+        SELECT RAISE(ABORT, 'Dependency cycle detected')
+        WHERE NEW.task_id = NEW.depends_on_task_id
+          OR EXISTS (
+            WITH RECURSIVE dependency_path(depends_on_task_id) AS (
+              SELECT depends_on_task_id
+              FROM task_dependencies
+              WHERE task_id = NEW.depends_on_task_id
+              UNION
+              SELECT td.depends_on_task_id
+              FROM task_dependencies td
+              JOIN dependency_path dp ON td.task_id = dp.depends_on_task_id
+            )
+            SELECT 1
+            FROM dependency_path
+            WHERE depends_on_task_id = NEW.task_id
+            LIMIT 1
+          );
+      END
+    `);
+
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS trg_task_dependencies_prevent_cycle_update
+      BEFORE UPDATE OF task_id, depends_on_task_id ON task_dependencies
+      FOR EACH ROW
+      BEGIN
+        SELECT RAISE(ABORT, 'Dependency cycle detected')
+        WHERE NEW.task_id = NEW.depends_on_task_id
+          OR EXISTS (
+            WITH RECURSIVE dependency_path(depends_on_task_id) AS (
+              SELECT depends_on_task_id
+              FROM task_dependencies
+              WHERE task_id = NEW.depends_on_task_id
+                AND NOT (task_id = OLD.task_id AND depends_on_task_id = OLD.depends_on_task_id)
+              UNION
+              SELECT td.depends_on_task_id
+              FROM task_dependencies td
+              JOIN dependency_path dp ON td.task_id = dp.depends_on_task_id
+            )
+            SELECT 1
+            FROM dependency_path
+            WHERE depends_on_task_id = NEW.task_id
+            LIMIT 1
+          );
+      END
+    `);
+
+    db.pragma('user_version = 11');
+  }
 }
 
 module.exports = { migrate };
