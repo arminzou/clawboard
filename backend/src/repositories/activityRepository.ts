@@ -6,6 +6,10 @@ export interface ListActivitiesParams {
   limit?: number;
   offset?: number;
   since?: string;
+  related_task_id?: number;
+  project_id?: number;
+  date_from?: string;
+  date_to?: string;
 }
 
 export interface CreateActivityBody {
@@ -28,9 +32,9 @@ export class ActivityRepository {
   constructor(public readonly db: Database) {}
 
   list(params: ListActivitiesParams = {}): Activity[] {
-    const { agent, limit = 50, offset = 0, since } = params;
+    const { agent, limit = 50, offset = 0, since, related_task_id, project_id, date_from, date_to } = params;
 
-    let query = 'SELECT * FROM activities';
+    let query = 'SELECT activities.* FROM activities LEFT JOIN tasks ON tasks.id = activities.related_task_id';
     const conditions: string[] = [];
     const values: unknown[] = [];
 
@@ -39,12 +43,28 @@ export class ActivityRepository {
       values.push(agent);
     }
     if (since) {
-      conditions.push('timestamp >= ?');
+      conditions.push('activities.timestamp >= ?');
       values.push(since);
+    }
+    if (related_task_id != null) {
+      conditions.push('activities.related_task_id = ?');
+      values.push(related_task_id);
+    }
+    if (project_id != null) {
+      conditions.push('tasks.project_id = ?');
+      values.push(project_id);
+    }
+    if (date_from) {
+      conditions.push('activities.timestamp >= ?');
+      values.push(date_from);
+    }
+    if (date_to) {
+      conditions.push('activities.timestamp <= ?');
+      values.push(date_to);
     }
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
 
-    query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY activities.timestamp DESC LIMIT ? OFFSET ?';
     values.push(limit, offset);
 
     return this.db.prepare(query).all(...values) as Activity[];

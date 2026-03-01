@@ -3,6 +3,7 @@ import type { Database } from 'better-sqlite3';
 import { ActivityRepository } from '../../../repositories/activityRepository';
 import { ActivityService } from '../../../services/activityService';
 import type { Agent } from '../../../domain/activity';
+import { HttpError } from '../errors/httpError';
 
 export type BroadcastFn = (data: unknown) => void;
 
@@ -15,13 +16,25 @@ export function createActivitiesRouter({ db, broadcast }: { db: Database; broadc
   // GET /api/activities
   router.get('/', (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { agent, limit, offset, since } = req.query as Record<string, string | undefined>;
+      const { agent, limit, offset, since, task_id, project_id, date_from, date_to } = req.query as Record<string, string | undefined>;
+      const parsedTaskId = task_id != null ? Number(task_id) : undefined;
+      if (task_id != null && !Number.isFinite(parsedTaskId)) {
+        throw new HttpError(400, 'Invalid task_id');
+      }
+      const parsedProjectId = project_id != null ? Number(project_id) : undefined;
+      if (project_id != null && !Number.isFinite(parsedProjectId)) {
+        throw new HttpError(400, 'Invalid project_id');
+      }
 
       const activities = service.list({
         agent: agent as Agent | undefined,
         limit: limit != null ? parseInt(limit, 10) : undefined,
         offset: offset != null ? parseInt(offset, 10) : undefined,
         since,
+        related_task_id: parsedTaskId,
+        project_id: parsedProjectId,
+        date_from,
+        date_to,
       });
       res.json(activities);
     } catch (err) {

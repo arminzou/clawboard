@@ -54,4 +54,50 @@ describe('Activities API', () => {
     const stats = await request(appCtx.app).get('/api/activities/stats').expect(200);
     expect(stats.body.total).toBeGreaterThan(0);
   });
+
+  it('filters activities by task/project/date range', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const project = db.prepare('INSERT INTO projects (name, slug, path) VALUES (?, ?, ?)').run(
+      'Clawboard',
+      'clawboard',
+      '/tmp/clawboard',
+    );
+    const projectId = Number(project.lastInsertRowid);
+
+    const task = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'Activity link', status: 'backlog', project_id: projectId })
+      .expect(201);
+
+    const now = new Date().toISOString();
+    await request(appCtx.app)
+      .post('/api/activities')
+      .send({
+        agent: 'tee',
+        activity_type: 'message',
+        description: 'linked activity',
+        related_task_id: task.body.id,
+      })
+      .expect(201);
+
+    await request(appCtx.app)
+      .post('/api/activities')
+      .send({
+        agent: 'tee',
+        activity_type: 'message',
+        description: 'unlinked activity',
+      })
+      .expect(201);
+
+    const byTask = await request(appCtx.app).get(`/api/activities?task_id=${task.body.id}`).expect(200);
+    expect(byTask.body).toHaveLength(1);
+
+    const byProject = await request(appCtx.app).get(`/api/activities?project_id=${projectId}`).expect(200);
+    expect(byProject.body).toHaveLength(1);
+
+    const byDate = await request(appCtx.app).get(`/api/activities?date_from=${encodeURIComponent(now)}`).expect(200);
+    expect(byDate.body.length).toBeGreaterThanOrEqual(1);
+  });
 });

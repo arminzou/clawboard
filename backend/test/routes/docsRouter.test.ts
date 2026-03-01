@@ -35,6 +35,7 @@ describe('Docs API', () => {
 
     const list = await request(appCtx.app).get('/api/docs?git_status=modified').expect(200);
     expect(list.body).toHaveLength(1);
+    expect(list.body[0].linked_tasks).toEqual([]);
 
     // Unknown query params should not break listing.
     await request(appCtx.app).get('/api/docs?project_id=1').expect(200);
@@ -52,5 +53,40 @@ describe('Docs API', () => {
     const resync = await request(appCtx.app).post('/api/docs/resync').send({ workspace_root: '/tmp' }).expect(200);
     expect(resync.body.files).toBe(2);
     expect(broadcast).toHaveBeenCalledWith({ type: 'document_resynced', data: { files: 2, workspaceRoot: '/tmp' } });
+  });
+
+  it('updates doc metadata and attaches docs to tasks', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const doc = await request(appCtx.app)
+      .post('/api/docs/sync')
+      .send({ file_path: 'docs/spec.md', file_type: 'md', git_status: 'clean' })
+      .expect(200);
+
+    const task = await request(appCtx.app)
+      .post('/api/tasks')
+      .send({ title: 'Link docs', status: 'backlog' })
+      .expect(201);
+
+    const tagged = await request(appCtx.app)
+      .patch(`/api/docs/${doc.body.id}`)
+      .send({ doc_type_tag: 'spec' })
+      .expect(200);
+    expect(tagged.body.doc_type_tag).toBe('spec');
+
+    const linked = await request(appCtx.app)
+      .post(`/api/docs/${doc.body.id}/attach-task`)
+      .send({ task_id: task.body.id })
+      .expect(200);
+    expect(linked.body.linked_tasks).toEqual([
+      expect.objectContaining({ id: task.body.id, title: 'Link docs' }),
+    ]);
+
+    const accessed = await request(appCtx.app)
+      .post(`/api/docs/${doc.body.id}/accessed`)
+      .send({})
+      .expect(200);
+    expect(accessed.body.last_accessed_at).toBeTruthy();
   });
 });
