@@ -229,6 +229,7 @@ export function InboxPage({ wsSignal }: { wsSignal?: { type?: string; data?: unk
       {editTask ? (
         <EditTaskModal
           task={editTask}
+          allTasks={tasks}
           tagOptions={tagOptions}
           onClose={() => setEditTask(null)}
           onSave={async (patch: {

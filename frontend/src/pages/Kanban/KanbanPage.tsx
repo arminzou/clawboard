@@ -1202,6 +1202,7 @@ export function KanbanPage({
       {editTask ? (
         <EditTaskModal
           task={editTask}
+          allTasks={tasks}
           tagOptions={tagOptions}
           projects={projects}
           onClose={() => setEditTask(null)}
@@ -1229,6 +1230,7 @@ export function KanbanPage({
         <CreateTaskModal
           initialStatus={createPrefill?.status}
           initialProjectId={currentProjectId}
+          allTasks={tasks}
           tagOptions={tagOptions}
           projects={projects}
           onClose={() => {

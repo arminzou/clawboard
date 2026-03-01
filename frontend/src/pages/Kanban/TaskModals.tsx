@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calendar, CheckCircle2, ChevronDown, Clock, Trash2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle2, ChevronDown, Clock, Search, Trash2 } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import type { AssigneeType, Project, Task, TaskPriority, TaskStatus } from '../../lib/api';
 import { formatDateTimeFull } from '../../lib/date';
@@ -43,18 +43,282 @@ function hasTag(tags: string[], tag: string): boolean {
   return tags.some((t) => t.toLowerCase() === target);
 }
 
-function parseTaskIdCsv(raw: string): number[] {
+function normalizeTaskIdList(ids: number[]): number[] {
   const seen = new Set<number>();
   const out: number[] = [];
-  for (const part of raw.split(',')) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const id = Number(trimmed);
+  for (const raw of ids) {
+    const id = Number(raw);
     if (!Number.isInteger(id) || id <= 0 || seen.has(id)) continue;
     seen.add(id);
     out.push(id);
   }
   return out;
+}
+
+function dependencyStatusLabel(status: TaskStatus): string {
+  return COLUMNS.find((col) => col.key === status)?.title ?? status;
+}
+
+function dependencySearchText(task: Task): string {
+  const parts = [
+    `#${task.id}`,
+    task.title,
+    task.status,
+    task.assigned_to_id ?? '',
+    ...(Array.isArray(task.tags) ? task.tags : []),
+  ];
+  return parts.join(' ').toLowerCase();
+}
+
+function taskDependsOnTarget({
+  startTaskId,
+  targetTaskId,
+  dependencyMap,
+}: {
+  startTaskId: number;
+  targetTaskId: number;
+  dependencyMap: Map<number, number[]>;
+}): boolean {
+  if (startTaskId === targetTaskId) return true;
+  const visited = new Set<number>();
+  const queue: number[] = [startTaskId];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current == null || visited.has(current)) continue;
+    visited.add(current);
+    const dependencies = dependencyMap.get(current) ?? [];
+    for (const dep of dependencies) {
+      if (dep === targetTaskId) return true;
+      if (!visited.has(dep)) queue.push(dep);
+    }
+  }
+
+  return false;
+}
+
+function DependencyLookupField({
+  tasks,
+  currentTaskId,
+  value,
+  onChange,
+}: {
+  tasks: Task[];
+  currentTaskId?: number;
+  value: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectedIds = useMemo(() => normalizeTaskIdList(value), [value]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const taskById = useMemo(() => {
+    const map = new Map<number, Task>();
+    for (const task of tasks) map.set(task.id, task);
+    return map;
+  }, [tasks]);
+
+  const dependencyMap = useMemo(() => {
+    const map = new Map<number, number[]>();
+    for (const task of tasks) {
+      map.set(task.id, normalizeTaskIdList(task.blocked_by_task_ids ?? []));
+    }
+    return map;
+  }, [tasks]);
+
+  const cycleBlockedIds = useMemo(() => {
+    if (typeof currentTaskId !== 'number' || !Number.isInteger(currentTaskId)) return new Set<number>();
+    const blocked = new Set<number>();
+    for (const task of tasks) {
+      if (task.id === currentTaskId) continue;
+      if (taskDependsOnTarget({ startTaskId: task.id, targetTaskId: currentTaskId, dependencyMap })) {
+        blocked.add(task.id);
+      }
+    }
+    return blocked;
+  }, [currentTaskId, dependencyMap, tasks]);
+
+  const selectedRows = useMemo(
+    () => selectedIds.map((id) => ({ id, task: taskById.get(id) ?? null })),
+    [selectedIds, taskById],
+  );
+
+  const filteredOptions = useMemo(() => {
+    const options = tasks.filter((task) => task.id !== currentTaskId);
+    if (!normalizedQuery) return options.slice(0, 20);
+    return options.filter((task) => dependencySearchText(task).includes(normalizedQuery)).slice(0, 20);
+  }, [currentTaskId, normalizedQuery, tasks]);
+
+  function addDependency(id: number) {
+    if (selectedIdSet.has(id)) return;
+    onChange([...selectedIds, id]);
+  }
+
+  function removeDependency(id: number) {
+    onChange(selectedIds.filter((valueId) => valueId !== id));
+  }
+
+  const cycleSelected = selectedRows.some((row) => cycleBlockedIds.has(row.id));
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[rgb(var(--cb-text-muted))]" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-8"
+          placeholder="Search by #id, title, status, tag, assignee"
+        />
+      </div>
+
+      {selectedRows.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedRows.map(({ id, task }) => (
+            <Chip key={id} variant="soft" className="pr-1">
+              <span className="max-w-[220px] truncate" title={task ? `#${task.id} ${task.title}` : `#${id}`}>
+                {task ? `#${task.id} ${task.title}` : `#${id} (not in current list)`}
+              </span>
+              {task ? <span className="text-[10px] text-[rgb(var(--cb-text-muted))]">• {dependencyStatusLabel(task.status)}</span> : null}
+              <button
+                type="button"
+                onClick={() => removeDependency(id)}
+                aria-label={`Remove dependency #${id}`}
+                className="rounded-full px-1 text-[10px] text-[rgb(var(--cb-text-muted))] transition hover:text-[rgb(var(--cb-text))]"
+              >
+                ×
+              </button>
+            </Chip>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-[rgb(var(--cb-text-muted))]">No dependency tasks selected.</div>
+      )}
+
+      <div className="max-h-44 overflow-auto rounded-lg border border-[rgb(var(--cb-border))]">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-[rgb(var(--cb-surface-muted))] text-[rgb(var(--cb-text-muted))]">
+            <tr>
+              <th className="px-2 py-1.5">Task</th>
+              <th className="px-2 py-1.5">Status</th>
+              <th className="px-2 py-1.5">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((task) => {
+                const selected = selectedIdSet.has(task.id);
+                const cycleBlocked = cycleBlockedIds.has(task.id);
+                return (
+                  <tr key={task.id} className="border-t border-[rgb(var(--cb-border))]">
+                    <td className="px-2 py-1.5">
+                      <div className="font-medium text-[rgb(var(--cb-text))]">{task.title}</div>
+                      <div className="font-mono text-[11px] text-[rgb(var(--cb-text-muted))]">#{task.id}</div>
+                    </td>
+                    <td className="px-2 py-1.5">{dependencyStatusLabel(task.status)}</td>
+                    <td className="px-2 py-1.5">
+                      <Button
+                        variant={selected ? 'secondary' : 'ghost'}
+                        size="sm"
+                        disabled={selected || cycleBlocked}
+                        onClick={() => addDependency(task.id)}
+                        title={cycleBlocked ? 'Would create dependency cycle' : undefined}
+                      >
+                        {cycleBlocked ? 'Cycle' : selected ? 'Added' : 'Add'}
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr className="border-t border-[rgb(var(--cb-border))]">
+                <td colSpan={3} className="px-2 py-2 text-[rgb(var(--cb-text-muted))]">
+                  No tasks match your search.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {cycleSelected ? (
+        <div className="flex items-center gap-1.5 text-xs text-amber-700">
+          <AlertTriangle size={14} />
+          <span>One or more selected dependencies would create a cycle. Remove those tasks before saving.</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DependencyFieldSection({
+  tasks,
+  currentTaskId,
+  value,
+  onChange,
+  expanded,
+  onToggleExpanded,
+}: {
+  tasks: Task[];
+  currentTaskId?: number;
+  value: number[];
+  onChange: (next: number[]) => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
+  const selectedIds = useMemo(() => normalizeTaskIdList(value), [value]);
+  const taskById = useMemo(() => {
+    const map = new Map<number, Task>();
+    for (const task of tasks) map.set(task.id, task);
+    return map;
+  }, [tasks]);
+
+  const selectedRows = useMemo(
+    () => selectedIds.map((id) => ({ id, task: taskById.get(id) ?? null })),
+    [selectedIds, taskById],
+  );
+
+  const previewRows = selectedRows.slice(0, 3);
+  const remainingCount = Math.max(0, selectedRows.length - previewRows.length);
+
+  return (
+    <div className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked by tasks</div>
+          <div className="text-[11px] text-[rgb(var(--cb-text-muted))]">
+            {selectedRows.length === 0 ? 'No dependencies selected.' : `${selectedRows.length} selected`}
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onToggleExpanded}>
+          {expanded ? 'Hide list' : 'Manage'}
+        </Button>
+      </div>
+
+      {selectedRows.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {previewRows.map(({ id, task }) => (
+            <Chip key={id} variant="neutral">
+              {task ? `#${task.id} ${task.title}` : `#${id}`}
+            </Chip>
+          ))}
+          {remainingCount > 0 ? <Chip variant="neutral">+{remainingCount} more</Chip> : null}
+        </div>
+      ) : null}
+
+      {expanded ? (
+        <div className="mt-2">
+          <DependencyLookupField
+            tasks={tasks}
+            currentTaskId={currentTaskId}
+            value={selectedIds}
+            onChange={onChange}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 // tag toggling handled by TagPicker
@@ -344,13 +608,14 @@ type EditTaskFormValues = {
   nonAgent: boolean;
   anchor: string;
   blockedReason: string;
-  blockedByTaskIds: string;
+  blockedByTaskIds: number[];
   projectId: number | null;
   isSomeday: boolean;
 };
 
 export function EditTaskModal({
   task,
+  allTasks,
   onClose,
   onSave,
   onDelete,
@@ -358,6 +623,7 @@ export function EditTaskModal({
   projects = [],
 }: {
   task: Task;
+  allTasks: Task[];
   onClose: () => void;
   onSave: (patch: {
     title?: string;
@@ -384,6 +650,7 @@ export function EditTaskModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showDependencyPicker, setShowDependencyPicker] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
@@ -401,7 +668,7 @@ export function EditTaskModal({
       nonAgent: Boolean(task.non_agent),
       anchor: task.anchor ?? '',
       blockedReason: task.blocked_reason ?? '',
-      blockedByTaskIds: task.blocked_by_task_ids.join(', '),
+      blockedByTaskIds: normalizeTaskIdList(task.blocked_by_task_ids ?? []),
       projectId: task.project_id ?? null,
       isSomeday: Boolean(task.is_someday),
     },
@@ -440,6 +707,11 @@ export function EditTaskModal({
     setValue('assignedId', null, { shouldDirty: true });
   }, [assignedType, nonAgent, setValue]);
 
+  useEffect(() => {
+    if (showAdvanced) return;
+    setShowDependencyPicker(false);
+  }, [showAdvanced]);
+
   const requestClose = useCallback(() => {
     if (saving || deleting) return;
     if (formState.isDirty) {
@@ -469,7 +741,7 @@ export function EditTaskModal({
           non_agent: values.nonAgent,
           anchor: values.anchor.trim() ? values.anchor.trim() : null,
           blocked_reason: values.blockedReason.trim() ? values.blockedReason : null,
-          blocked_by_task_ids: parseTaskIdCsv(values.blockedByTaskIds),
+          blocked_by_task_ids: normalizeTaskIdList(values.blockedByTaskIds),
           project_id: values.projectId,
           is_someday: values.isSomeday,
         });
@@ -638,24 +910,6 @@ export function EditTaskModal({
 
             {showAdvanced ? (
               <>
-                <label className="text-sm">
-                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
-                  <textarea
-                    {...register('blockedReason')}
-                    className="cb-input w-full"
-                    rows={2}
-                    placeholder="Optional…"
-                  />
-                </label>
-
-                <label className="text-sm">
-                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked by task IDs</div>
-                  <Input
-                    {...register('blockedByTaskIds')}
-                    placeholder="e.g. 12, 18"
-                  />
-                </label>
-
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-sm">
                     <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
@@ -706,6 +960,31 @@ export function EditTaskModal({
                     <Input {...register('anchor')} placeholder="/path/to/context" />
                   </label>
                 </div>
+
+                <label className="text-sm">
+                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+                  <textarea
+                    {...register('blockedReason')}
+                    className="cb-input w-full"
+                    rows={2}
+                    placeholder="Optional…"
+                  />
+                </label>
+
+                <Controller
+                  control={control}
+                  name="blockedByTaskIds"
+                  render={({ field }) => (
+                    <DependencyFieldSection
+                      tasks={allTasks}
+                      currentTaskId={task.id}
+                      value={field.value ?? []}
+                      onChange={(next) => field.onChange(normalizeTaskIdList(next))}
+                      expanded={showDependencyPicker}
+                      onToggleExpanded={() => setShowDependencyPicker((prev) => !prev)}
+                    />
+                  )}
+                />
 
                 <div className="rounded-xl border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-surface-muted))] p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Timeline</div>
@@ -794,6 +1073,7 @@ export function EditTaskModal({
 export function CreateTaskModal({
   initialStatus,
   initialProjectId,
+  allTasks,
   onClose,
   onCreate,
   tagOptions = [],
@@ -801,6 +1081,7 @@ export function CreateTaskModal({
 }: {
   initialStatus?: TaskStatus;
   initialProjectId?: number | null;
+  allTasks: Task[];
   onClose: () => void;
   onCreate: (body: {
     title: string;
@@ -824,6 +1105,7 @@ export function CreateTaskModal({
   const { agents } = useAgents();
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showDependencyPicker, setShowDependencyPicker] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const modalRef = useRef<HTMLDivElement | null>(null);
   const availableTags = useMemo(() => mergeTags(tagOptions), [tagOptions]);
@@ -841,7 +1123,7 @@ export function CreateTaskModal({
       nonAgent: false,
       anchor: '',
       blockedReason: '',
-      blockedByTaskIds: '',
+      blockedByTaskIds: [],
       projectId: initialProjectId ?? null,
       isSomeday: false,
     },
@@ -890,6 +1172,11 @@ export function CreateTaskModal({
     setValue('assignedId', null, { shouldDirty: true });
   }, [assignedType, nonAgent, setValue]);
 
+  useEffect(() => {
+    if (showAdvanced) return;
+    setShowDependencyPicker(false);
+  }, [showAdvanced]);
+
   const create = useCallback(() => {
     void handleSubmit(async (values) => {
       if (saving) return;
@@ -905,7 +1192,7 @@ export function CreateTaskModal({
           due_date: values.dueDate.trim() ? values.dueDate.trim() : null,
           tags: mergeTags(values.tags),
           blocked_reason: values.blockedReason.trim() ? values.blockedReason : null,
-          blocked_by_task_ids: parseTaskIdCsv(values.blockedByTaskIds),
+          blocked_by_task_ids: normalizeTaskIdList(values.blockedByTaskIds),
           assigned_to_type: values.assignedType,
           assigned_to_id: values.assignedId,
           non_agent: values.nonAgent,
@@ -1064,19 +1351,6 @@ export function CreateTaskModal({
 
             {showAdvanced ? (
               <>
-                <label className="text-sm">
-                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
-                  <textarea {...register('blockedReason')} className="cb-input w-full" rows={2} placeholder="Optional…" />
-                </label>
-
-                <label className="text-sm">
-                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked by task IDs</div>
-                  <Input
-                    {...register('blockedByTaskIds')}
-                    placeholder="e.g. 12, 18"
-                  />
-                </label>
-
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-sm">
                     <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Project</div>
@@ -1127,6 +1401,25 @@ export function CreateTaskModal({
                     <Input {...register('anchor')} placeholder="/path/to/context" />
                   </label>
                 </div>
+
+                <label className="text-sm">
+                  <div className="mb-1 text-xs font-medium text-[rgb(var(--cb-text-muted))]">Blocked reason</div>
+                  <textarea {...register('blockedReason')} className="cb-input w-full" rows={2} placeholder="Optional…" />
+                </label>
+
+                <Controller
+                  control={control}
+                  name="blockedByTaskIds"
+                  render={({ field }) => (
+                    <DependencyFieldSection
+                      tasks={allTasks}
+                      value={field.value ?? []}
+                      onChange={(next) => field.onChange(normalizeTaskIdList(next))}
+                      expanded={showDependencyPicker}
+                      onToggleExpanded={() => setShowDependencyPicker((prev) => !prev)}
+                    />
+                  )}
+                />
               </>
             ) : null}
 
