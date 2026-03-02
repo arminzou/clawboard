@@ -72,7 +72,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
             "set -e
              if [ ! -d '$APP_DIR' ]; then
-               git clone '${{ gitea.server_url }}/${{ gitea.repository }}.git' '$APP_DIR'
+               git clone '${{ github.server_url }}/${{ github.repository }}.git' '$APP_DIR'
              fi
              cd '$APP_DIR'
              git fetch origin main
