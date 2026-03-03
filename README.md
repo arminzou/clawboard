@@ -32,6 +32,12 @@ A kanban board and table view give you a live picture of what's in progress, wha
 
 Attach reference docs, acceptance criteria, and scope notes directly to tasks. Your agents read the task and start—no lengthy prompts, no repeated explanations.
 
+Every agent task resolves to a [context anchor](docs/context-anchors.md) — a filesystem path that grounds the agent's work. Pawvy figures out the right directory automatically, or you can set one explicitly.
+
+### Keep Personal Tasks Separate
+
+The [Inbox](docs/inbox.md) is for reminders and to-dos that don't need an agent — shopping lists, quick notes, anything human-only. They live separately from the Kanban board and never get picked up by agents.
+
 ## 🛠 Tech Stack
 
 - **Backend:** Node.js + Express + SQLite + WebSocket
@@ -76,11 +82,18 @@ See [OpenClaw integration guide →](docs/openclaw-integration.md)
 
 ## Roadmap
 
-**v0.1.0 (current)**—Kanban board, table view, projects, My Queue, agent API, OpenClaw integration
+**v0.1.0 (current)**—Kanban board, table view, projects, My Queue, agent API, OpenClaw integration, Inbox, context anchors
 
-**v1.0.0 (in design)**—Draft states, context anchors, `pending_approval` flow, review notes with versioning, actor-aware transition enforcement. Full agent-human approval loop.
+**v1.0.0 (in design)**—Draft states, `pending_approval` flow, review notes with versioning, actor-aware transition enforcement. Full agent-human approval loop.
 
 See [ROADMAP.md](ROADMAP.md) for details.
+
+## 📖 Documentation
+
+- [Workflow guide →](docs/agent-design.md)
+- [OpenClaw integration →](docs/openclaw-integration.md)
+- [Inbox →](docs/inbox.md)
+- [Context anchors →](docs/context-anchors.md)
 
 ## 🤝 Contributing
 

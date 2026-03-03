@@ -1,164 +1,179 @@
-# Agent Status Row / Arcade Redesign
+# Pawvy Workflow Guide
 
-## Phase 1: Code Cleanup (Completed ✅)
+> **v0.1.0** — current release
 
-Redesigned the component to align with the plugin's actual output and remove dead code.
-
-### Changes Made
-
-| Item | Detail |
-|------|--------|
-| Removed `active` / `blocked` statuses | Type now exactly mirrors plugin output: `thinking \| idle \| offline` |
-| Removed frontend idle timeout | Plugin owns the `thinking → idle` transition via `idleTimeoutMs` |
-| Removed `fetchStatus` poll | `/api/openclaw/status` returns agent list, not live status — useless here |
-| Removed dead `presence.agent` field | Prop `agentId` is available directly |
-| Split thought into two concepts | `agentThought` (real plugin output) vs `decorativeQuote` (stable, chosen on mount) |
-| Handle `agentId: "*"` wildcard | `gateway_start` / `gateway_stop` broadcast to all agents |
-| Clear `agentThought` on offline | Preserve on idle (last known output stays visible) |
-| Removed energy bar | Decorative and misleading — no real metric behind it |
-| Added WebSocket connection indicator | Card dims + shows "Connecting..." / "Reconnecting..." when WS is not live |
-| Removed `console.log` | Debug noise |
+Pawvy connects human intent with agent execution. This guide covers how work flows between you and your agents in the current version.
 
 ---
 
-## Phase 2: UX Improvements (Planned)
+## Core Concepts
 
-### Animation & Liveliness
+### Tasks
 
-The biggest gap: nothing moves. A static card is just a status badge with a cat emoji.
+The unit of work in Pawvy. Every task has:
 
-- **Thinking pulse** — card border or avatar glows/pulses with CSS `animate-pulse` during `thinking`. Instant at-a-glance signal.
-- **Thinking spinner ring** — rotating dashed ring around the avatar during `thinking`, disappears on `idle`.
-- **Status transition animation** — subtle scale + fade when status changes. Prevents jarring snaps between states.
-- **Typewriter effect for thought bubble** — when a new `agentThought` arrives, characters type in one by one rather than snapping to the full string.
-- **Idle breathing** — very subtle scale oscillation (1.0 → 1.02 → 1.0) on `idle` to suggest the agent is alive but resting. Stops on `offline`.
+- **Title + description** — what needs to be done and why
+- **Status** — where it is in the workflow
+- **Project** — which project it belongs to
+- **Assignee** — you, an agent, or unassigned
 
-**Priority: Thinking pulse first — highest impact, pure CSS, zero data dependencies.**
+### Task Statuses
 
----
+```
+backlog → todo → in_progress → in_review → done
+                      ↕
+                   blocked
+```
 
-### Information Density
+| Status | Meaning |
+|--------|---------|
+| `backlog` | Not ready to be worked on yet |
+| `todo` | Ready to be picked up |
+| `in_progress` | Actively being worked on |
+| `in_review` | Work done, needs human review |
+| `blocked` | Stuck — waiting on something external |
+| `done` | Closed |
 
-- **Run elapsed timer** — record when `thinking` begins; show live counter: `"Thinking · 0:23"`. Tells you if the agent is stuck or just taking its time.
-- **Turn counter** — show how many tool calls/turns the current run has taken (requires plugin to emit it): `"Turn 4"`.
-- **Today's session count** — `"3 runs today"` as a tiny stat below the name. Glanceable activity signal.
-- **Preserved last thought** — keep the last real `agentThought` visible at `opacity-60` with a `"last run"` label on idle, rather than hiding it behind a decorative quote.
+### My Queue
 
----
+Your attention filter. Shows tasks that need a human decision right now:
 
-### Personality
+- Tasks in `in_review` assigned to you (agent surfaced them for review)
+- Tasks explicitly assigned to you in any open status
 
-Agents should have distinct personalities without relying on hardcoded IDs. The widget should feel tailored per agent.
+One click — no hunting through the board.
 
-- **Agent-specific idle quotes** — prefer persona-appropriate pools (`methodical`, `playful`, `pragmatic`) or explicit per-agent overrides.
-- **Per-agent color accent** — derive from stable agent profile so each agent is recognizable at a glance.
-- **Distinct avatars** — use profile-provided emoji/SVG when available, deterministic fallback otherwise.
-- **Source priority** — resolve identity from:
-  1. Pawvy config overrides
-  2. Plugin metadata hints
-  3. Generated deterministic defaults
+### Projects
 
----
-
-### Context Awareness
-
-The widget knows status but nothing about *what* the agent is doing — the most useful missing signal.
-
-- **Task link** — when a session is linked to a Pawvy task (Phase 12), show the task title in the card: `"Working on #47 — Fix auth flow"`. Click to jump to the task.
-- **Project / branch context** — show the git branch or project name: `"on feature/auth"`.
-- **"Working on..." summary** — if the plugin emits the first user message of the session, show it truncated in the card.
+Group related tasks. Pawvy auto-discovers git projects in your workspace, or you can register projects manually via the sidebar.
 
 ---
 
-### Interaction
+## Workflows
 
-The card is currently pure display with no affordances.
+### 1. You Create a Task for Your Agent
 
-- **Click to open session** — clicking the card opens the agent's activity feed or linked task.
-- **Hover tooltip** — full thought text (untruncated), exact last-activity timestamp, run start time.
-- **Ping button** — small icon to send a quick message to the agent without leaving the board. Taps into existing agent-to-agent messaging.
+Use this when you know what needs to be done and want to hand it off.
 
----
+1. Create a task — give it a clear title and description
+2. Set status to `todo`, assign to your agent
+3. Agent picks it up → moves to `in_progress` → does the work
+4. Agent moves it to `in_review` when done
+5. Task appears in **My Queue** — you review and close the loop
 
-### Connection State
-
-- **Reconnecting skeleton** — shimmer on the thought bubble area specifically while WS is disconnected; name/avatar stay fully visible. Clearer than a blanket opacity dim.
-- **"Offline since X"** — under the status label when `offline`, show when the gateway went down rather than just "Last: Xm ago".
-
----
-
-### Layout
-
-- **Horizontal compact mode** — single-row render for narrow sidebars: `🤖 Agent · Thinking · "Just finished a feature"`.
-- **Unified team panel** — when multiple agents are visible, a cohesive multi-agent layout rather than isolated cards.
+**Tip:** The more context in the description, the less back-and-forth. Tell the agent *why* the task exists and *what done looks like*.
 
 ---
 
-## Implementation Priority
+### 2. Agent Creates a Task
 
-| Priority | Item | Effort | Dependencies |
-|----------|------|--------|--------------|
-| 1 | Thinking pulse animation | Low | None |
-| 2 | Run elapsed timer | Low | None |
-| 3 | Agent-specific colors + idle quotes | Low | None |
-| 4 | Typewriter effect for thought bubble | Medium | None |
-| 5 | Distinct avatars per agent | Low | None |
-| 6 | Click to open session / task | Medium | Phase 12 task linking |
-| 7 | Turn counter | Medium | Plugin emit support |
-| 8 | Horizontal compact mode | Medium | None |
-| 9 | Ping button | High | Agent messaging API |
+Agents can create tasks via the Pawvy API or OpenClaw skill — useful when an agent discovers sub-work mid-session.
+
+1. Agent creates the task with context pre-populated
+2. Task appears on the board in `todo` or `in_progress`
+3. Agent completes it → moves to `in_review`
+4. Shows up in **My Queue** for your review
 
 ---
 
-## Phase 3: Arcade Pet Direction (v1 Spec)
+### 3. Review Loop
 
-Chosen direction:
-- Visual style: **arcade pet**
-- Product emphasis: **personality-first**
-- Primary click action: open **Activity Feed** (agent-filtered when available)
+When an agent finishes work:
 
-### Visual System
+1. Agent sets status to `in_review`
+2. Task surfaces in **My Queue**
+3. You review — three paths:
+   - **Approve** → move to `done`
+   - **Send back** → move to `in_progress` with a note
+   - **Block** → mark `blocked`, add reason
 
-- Strong per-agent identity via avatar + scene first, text second.
-- Personality mix target:
-  - 70% avatar + background scene
-  - 20% motion behavior
-  - 10% quotes/copy
-- Agent themes are data-driven:
-  - deterministic fallback per `agentId`
-  - optional config/plugin profile overrides for explicit personality
+---
 
-### Card Structure
+### 4. Blocked Tasks
 
-- Top lane: avatar capsule + name + status chip.
-- Mid lane: thought bubble (real thought first, decorative quote fallback).
-- Bottom lane: compact telemetry (elapsed time, last activity).
-- Offline card keeps identity visible, but desaturates scene and pauses decorative motion.
+When a task can't move forward:
 
-### Motion Language
+1. Set status to `blocked`
+2. Add a reason in the description (what's blocking, what's needed)
+3. When unblocked → move back to `in_progress` or `todo`
 
-- Thinking:
-  - energetic spark particles/ring around avatar
-  - status chip flicker/pulse (small amplitude)
-- Idle:
-  - low-amplitude breathing
-  - slow ambient backdrop drift
-- Offline:
-  - subtle moon/sleep icon accent, no active pulse
+Blocked tasks are visible on the board but filtered from **My Queue** until they're unblocked.
 
-### Global Presence Requirement
+---
 
-- Agent panel must be visible across **all primary pages**:
-  - Kanban
-  - Activity
-  - Docs
-- Placement rule:
-  - Desktop: persistent right-side "Agent Arcade" panel
-  - Mobile: compact sticky bottom dock, expandable into a bottom sheet
-- Keep one shared component to avoid diverging behavior across routes.
+## Board Views
 
-### Interaction Rules
+### Kanban
 
-- Card click opens Activity Feed scoped to that agent.
-- Task deep-link remains a secondary affordance for later Phase 12 linkage.
-- Quotes are only shown when idle and no real thought is present.
+Columns by status. Drag tasks between columns to update status. Filter by project, assignee, or status using the sidebar.
+
+### Table
+
+Row-based view. Better for scanning many tasks at once, sorting by date or assignee, or doing bulk updates.
+
+Switch between views without losing your active filters.
+
+---
+
+## OpenClaw Integration
+
+Pawvy integrates with OpenClaw so your agents can manage tasks directly and appear live in the sidebar.
+
+### Setup
+
+**1. Load the Pawvy plugin** in `openclaw.json`:
+
+```json
+{
+  "plugins": {
+    "load": {
+      "paths": ["/path/to/pawvy/extensions"]
+    },
+    "entries": {
+      "pawvy": {
+        "enabled": true,
+        "config": {
+          "webhookUrl": "http://localhost:3001/api/webhook/pawvy",
+          "idleTimeoutMs": 5000
+        }
+      }
+    }
+  }
+}
+```
+
+Restart the gateway:
+
+```bash
+openclaw gateway restart
+```
+
+**2. Install the Pawvy skill** in your agent's workspace — see the [OpenClaw integration guide →](./openclaw-integration.md)
+
+### What Agents Can Do
+
+With the Pawvy skill loaded, your agents can:
+
+| Action | Description |
+|--------|-------------|
+| Create task | Add a task with title, description, project |
+| Update status | Move a task through the workflow |
+| List queue | See tasks assigned to them or awaiting action |
+| Update description | Add context, findings, or blocker notes |
+
+### Agent Presence
+
+The sidebar shows live agent status — `thinking`, `idle`, or `offline` — updated in real time as your agents work.
+
+---
+
+## Tips
+
+- **Keep descriptions sharp.** A vague task = a vague result. State the goal, the constraints, and what done looks like.
+- **Use My Queue as your daily driver.** Open it first — it's everything that needs your attention, nothing else.
+- **Let agents create tasks.** If an agent discovers sub-work, let it create the task rather than trying to describe everything upfront.
+- **Blocked ≠ done.** If a task is waiting on something external, mark it blocked so it's visible but not cluttering the active queue.
+
+---
+
+*For the full roadmap and upcoming workflow features, see [ROADMAP.md](../ROADMAP.md).*

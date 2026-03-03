@@ -1,179 +1,130 @@
-# OpenClaw + Pawvy Integration
+# OpenClaw Integration
 
-This document describes the real-time integration between OpenClaw and Pawvy.
+Pawvy integrates with [OpenClaw](https://github.com/openclaw/openclaw) via the Pawvy plugin. The plugin tracks agent lifecycle events and reports real-time status to Pawvy — no manual webhook configuration required.
 
-## Overview
+---
 
-The integration enables Pawvy to display real-time agent presence and activity from OpenClaw via webhooks and WebSockets.
+## How It Works
 
-## Architecture
+The Pawvy plugin hooks into OpenClaw's agent lifecycle and reports status to Pawvy automatically:
 
-```
-OpenClaw                    Pawvy                    Frontend
-    │                           │                            │
-    │  sessions.reset           │                            │
-    │ ──────────────────────>  │                            │
-    │  chat:start              │  POST /api/webhook/pawvy│
-    │ ──────────────────────>  │ ───────────────────────>   │
-    │                          │     broadcast(             │
-    │                          │       agent_status_updated)│
-    │                          │ ───────────────────────>   │
-    │                          │      WebSocket            │
-    │                          │                            │
-```
+| Hook | What happens |
+|------|-------------|
+| `before_agent_start` | Agent → `thinking` (Planning response...) |
+| `before_tool_call` | Agent → `thinking` (Reading files... / Editing code... / etc.) |
+| `agent_end` | Agent → `idle` after `idleTimeoutMs` |
+| `session_start` | Agent → `idle` if not mid-run |
+| `gateway_start` | All agents → `idle` |
+| `gateway_stop` | All agents → `offline` |
 
-## Components
+---
 
-### 1. OpenClaw Webhook System (`src/webhook.ts`)
+## Setup
 
-Sends events to configured webhooks when agent activity occurs:
+### 1. Configure the Plugin
 
-- `session:start` - When a session is created/reset
-- `session:end` - When a session ends
-- `agent:thinking` / `agent:idle` / `agent:offline` - Agent lifecycle state changes
+Add to `openclaw.json`:
 
-Configuration in `openclaw.json`:
 ```json
 {
-  "webhook": {
-    "urls": ["http://localhost:3001/api/webhook/pawvy"],
-    "secret": "optional-shared-secret"
+  "plugins": {
+    "load": {
+      "paths": ["/path/to/pawvy/extensions"]
+    },
+    "entries": {
+      "pawvy": {
+        "enabled": true,
+        "config": {
+          "webhookUrl": "http://localhost:3001/api/webhook/pawvy",
+          "idleTimeoutMs": 5000
+        }
+      }
+    }
   }
 }
 ```
 
-### 2. Pawvy Webhook Endpoint (`/api/webhook/pawvy`)
+| Option | Description | Default |
+|--------|-------------|---------|
+| `webhookUrl` | Pawvy server URL | required |
+| `idleTimeoutMs` | Delay before flipping agent to `idle` after a run ends | `30000` |
 
-Receives events from OpenClaw and broadcasts to WebSocket clients.
-
-**Endpoint:** `POST /api/webhook/pawvy`
-
-**Request Body:**
-```json
-{
-  "event": "agent:thinking" | "agent:idle" | "agent:offline" | "gateway:online" | "gateway:offline",
-  "agentId": "<agent-id>" | "*",
-  "timestamp": "2026-02-19T09:00:00Z",
-  "thought": "Working on auth implementation"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true
-}
-```
-
-**Features:**
-- No API key required (auth bypassed for webhook endpoints)
-- Broadcasts `agent_status_updated` events to all connected WebSocket clients
-- Supports prefix matching for webhook paths (e.g., `/webhook/pawvy`)
-
-### 3. Auth Bypass Configuration
-
-Webhook endpoints are exempt from API key authentication:
-
-```typescript
-// backend/src/presentation/http/middleware/commonMiddleware.ts
-app.use('/api', requireApiKey({ allowPaths: ['/health', '/webhook'] }));
-```
-
-This allows OpenClaw to send events without managing API keys.
-
-### 4. Agent Status Row Component
-
-React component in sidebar showing agent status UI.
-
-**Location:** `frontend/src/components/layout/AgentStatusRow.tsx`
-
-**Features:**
-- Deterministic avatar/personality fallback for any `agentId`
-- Optional profile overrides from config/plugin metadata
-- Optional include filter to only surface selected agents (`PAWVY_AGENTS_INCLUDE` or `~/.pawvy/config.json`)
-- Status indicator with color coding:
-  - `thinking` - 🤔 Yellow (processing)
-  - `idle` - 😴 Gray (waiting)
-  - `offline` - 💤 Dark gray (disconnected)
-- Thought bubble with real thought + persona fallback quote
-- Last activity timestamp
-
-**Profile Source Priority:**
-1. `~/.pawvy/agent-profiles.json` (or `PAWVY_AGENT_PROFILES_PATH`)
-2. `<openclaw-home>/agent-profiles.json` (or `OPENCLAW_AGENT_PROFILES_PATH`)
-3. Deterministic defaults generated from `agentId`
-
-### 5. Webhook Router (`backend/src/presentation/http/routes/webhookRouter.ts`)
-
-Handles incoming webhook events from OpenClaw.
-
-**Endpoints:**
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/webhook/pawvy` | Receive OpenClaw events |
-| GET | `/api/webhook/config` | Get webhook configuration |
-
-**Event Types Processed:**
-- `agent:thinking` → Status: `thinking`
-- `agent:idle` → Status: `idle`
-- `agent:offline` → Status: `offline`
-- `gateway:online` → Status: `idle` (broadcast to `*`)
-- `gateway:offline` → Status: `offline` (broadcast to `*`)
-
-## Events Flow
-
-1. **Agent Run Start**: plugin emits `agent:thinking`
-2. **Agent Run End**: plugin emits `agent:idle` (after idle timeout)
-3. **Gateway Changes**: plugin emits `gateway:online` / `gateway:offline` with `agentId: "*"`
-4. **Broadcast**: webhook router maps event → `agent_status_updated` → WebSocket → frontend
-
-## Frontend WebSocket Events
-
-```typescript
-{
-  type: 'agent_status_updated',
-  data: {
-    agentId: '<agent-id>' | '*',
-    status: 'thinking' | 'idle' | 'offline',
-    lastActivity: '2026-02-19T09:00:00Z',
-    thought: 'Working on Phase 11!'
-  }
-}
-```
-
-## Webhook Configuration Discovery
-
-OpenClaw can query the webhook configuration:
+Restart the gateway:
 
 ```bash
-GET /api/webhook/config
+openclaw gateway restart
+```
 
-Response:
+Verify the plugin loaded:
+
+```bash
+openclaw plugins list
+# pawvy   active   v0.1.0
+```
+
+### 2. Install the Pawvy Skill
+
+The skill lets agents create tasks, update status, and list their queue directly from a session.
+
+Copy or symlink `extensions/pawvy/` into your agent's skills directory, then reference it in the agent's workspace (`AGENTS.md` or `TOOLS.md`).
+
+---
+
+## Filtering Agent Display
+
+Show only specific agents in the sidebar:
+
+```bash
+# .env
+PAWVY_AGENTS_INCLUDE=fay,tee
+```
+
+Or in `~/.pawvy/config.json`:
+
+```json
 {
-  "enabled": true,
-  "url": "http://localhost:3001/api/webhook/pawvy",
-  "events": ["agent:thinking", "agent:idle", "agent:offline", "gateway:online", "gateway:offline"]
+  "agentsInclude": ["fay", "tee"]
 }
 ```
 
-## Sidebar Integration
+---
 
-The agent status row component is displayed in the sidebar:
+## Agent Profiles (Optional)
 
-```tsx
-// frontend/src/components/layout/Sidebar.tsx
-<div className="border-t border-slate-200 p-3">
-  <div className="text-xs font-medium text-slate-500 mb-2">Agent Arcade</div>
-  <AgentArcadePanel />
-</div>
+Customize agent display — name, avatar, personality.
+
+**`~/.pawvy/agent-profiles.json`:**
+
+```json
+{
+  "fay": {
+    "displayName": "Fay",
+    "avatar": "🐱",
+    "personality": "playful"
+  },
+  "tee": {
+    "displayName": "Tee",
+    "avatar": "🐶",
+    "personality": "methodical"
+  }
+}
 ```
 
-## Future Enhancements
+If no profile is set, Pawvy generates a deterministic avatar and personality from the agent ID.
 
-- Show current task being worked on
-- Display session context (branch/worktree)
-- Add "blocked" status when agent reports blocked
-- Show agent's recent commits/activity
-- Task completion events (`task:completed`)
-- Agent-specific thought customization
+---
+
+## Troubleshooting
+
+**Agents not appearing in sidebar**
+- Check `openclaw plugins list` — `pawvy` should be `active`
+- Verify `webhookUrl` is reachable from the gateway host: `curl http://localhost:3001/api/health`
+- Check OpenClaw gateway logs for plugin errors
+
+**Plugin shows `error` in plugins list**
+- Verify `plugins.load.paths` points to the correct `extensions/` directory
+- Check the config matches the schema in `extensions/pawvy/openclaw.plugin.json`
+
+**Agent stuck on `thinking`**
+- Increase `idleTimeoutMs` — multi-turn agents may pause between turns
+- Check that `agent_end` events are firing in gateway logs
