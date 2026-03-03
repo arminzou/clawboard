@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What Is Pawvy?
 
-A **local-first command center for OpenClaw users** — a real-time Kanban board that tracks what you and your OpenClaw agents are working on.
+**The task layer for human-agent teams.** Pawvy is an open-source task and project management tool built for developers who work alongside AI agents. It gives agents the context to start work and brings their output back to the human at exactly the right moment.
 
-**Vision:** "Just Works™" — zero-config integration with OpenClaw.
+> *"Give agents context without heavy prompting, give humans insight without reading logs."*
 
 ---
 
@@ -30,13 +30,12 @@ A **local-first command center for OpenClaw users** — a real-time Kanban board
 
 ```bash
 pnpm run dev              # Backend + Frontend concurrently
-pnpm run dev:backend     # Backend only (port 3001)
-pnpm run dev:frontend    # Frontend only (port 5173)
-pnpm run build           # Build frontend
-pnpm run test:e2e        # Playwright E2E tests
+pnpm run dev:backend      # Backend only (port 3001)
+pnpm run dev:frontend     # Frontend only (port 5173)
+pnpm run build            # Build frontend
 
 # Backend unit tests (Vitest)
-pnpm -C backend test:run                              # All unit tests
+pnpm -C backend test:run                                   # All unit tests
 pnpm -C backend test:run src/services/taskService.test.ts  # Single test file
 ```
 
@@ -51,10 +50,9 @@ Copy `.env.example` to `.env` in the project root. Key variables:
 | `PAWVY_API_KEY` | — | Bearer token for API auth (required) |
 | `PAWVY_DB_PATH` | `~/.local/share/pawvy/pawvy.db` | SQLite path |
 | `PAWVY_PROJECTS_DIR` | — | Directory to scan for projects |
-| `AUTO_SYNC` | `false` | Enable periodic activity/doc sync |
-| `PORT` / `HOST` | `3001` / `127.0.0.1` | Server bind |
+| `PORT` / `HOST` | `3001` / `0.0.0.0` | Server bind |
 
-Frontend reads `VITE_API_BASE` and `VITE_PAWVY_API_KEY` from `frontend/.env.local`.
+Frontend reads `API_BASE`, `WS_BASE`, and `PAWVY_API_KEY` from `frontend/.env.local` (dev) or build args (Docker).
 
 ---
 
@@ -64,8 +62,8 @@ Frontend reads `VITE_API_BASE` and `VITE_PAWVY_API_KEY` from `frontend/.env.loca
 backend/
 ├── server.ts                      # Entry point: wires Express, SQLite, WebSocket
 ├── src/
-│   ├── config.ts                  # DB path, schema path resolution
-│   ├── domain/                    # Canonical TypeScript types (Task, Project, Activity, Document)
+│   ├── config.ts                  # DB path, schema path, Pawvy config resolution
+│   ├── domain/                    # Canonical TypeScript types (Task, Project, Activity)
 │   ├── repositories/              # Raw SQLite access (better-sqlite3)
 │   ├── services/                  # Business logic; tested with Vitest
 │   ├── presentation/http/
@@ -84,7 +82,7 @@ backend/
 
 Routes receive `{ db, broadcast }` at startup. After mutations, routes call `broadcast({ type, data })` to push real-time events to WebSocket clients.
 
-**WebSocket event types:** `task_created`, `task_updated`, `task_deleted`, `tasks_reordered`
+**WebSocket event types:** `task_created`, `task_updated`, `task_deleted`, `tasks_reordered`, `agent_status_updated`, `projects_updated`
 
 ---
 
@@ -92,75 +90,68 @@ Routes receive `{ db, broadcast }` at startup. After mutations, routes call `bro
 
 ```
 frontend/src/
-├── App.tsx                        # Router + WebSocket setup; routes: /, /project/:id, /activity, /docs
+├── App.tsx                        # Router + WebSocket; routes: /, /project/:id, /activity, /inbox, /docs, /settings
 ├── pages/
 │   ├── Kanban/                    # Board view (KanbanPage → KanbanBoard + TaskModals)
-│   ├── Activity/ActivityTimeline  # Agent activity feed
-│   └── Docs/DocsView              # Workspace document tracker
+│   ├── Activity/                  # Agent activity feed
+│   ├── Inbox/                     # Non-agent task checklist (InboxPage)
+│   ├── Docs/                      # Workspace document tracker
+│   └── Settings/                  # App settings
 ├── components/
-│   ├── layout/                    # AppShell, IconRail, Topbar, Sidebar
+│   ├── layout/                    # AppShell, IconRail, Topbar, Sidebar, AgentArcadePanel
 │   └── ui/                        # Primitives: Button, Input, Select, Chip, Menu, Toast, Modal
-├── hooks/                         # useWebSocket, useProjects, useHealth
+├── hooks/                         # useWebSocket, useProjects, useHealth, useAgents
 └── lib/
     ├── api.ts                     # All API calls + frontend type definitions
     └── toast.ts                   # Imperative toast system
 ```
 
-**Note:** Frontend has its own type definitions in `lib/api.ts` (not shared with backend `domain/`).
-
 Design tokens are CSS variables in `index.css`. Use `clsx` for conditional classes.
-
----
-
-## Task Management (API as source of truth)
-
-```bash
-# List backlog tasks
-curl -s http://127.0.0.1:3001/api/tasks?status=backlog | jq
-
-# Create task
-curl -X POST http://127.0.0.1:3001/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title": "...", "status": "in_progress", "project_id": 1}'
-
-# Update task
-curl -X PATCH http://127.0.0.1:3001/api/tasks/ID \
-  -H "Content-Type: application/json" \
-  -d '{"status": "done"}'
-```
 
 ---
 
 ## API Endpoints
 
-- `GET/POST/PATCH/DELETE /api/tasks` — Task CRUD; also `POST /api/tasks/reorder`, `POST /api/tasks/archive_done`
-- `GET/POST /api/activities` — Activity timeline; `POST /api/activities/ingest-sessions`
-- `GET/POST /api/docs` — Document tracking; `POST /api/docs/resync`, `POST /api/docs/sync`
-- `GET/PATCH/DELETE /api/projects` — Project management; `POST /api/projects/discover`
+- `GET/POST/PATCH/DELETE /api/tasks` — Task CRUD; `POST /api/tasks/reorder`, `POST /api/tasks/archive_done`, `POST /api/tasks/bulk/assignee`
+- `GET/POST /api/projects` — Project management; `POST /api/projects/discover` (auto-discover), `POST /api/projects` (manual registration with explicit `path`)
+- `GET/POST /api/activities` — Activity timeline
+- `GET/PATCH /api/settings` — App settings
 - `GET /api/tags` — All tags in use
+- `POST /api/webhook/pawvy` — OpenClaw plugin webhook (no API key required)
 - `ws://localhost:3001/ws` — Real-time updates
 
 ---
-
-## Schema Changes
-
-All schema changes go through `backend/db/schema.sql` (source of truth) and `backend/db/migrate.js` (migration runner). Never modify the database directly. Run `node backend/db/migrate.js` after schema changes to apply migrations.
 
 ## Data Model
 
 | Entity | Key Fields |
 |--------|------------|
-| Task | id, title, status, priority, tags (JSON string in DB, `string[]` in API), assigned_to, project_id, context_key, context_type, is_someday, blocked_reason |
+| Task | `id`, `title`, `description`, `status`, `priority`, `tags` (JSON string → `string[]`), `assigned_to_type`, `assigned_to_id`, `non_agent`, `anchor`, `blocked_reason`, `project_id`, `is_someday` |
 | Status | `backlog` \| `in_progress` \| `review` \| `done` |
 | Priority | `low` \| `medium` \| `high` \| `urgent` \| null |
-| Assignee | `tee` \| `fay` \| `armin` \| null |
+| Assignee | `assigned_to_type`: `'agent' \| 'human' \| null`; `assigned_to_id`: agent id or user id |
+| Non-agent | `non_agent: 1` — inbox/reminder tasks; cannot be assigned to an agent |
+| Anchor | `anchor`: explicit filesystem path override for agent context resolution |
 
-`context_key` / `context_type` links tasks to git branches or worktrees (OpenClaw integration). `is_someday` marks "someday/maybe" tasks.
+**Anchor resolution priority:** task anchor → project root → category default → scratch workspace → blocked.
+
+---
+
+## Schema Changes
+
+All schema changes go through `backend/db/schema.sql` (source of truth) and `backend/db/migrate.js`. Never modify the database directly. Run `node backend/db/migrate.js` after schema changes.
+
+---
+
+## OpenClaw Integration
+
+The `extensions/pawvy/` plugin hooks into OpenClaw's agent lifecycle and POSTs status events to `/api/webhook/pawvy`. Configure via `openclaw.json` — see [docs/openclaw-integration.md](docs/openclaw-integration.md).
 
 ---
 
 ## See Also
 
-- [AGENTS.md](./AGENTS.md) — Workflow rules, current phase, autopilot mode
-- [ROADMAP.md](./ROADMAP.md) — High-level plan
+- [AGENTS.md](./AGENTS.md) — Coding conventions, project structure, commit style
+- [ROADMAP.md](./ROADMAP.md) — Feature roadmap
 - [README.md](./README.md) — User documentation
+- [docs/](./docs/) — Workflow guide, OpenClaw integration, context anchors, inbox, Docker setup
