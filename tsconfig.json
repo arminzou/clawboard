@@ -15,7 +15,7 @@
   "include": [
     "backend/**/*.ts",
     "frontend/**/*.ts",
-    "hooks/**/*.ts"
+    "dev/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "**/dist"]
 }

@@ -23,5 +23,6 @@ yarn-error.log*
 
 docs/internal
 test-results/
+dev
 
 AGENTS.override.md
