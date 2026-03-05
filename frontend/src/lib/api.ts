@@ -160,6 +160,95 @@ export interface ClaudeTasksResponse {
   tasks: ClaudeNativeTask[];
 }
 
+// Thread-first v1.0 (feature-flagged on backend)
+export type ThreadStatus = 'open' | 'clarifying' | 'ready_to_plan' | 'pending_approval' | 'promoted' | 'archived';
+export type ThreadPriority = 'low' | 'medium' | 'high';
+export type ThreadActorType = 'human' | 'agent' | 'system';
+export type ThreadEventType =
+  | 'question_opened'
+  | 'clarification_requested'
+  | 'clarification_provided'
+  | 'work_log'
+  | 'proposal_posted'
+  | 'objection_posted'
+  | 'decision_requested'
+  | 'decision_recorded'
+  | 'promoted_to_task'
+  | 'thread_cloned'
+  | 'archived';
+export type ThreadStance = 'agree' | 'object' | 'needs_info';
+
+export interface MentionPayload {
+  what_changed: string;
+  what_you_need_from_human: string;
+  options: string[];
+  recommended_option?: string;
+  deadline_or_urgency?: string;
+}
+
+export interface QuestionThread {
+  id: string;
+  workspace_id: string;
+  title: string;
+  problem_statement: string;
+  status: ThreadStatus;
+  priority: ThreadPriority;
+  owner_human_id: string;
+  created_by_type: Exclude<ThreadActorType, 'system'>;
+  created_by_id: string;
+  current_state_summary: string | null;
+  consensus_state: 'aligned' | 'mixed' | 'blocked';
+  open_disagreements_count: number;
+  decision_deadline: string | null;
+  last_human_ping_at: string | null;
+  cloned_from_thread_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ThreadEvent {
+  id: string;
+  thread_id: string;
+  event_type: ThreadEventType;
+  actor_type: ThreadActorType;
+  actor_id: string;
+  body_md: string | null;
+  stance: ThreadStance | null;
+  mention_human: boolean;
+  mention_payload: MentionPayload | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface PromotionPacket {
+  id: string;
+  thread_id: string;
+  problem: string | null;
+  desired_outcome: string | null;
+  scope_in: string | null;
+  scope_out: string | null;
+  constraints: string | null;
+  decision_owner_id: string | null;
+  acceptance_criteria: string[];
+  first_executable_slice: string | null;
+  dependencies: unknown;
+  risks: unknown;
+  context_links: unknown;
+  is_complete: boolean;
+  validated_at: string | null;
+  updated_by_type: ThreadActorType;
+  updated_by_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HumanAttentionBuckets = {
+  needs_decision: QuestionThread[];
+  needs_clarification: QuestionThread[];
+  needs_approval: QuestionThread[];
+  blocked_on_human: QuestionThread[];
+};
+
 const API_BASE = ((import.meta as unknown as { env?: { VITE_API_BASE?: string } }).env?.VITE_API_BASE) ?? '';
 const API_BASE_CLEAN = API_BASE ? API_BASE.replace(/\/$/, '') : '';
 
@@ -500,6 +589,38 @@ export const api = {
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       }),
+    );
+  },
+
+  // --- Thread-first v1.0 (feature-flagged on backend)
+  async getHumanAttention(humanId: string) {
+    return json<HumanAttentionBuckets>(
+      await fetch(withBase(`/api/humans/${encodeURIComponent(humanId)}/attention`), { headers: authHeaders() }),
+    );
+  },
+
+  async listThreads(params?: { status?: ThreadStatus; owner?: string; myAttention?: boolean }) {
+    const usp = new URLSearchParams();
+    if (params?.status) usp.set('status', params.status);
+    if (params?.owner) usp.set('owner', params.owner);
+    if (params?.myAttention !== undefined) usp.set('myAttention', params.myAttention ? 'true' : 'false');
+    const url = `${withBase('/api/threads')}${usp.toString() ? `?${usp.toString()}` : ''}`;
+    return json<QuestionThread[]>(await fetch(url, { headers: authHeaders() }));
+  },
+
+  async getThread(threadId: string) {
+    return json<QuestionThread>(await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}`), { headers: authHeaders() }));
+  },
+
+  async listThreadEvents(threadId: string) {
+    return json<ThreadEvent[]>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/events`), { headers: authHeaders() }),
+    );
+  },
+
+  async getPromotionPacket(threadId: string) {
+    return json<PromotionPacket>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/promotion-packet`), { headers: authHeaders() }),
     );
   },
 

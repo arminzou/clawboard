@@ -8,6 +8,9 @@ import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
 import { DocsView } from './pages/Docs/DocsView';
 import { InboxPage } from './pages/Inbox/InboxPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
+import { AttentionPage } from './pages/Attention/AttentionPage';
+import { ThreadDetailPage } from './pages/Threads/ThreadDetailPage';
+import { features } from './lib/features';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTheme } from './hooks/useTheme';
@@ -25,6 +28,8 @@ export default function App() {
 
   const tab = useMemo(() => {
     const p = location.pathname;
+    if (p.startsWith('/attention')) return 'attention';
+    if (p.startsWith('/threads/')) return 'attention';
     if (p.startsWith('/inbox')) return 'inbox';
     if (p.startsWith('/activity')) return 'activity';
     if (p.startsWith('/docs')) return 'docs';
@@ -92,7 +97,8 @@ export default function App() {
   }, []);
 
   const setTab = useCallback((t: Tab) => {
-    if (t === 'inbox') navigate('/inbox');
+    if (t === 'attention') navigate('/attention');
+    else if (t === 'inbox') navigate('/inbox');
     else if (t === 'activity') navigate('/activity');
     else if (t === 'docs') navigate('/docs');
     else if (t === 'settings') navigate('/settings');
@@ -111,10 +117,43 @@ export default function App() {
         />
 
         <div className="flex h-full">
-          <IconRail tab={tab} onTab={setTab} theme={resolvedTheme} onToggleTheme={toggleTheme} />
+          <IconRail tab={tab} onTab={setTab} theme={resolvedTheme} onToggleTheme={toggleTheme} showAttention={features.threadFirstV1} />
 
           <div className="min-w-0 flex-1">
             <Routes>
+              {features.threadFirstV1 ? (
+                <>
+                  <Route
+                    path="/attention"
+                    element={
+                      <AppShell
+                        topbar={<TopbarLite title="My Attention" subtitle="Thread-first collaboration" />}
+                        wsSignal={wsSignal}
+                        wsStatus={wsStatus}
+                        initialAgentIds={initialAgentIds}
+                        agentProfileSources={agentProfileSources}
+                      >
+                        <AttentionPage />
+                      </AppShell>
+                    }
+                  />
+                  <Route
+                    path="/threads/:threadId"
+                    element={
+                      <AppShell
+                        topbar={<TopbarLite title="Thread" subtitle="Details + timeline" />}
+                        wsSignal={wsSignal}
+                        wsStatus={wsStatus}
+                        initialAgentIds={initialAgentIds}
+                        agentProfileSources={agentProfileSources}
+                      >
+                        <ThreadDetailPage />
+                      </AppShell>
+                    }
+                  />
+                </>
+              ) : null}
+
               <Route
                 path="/"
                 element={

@@ -1,22 +1,25 @@
 import type { ReactNode } from 'react';
-import { Activity as ActivityIcon, CheckSquare, FileText, LayoutGrid, Moon, PawPrint, Settings, Sun } from 'lucide-react';
+import { Activity as ActivityIcon, Bell, CheckSquare, FileText, LayoutGrid, Moon, PawPrint, Settings, Sun } from 'lucide-react';
 import { IconButton } from '../ui/Button';
 import type { ResolvedTheme } from '../../hooks/useTheme';
 
-export type AppTab = 'kanban' | 'inbox' | 'activity' | 'docs' | 'settings';
+export type AppTab = 'attention' | 'kanban' | 'inbox' | 'activity' | 'docs' | 'settings';
 
 export function IconRail({
   tab,
   onTab,
   theme,
   onToggleTheme,
+  showAttention,
 }: {
   tab: AppTab;
   onTab: (t: AppTab) => void;
   theme: ResolvedTheme;
   onToggleTheme: () => void;
+  showAttention?: boolean;
 }) {
   const items: Array<{ key: AppTab; label: string; icon: ReactNode }> = [
+    ...(showAttention ? [{ key: 'attention' as const, label: 'Attention', icon: <Bell size={18} strokeWidth={2} /> }] : []),
     { key: 'kanban', label: 'Projects', icon: <LayoutGrid size={18} strokeWidth={2} /> },
     { key: 'inbox', label: 'Inbox', icon: <CheckSquare size={18} strokeWidth={2} /> },
     { key: 'activity', label: 'Activity', icon: <ActivityIcon size={18} strokeWidth={2} /> },
