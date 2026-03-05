@@ -14,6 +14,17 @@ function normalizeNonEmptyString(input: unknown): string | null {
   return value.length > 0 ? value : null;
 }
 
+function parseBoolean(input: unknown): boolean {
+  if (input === true) return true;
+  if (input === false || input == null) return false;
+  if (typeof input === 'number') return input === 1;
+  if (typeof input === 'string') {
+    const normalized = input.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+  }
+  return false;
+}
+
 const ALLOWED_PRIORITIES: ThreadPriority[] = ['low', 'medium', 'high'];
 const ALLOWED_STATUSES: ThreadStatus[] = [
   'open',
@@ -24,6 +35,27 @@ const ALLOWED_STATUSES: ThreadStatus[] = [
   'archived',
 ];
 
+const ALLOWED_ACTOR_TYPES: ThreadActorType[] = ['human', 'agent', 'system'];
+
+const ALLOWED_EVENT_TYPES = [
+  'question_opened',
+  'clarification_requested',
+  'clarification_provided',
+  'work_log',
+  'proposal_posted',
+  'objection_posted',
+  'decision_requested',
+  'decision_recorded',
+  'promoted_to_task',
+  'thread_cloned',
+  'archived',
+] as const;
+
+type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
+
+const ALLOWED_STANCES = ['agree', 'object', 'needs_info'] as const;
+type AllowedStance = (typeof ALLOWED_STANCES)[number];
+
 export class ThreadService {
   constructor(private readonly repo: ThreadRepository) {}
 
@@ -31,6 +63,27 @@ export class ThreadService {
     const status = filters.status ? String(filters.status) : undefined;
     if (status && !ALLOWED_STATUSES.includes(status as ThreadStatus)) {
       throw new HttpError(400, 'Invalid status');
+    }
+
+    if (filters.myAttention) {
+      if (!filters.owner_human_id) {
+        throw new HttpError(400, 'owner is required when myAttention=true');
+      }
+      const buckets = this.repo.listHumanAttention(filters.owner_human_id);
+      const flat = [
+        ...buckets.needs_decision,
+        ...buckets.needs_clarification,
+        ...buckets.needs_approval,
+        ...buckets.blocked_on_human,
+      ];
+      const seen = new Set<string>();
+      const unique: typeof flat = [];
+      for (const thread of flat) {
+        if (seen.has(thread.id)) continue;
+        seen.add(thread.id);
+        unique.push(thread);
+      }
+      return unique;
     }
 
     return this.repo.list({
@@ -117,6 +170,7 @@ export class ThreadService {
 
     if (!to || !actorType || !actorId) throw new HttpError(400, 'Missing transition fields');
     if (!ALLOWED_STATUSES.includes(to)) throw new HttpError(400, 'Invalid status');
+    if (!ALLOWED_ACTOR_TYPES.includes(actorType)) throw new HttpError(400, 'thread_actor_type_invalid');
 
     const thread = this.getById(threadId);
     assertThreadTransitionAllowed({ from: thread.status, to, actorType });
@@ -141,6 +195,7 @@ export class ThreadService {
     const actorId = normalizeNonEmptyString(body.actor_id);
 
     if (!actorType || !actorId) throw new HttpError(400, 'Missing clone actor fields');
+    if (!ALLOWED_ACTOR_TYPES.includes(actorType)) throw new HttpError(400, 'thread_actor_type_invalid');
 
     try {
       return this.repo.cloneArchivedThread({
@@ -167,30 +222,47 @@ export class ThreadService {
   createEvent(threadId: string, body: Record<string, unknown>) {
     this.getById(threadId);
 
-    const eventType = normalizeNonEmptyString(body.event_type);
+    const eventTypeRaw = normalizeNonEmptyString(body.event_type);
     const actorType = normalizeNonEmptyString(body.actor_type) as ThreadActorType | null;
     const actorId = normalizeNonEmptyString(body.actor_id);
 
-    if (!eventType || !actorType || !actorId) {
+    if (!eventTypeRaw || !actorType || !actorId) {
       throw new HttpError(400, 'Missing event fields');
     }
 
-    const mentionHuman = Boolean(body.mention_human);
+    if (!ALLOWED_ACTOR_TYPES.includes(actorType)) throw new HttpError(400, 'thread_actor_type_invalid');
+
+    if (!ALLOWED_EVENT_TYPES.includes(eventTypeRaw as AllowedEventType)) {
+      throw new HttpError(400, 'thread_event_type_invalid');
+    }
+
+    const eventType = eventTypeRaw as AllowedEventType;
+
+    const stanceRaw = normalizeNonEmptyString(body.stance);
+    const stance: AllowedStance | null = stanceRaw
+      ? ALLOWED_STANCES.includes(stanceRaw as AllowedStance)
+        ? (stanceRaw as AllowedStance)
+        : (() => {
+            throw new HttpError(400, 'thread_stance_invalid');
+          })()
+      : null;
+
+    const mentionHuman = parseBoolean(body.mention_human);
     const mentionPayload = mentionHuman ? parseAndValidateMentionPayload(body.mention_payload) : null;
 
     assertObjectionEventContract({
-      eventType: eventType as any,
-      stance: (body.stance as any) ?? null,
+      eventType,
+      stance,
       metadata: body.metadata,
     });
 
     return this.repo.createEvent({
       thread_id: threadId,
-      event_type: eventType as any,
+      event_type: eventType,
       actor_type: actorType,
       actor_id: actorId,
       body_md: normalizeNonEmptyString(body.body_md),
-      stance: (normalizeNonEmptyString(body.stance) as any) ?? null,
+      stance,
       mention_human: mentionHuman,
       mention_payload: mentionPayload,
       metadata: (body.metadata as any) ?? null,
