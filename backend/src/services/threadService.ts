@@ -214,9 +214,17 @@ export class ThreadService {
     }
   }
 
-  listEvents(threadId: string) {
+  listEvents(threadId: string, query: Record<string, unknown> = {}) {
     this.getById(threadId);
-    return this.repo.listEvents(threadId);
+
+    const cursor = normalizeNonEmptyString(query.cursor);
+    const limitRaw = query.limit;
+    const limit = limitRaw == null ? undefined : Number(limitRaw);
+    if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0)) {
+      throw new HttpError(400, 'Invalid limit');
+    }
+
+    return this.repo.listEvents(threadId, { cursor: cursor ?? undefined, limit: limit ? Math.floor(limit) : undefined });
   }
 
   createEvent(threadId: string, body: Record<string, unknown>) {

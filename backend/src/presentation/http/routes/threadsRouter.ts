@@ -42,7 +42,7 @@ export function createThreadsRouter({ db }: { db: Database }) {
   });
 
   router.get('/:threadId/events', (req, res) => {
-    const events = service.listEvents(req.params.threadId);
+    const events = service.listEvents(req.params.threadId, req.query as any);
     res.json(events);
   });
 

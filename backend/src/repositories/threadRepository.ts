@@ -185,34 +185,45 @@ export class ThreadRepository {
   create(input: CreateThreadInput): QuestionThread {
     const id = randomUUID();
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `
-        INSERT INTO question_threads (
-          id, workspace_id, title, problem_statement, status, priority,
-          owner_human_id, created_by_type, created_by_id, current_state_summary,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      )
-      .run(
-        id,
-        input.workspace_id,
-        input.title,
-        input.problem_statement,
-        input.status ?? 'open',
-        input.priority ?? 'medium',
-        input.owner_human_id,
-        input.created_by_type,
-        input.created_by_id,
-        normalizeNullableString(input.current_state_summary),
-        now,
-        now,
-      );
 
-    const created = this.getById(id);
-    if (!created) throw new Error('Thread not found');
-    return created;
+    return this.db.transaction(() => {
+      this.db
+        .prepare(
+          `
+          INSERT INTO question_threads (
+            id, workspace_id, title, problem_statement, status, priority,
+            owner_human_id, created_by_type, created_by_id, current_state_summary,
+            created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        )
+        .run(
+          id,
+          input.workspace_id,
+          input.title,
+          input.problem_statement,
+          input.status ?? 'open',
+          input.priority ?? 'medium',
+          input.owner_human_id,
+          input.created_by_type,
+          input.created_by_id,
+          normalizeNullableString(input.current_state_summary),
+          now,
+          now,
+        );
+
+      this.createEvent({
+        thread_id: id,
+        event_type: 'question_opened',
+        actor_type: input.created_by_type,
+        actor_id: input.created_by_id,
+        body_md: normalizeNullableString(input.problem_statement),
+      });
+
+      const created = this.getById(id);
+      if (!created) throw new Error('Thread not found');
+      return created;
+    })();
   }
 
   list(filters: ListThreadsFilters = {}): QuestionThread[] {
@@ -341,10 +352,27 @@ export class ThreadRepository {
     })();
   }
 
-  listEvents(threadId: string): ThreadEvent[] {
+  listEvents(threadId: string, opts: { cursor?: string; limit?: number } = {}): ThreadEvent[] {
+    const limit = opts.limit && Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 50;
+
+    let whereClause = 'thread_id = ?';
+    const values: unknown[] = [threadId];
+
+    if (opts.cursor) {
+      const cursorRow = this.db
+        .prepare('SELECT id, created_at FROM thread_events WHERE thread_id = ? AND id = ?')
+        .get(threadId, opts.cursor) as { id: string; created_at: string } | undefined;
+
+      if (cursorRow) {
+        whereClause += ' AND (created_at > ? OR (created_at = ? AND id > ?))';
+        values.push(cursorRow.created_at, cursorRow.created_at, cursorRow.id);
+      }
+    }
+
     const rows = this.db
-      .prepare('SELECT * FROM thread_events WHERE thread_id = ? ORDER BY created_at ASC, id ASC')
-      .all(threadId) as ThreadEventRow[];
+      .prepare(`SELECT * FROM thread_events WHERE ${whereClause} ORDER BY created_at ASC, id ASC LIMIT ?`)
+      .all(...values, limit) as ThreadEventRow[];
+
     return rows.map(hydrateEvent);
   }
 

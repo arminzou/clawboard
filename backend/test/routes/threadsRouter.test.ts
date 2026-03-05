@@ -30,6 +30,13 @@ describe('Threads API', () => {
       })
       .expect(201);
 
+    const initialEvents = await request(appCtx.app)
+      .get(`/api/threads/${created.body.id}/events`)
+      .expect(200);
+
+    expect(initialEvents.body).toHaveLength(1);
+    expect(initialEvents.body[0].event_type).toBe('question_opened');
+
     const invalidType = await request(appCtx.app)
       .post(`/api/threads/${created.body.id}/events`)
       .send({
@@ -76,6 +83,51 @@ describe('Threads API', () => {
 
     expect(validEvent.body.mention_human).toBe(true);
     expect(validEvent.body.mention_payload.recommended_option).toBe('A');
+  });
+
+  it('paginates thread events with cursor and limit', async () => {
+    const appCtx = createTestApp();
+    db = appCtx.db;
+
+    const created = await request(appCtx.app)
+      .post('/api/threads')
+      .send({
+        workspace_id: 'default',
+        title: 'Paginate events',
+        problem_statement: 'Cursor test',
+        owner_human_id: 'armin',
+        created_by_type: 'human',
+        created_by_id: 'armin',
+      })
+      .expect(201);
+
+    await request(appCtx.app)
+      .post(`/api/threads/${created.body.id}/events`)
+      .send({ event_type: 'work_log', actor_type: 'agent', actor_id: 'tee', body_md: 'step 1' })
+      .expect(201);
+
+    const second = await request(appCtx.app)
+      .post(`/api/threads/${created.body.id}/events`)
+      .send({ event_type: 'work_log', actor_type: 'agent', actor_id: 'tee', body_md: 'step 2' })
+      .expect(201);
+
+    await request(appCtx.app)
+      .post(`/api/threads/${created.body.id}/events`)
+      .send({ event_type: 'work_log', actor_type: 'agent', actor_id: 'tee', body_md: 'step 3' })
+      .expect(201);
+
+    const firstPage = await request(appCtx.app)
+      .get(`/api/threads/${created.body.id}/events?limit=2`)
+      .expect(200);
+
+    expect(firstPage.body).toHaveLength(2);
+
+    const nextPage = await request(appCtx.app)
+      .get(`/api/threads/${created.body.id}/events?cursor=${second.body.id}&limit=10`)
+      .expect(200);
+
+    expect(nextPage.body.length).toBeGreaterThan(0);
+    expect(nextPage.body[0].id).not.toBe(second.body.id);
   });
 
   it('enforces promote gate: pending approval + complete packet + at least one task', async () => {
