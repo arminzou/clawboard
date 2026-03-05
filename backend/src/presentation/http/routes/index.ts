@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import type { Database } from 'better-sqlite3';
+import { config } from '../../../config';
 import { createTasksRouter } from './tasksRouter';
 import { createProjectsRouter } from './projectsRouter';
 import { createActivitiesRouter } from './activitiesRouter';
@@ -22,8 +23,12 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
   app.use('/api/tags', createTagsRouter({ db }));
   app.use('/api/settings', createSettingsRouter());
   app.use('/api/claude', createClaudeTasksRouter({ db }));
-  app.use('/api/threads', createThreadsRouter({ db }));
-  app.use('/api/humans', createHumansRouter({ db }));
+
+  // v1 thread-first collaboration (guarded by feature flag)
+  if (config.threadFirstV1Enabled) {
+    app.use('/api/threads', createThreadsRouter({ db }));
+    app.use('/api/humans', createHumansRouter({ db }));
+  }
 
   // Legacy CommonJS routes (to be migrated)
   // eslint-disable-next-line @typescript-eslint/no-var-requires
