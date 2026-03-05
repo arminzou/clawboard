@@ -8,6 +8,8 @@ import { createOpenClawRouter } from './openclawRouter';
 import { createWebhookRouter } from './webhookRouter';
 import { createSettingsRouter } from './settingsRouter';
 import { createClaudeTasksRouter } from './claudeTasksRouter';
+import { createThreadsRouter } from './threadsRouter';
+import { createHumansRouter } from './humansRouter';
 import { errorHandler } from '../middleware/errorHandler';
 
 export type BroadcastFn = (data: unknown) => void;
@@ -20,6 +22,8 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
   app.use('/api/tags', createTagsRouter({ db }));
   app.use('/api/settings', createSettingsRouter());
   app.use('/api/claude', createClaudeTasksRouter({ db }));
+  app.use('/api/threads', createThreadsRouter({ db }));
+  app.use('/api/humans', createHumansRouter({ db }));
 
   // Legacy CommonJS routes (to be migrated)
   // eslint-disable-next-line @typescript-eslint/no-var-requires
