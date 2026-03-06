@@ -6,10 +6,13 @@ import type { WsMessage } from '../../hooks/useWebSocket';
 
 /* ── helpers ─────────────────────────────────────────── */
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, actions }: { title: string; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] p-4">
-      <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold text-[rgb(var(--cb-text))]">{title}</div>
+        {actions && <div className="flex gap-2">{actions}</div>}
+      </div>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -20,22 +23,158 @@ function Btn({
   onClick,
   disabled,
   variant = 'default',
+  size = 'md',
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
   variant?: 'default' | 'primary' | 'danger';
+  size?: 'sm' | 'md';
 }) {
-  const base = 'rounded-md px-3 py-1.5 text-xs font-medium transition disabled:opacity-40';
+  const base = 'rounded-md font-medium transition disabled:opacity-40';
+  const sizes = {
+    sm: 'px-2 py-1 text-[10px]',
+    md: 'px-3 py-1.5 text-xs',
+  };
   const variants: Record<string, string> = {
     default: 'border border-[rgb(var(--cb-border))] text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))]',
     primary: 'bg-[rgb(var(--cb-accent))] text-white hover:opacity-90',
     danger: 'border border-red-500/30 text-red-400 hover:bg-red-500/10',
   };
   return (
-    <button type="button" className={`${base} ${variants[variant]}`} onClick={onClick} disabled={disabled}>
+    <button
+      type="button"
+      className={`${base} ${sizes[size]} ${variants[variant]}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
+  );
+}
+
+function PacketEditor({
+  packet,
+  onSave,
+  onCancel,
+}: {
+  packet: Partial<PromotionPacket>;
+  onSave: (data: Partial<PromotionPacket>) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    problem: packet.problem ?? '',
+    desired_outcome: packet.desired_outcome ?? '',
+    scope_in: packet.scope_in ?? '',
+    scope_out: packet.scope_out ?? '',
+    constraints: packet.constraints ?? '',
+    first_executable_slice: packet.first_executable_slice ?? '',
+    acceptance_criteria: (packet.acceptance_criteria ?? []).join('\n'),
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave({
+        ...formData,
+        acceptance_criteria: formData.acceptance_criteria.split('\n').filter((l) => l.trim()),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setBusy(false);
+    }
+  };
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      {error && <div className="rounded border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-300">{error}</div>}
+      
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Problem</label>
+          <textarea
+            className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            rows={3}
+            value={formData.problem}
+            onChange={(e) => handleChange('problem', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Desired Outcome</label>
+          <textarea
+            className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            rows={3}
+            value={formData.desired_outcome}
+            onChange={(e) => handleChange('desired_outcome', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Scope In</label>
+          <textarea
+            className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            rows={3}
+            value={formData.scope_in}
+            onChange={(e) => handleChange('scope_in', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Scope Out</label>
+          <textarea
+            className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            rows={3}
+            value={formData.scope_out}
+            onChange={(e) => handleChange('scope_out', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Constraints</label>
+        <textarea
+          className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+          rows={2}
+          value={formData.constraints}
+          onChange={(e) => handleChange('constraints', e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Acceptance Criteria (one per line)</label>
+        <textarea
+          className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+          rows={4}
+          value={formData.acceptance_criteria}
+          onChange={(e) => handleChange('acceptance_criteria', e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">First Executable Slice</label>
+        <input
+          type="text"
+          className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+          value={formData.first_executable_slice}
+          onChange={(e) => handleChange('first_executable_slice', e.target.value)}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Btn onClick={onCancel} disabled={busy}>
+          Cancel
+        </Btn>
+        <Btn onClick={() => {}} disabled={busy} variant="primary">
+          {busy ? 'Saving…' : 'Save Packet'}
+        </Btn>
+      </div>
+    </form>
   );
 }
 
@@ -72,11 +211,10 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const [packet, setPacket] = useState<PromotionPacket | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editingPacket, setEditingPacket] = useState(false);
 
   const reload = useCallback(() => {
     let cancelled = false;
-    // Don't flash loading on refresh
-    // setLoading(true); 
     setError(null);
 
     Promise.all([
@@ -103,7 +241,6 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   }, [threadId]);
 
   useEffect(() => {
-    // Initial load
     setLoading(true);
     return reload();
   }, [reload]);
@@ -113,14 +250,9 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     const t = String(wsSignal.type || '');
     const d = wsSignal.data as { id?: string; thread_id?: string } | undefined;
     
-    const isForThisThread = 
-      (d?.id === threadId) || 
-      (d?.thread_id === threadId);
+    const isForThisThread = (d?.id === threadId) || (d?.thread_id === threadId);
 
-    if (
-      (t === 'thread_updated' && isForThisThread) || 
-      (t === 'thread_event_created' && isForThisThread)
-    ) {
+    if ((t === 'thread_updated' && isForThisThread) || (t === 'thread_event_created' && isForThisThread)) {
        reload();
     }
   }, [wsSignal, reload, threadId]);
@@ -140,7 +272,6 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
           actor_id: humanId,
         });
         setThread(updated);
-        // refresh events
         const evts = await api.listThreadEvents(threadId);
         setEvents(evts);
       } catch (err) {
@@ -190,6 +321,16 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     }
   }, [threadId, humanId]);
 
+  const savePacket = useCallback(async (data: Partial<PromotionPacket>) => {
+    const saved = await api.putPromotionPacket(threadId, {
+      ...data,
+      actor_type: 'human',
+      actor_id: humanId,
+    });
+    setPacket(saved);
+    setEditingPacket(false);
+  }, [threadId, humanId]);
+
   /* ── render ────────────────────────────────────────── */
 
   if (!threadId) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Missing thread id.</div>;
@@ -232,7 +373,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       {/* Actions bar */}
       <div className="flex flex-wrap items-center gap-2">
         {transitions
-          .filter((t) => t !== 'promoted') // promote has its own button
+          .filter((t) => t !== 'promoted')
           .map((to) => (
             <Btn
               key={to}
@@ -274,8 +415,19 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       </Section>
 
       {/* Promotion packet */}
-      <Section title="Promotion packet">
-        {packet ? (
+      <Section
+        title="Promotion packet"
+        actions={
+          !editingPacket && (
+            <Btn onClick={() => setEditingPacket(true)} size="sm">
+              Edit
+            </Btn>
+          )
+        }
+      >
+        {editingPacket ? (
+          <PacketEditor packet={packet ?? {}} onSave={savePacket} onCancel={() => setEditingPacket(false)} />
+        ) : packet ? (
           <div className="space-y-1 text-xs text-[rgb(var(--cb-text-muted))]">
             <div>
               <span className="font-medium text-[rgb(var(--cb-text))]">Complete:</span>{' '}
