@@ -26,7 +26,7 @@ export function registerRoutes(app: Express, db: Database, broadcast: BroadcastF
 
   // v1 thread-first collaboration (guarded by feature flag)
   if (config.threadFirstV1Enabled) {
-    app.use('/api/threads', createThreadsRouter({ db }));
+    app.use('/api/threads', createThreadsRouter({ db, broadcast }));
     app.use('/api/humans', createHumansRouter({ db }));
   }
 

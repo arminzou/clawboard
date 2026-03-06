@@ -608,6 +608,24 @@ export const api = {
     return json<QuestionThread[]>(await fetch(url, { headers: authHeaders() }));
   },
 
+  async createThread(body: {
+    workspace_id: string;
+    title: string;
+    problem_statement: string;
+    owner_human_id: string;
+    created_by_type: 'human';
+    created_by_id: string;
+    priority?: ThreadPriority;
+  }) {
+    return json<QuestionThread>(
+      await fetch(withBase('/api/threads'), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
   async getThread(threadId: string) {
     return json<QuestionThread>(await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}`), { headers: authHeaders() }));
   },

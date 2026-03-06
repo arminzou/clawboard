@@ -133,7 +133,7 @@ export default function App() {
                         initialAgentIds={initialAgentIds}
                         agentProfileSources={agentProfileSources}
                       >
-                        <AttentionPage />
+                        <AttentionPage wsSignal={wsSignal} />
                       </AppShell>
                     }
                   />
@@ -147,7 +147,7 @@ export default function App() {
                         initialAgentIds={initialAgentIds}
                         agentProfileSources={agentProfileSources}
                       >
-                        <ThreadDetailPage />
+                        <ThreadDetailPage wsSignal={wsSignal} />
                       </AppShell>
                     }
                   />

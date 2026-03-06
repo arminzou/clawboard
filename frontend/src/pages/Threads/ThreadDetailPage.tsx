@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type PromotionPacket, type QuestionThread, type ThreadEvent, type ThreadStatus } from '../../lib/api';
 import { defaults } from '../../lib/features';
+import type { WsMessage } from '../../hooks/useWebSocket';
 
 /* ── helpers ─────────────────────────────────────────── */
 
@@ -58,7 +59,7 @@ const STATUS_LABELS: Record<ThreadStatus, string> = {
 
 /* ── page ────────────────────────────────────────────── */
 
-export function ThreadDetailPage() {
+export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const params = useParams();
   const navigate = useNavigate();
   const threadId = params.threadId ?? '';
@@ -74,7 +75,8 @@ export function ThreadDetailPage() {
 
   const reload = useCallback(() => {
     let cancelled = false;
-    setLoading(true);
+    // Don't flash loading on refresh
+    // setLoading(true); 
     setError(null);
 
     Promise.all([
@@ -100,7 +102,28 @@ export function ThreadDetailPage() {
     };
   }, [threadId]);
 
-  useEffect(() => reload(), [reload]);
+  useEffect(() => {
+    // Initial load
+    setLoading(true);
+    return reload();
+  }, [reload]);
+
+  useEffect(() => {
+    if (!wsSignal) return;
+    const t = String(wsSignal.type || '');
+    const d = wsSignal.data as { id?: string; thread_id?: string } | undefined;
+    
+    const isForThisThread = 
+      (d?.id === threadId) || 
+      (d?.thread_id === threadId);
+
+    if (
+      (t === 'thread_updated' && isForThisThread) || 
+      (t === 'thread_event_created' && isForThisThread)
+    ) {
+       reload();
+    }
+  }, [wsSignal, reload, threadId]);
 
   const title = useMemo(() => thread?.title ?? `Thread ${threadId}`, [thread, threadId]);
 
@@ -170,7 +193,7 @@ export function ThreadDetailPage() {
   /* ── render ────────────────────────────────────────── */
 
   if (!threadId) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Missing thread id.</div>;
-  if (loading) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Loading thread…</div>;
+  if (loading && !thread) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Loading thread…</div>;
   if (error)
     return (
       <div className="p-6">

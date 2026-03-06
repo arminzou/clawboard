@@ -3,12 +3,15 @@ import { Router } from 'express';
 import { ThreadRepository } from '../../../repositories/threadRepository';
 import { ThreadService } from '../../../services/threadService';
 
-export function createThreadsRouter({ db }: { db: Database }) {
+import { BroadcastFn } from './index';
+
+export function createThreadsRouter({ db, broadcast }: { db: Database; broadcast: BroadcastFn }) {
   const router = Router();
   const service = new ThreadService(new ThreadRepository(db));
 
   router.post('/', (req, res) => {
     const thread = service.create(req.body ?? {});
+    broadcast({ type: 'thread_created', data: thread });
     res.status(201).json(thread);
   });
 
@@ -28,16 +31,19 @@ export function createThreadsRouter({ db }: { db: Database }) {
 
   router.patch('/:threadId', (req, res) => {
     const thread = service.update(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_updated', data: thread });
     res.json(thread);
   });
 
   router.post('/:threadId/transition', (req, res) => {
     const thread = service.transition(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_updated', data: thread });
     res.json(thread);
   });
 
   router.post('/:threadId/clone', (req, res) => {
     const cloned = service.clone(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_created', data: cloned });
     res.status(201).json(cloned);
   });
 
@@ -48,6 +54,10 @@ export function createThreadsRouter({ db }: { db: Database }) {
 
   router.post('/:threadId/events', (req, res) => {
     const event = service.createEvent(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_event_created', data: event });
+    // Also update thread updated_at
+    const thread = service.getById(req.params.threadId);
+    broadcast({ type: 'thread_updated', data: thread });
     res.status(201).json(event);
   });
 
@@ -62,6 +72,7 @@ export function createThreadsRouter({ db }: { db: Database }) {
 
   router.put('/:threadId/promotion-packet', (req, res) => {
     const packet = service.putPromotionPacket(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_updated', data: { id: req.params.threadId } }); // simple invalidation
     res.json(packet);
   });
 
@@ -72,6 +83,8 @@ export function createThreadsRouter({ db }: { db: Database }) {
 
   router.post('/:threadId/promote', (req, res) => {
     const result = service.promote(req.params.threadId, req.body ?? {});
+    broadcast({ type: 'thread_updated', data: result.thread });
+    // broadcast new tasks? maybe later
     res.json(result);
   });
 
