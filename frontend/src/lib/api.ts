@@ -624,6 +624,55 @@ export const api = {
     );
   },
 
+  async transitionThread(threadId: string, body: { to: ThreadStatus; actor_type: ThreadActorType; actor_id: string; reason?: string }) {
+    return json<QuestionThread>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/transition`), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async cloneThread(threadId: string, body: { actor_type: ThreadActorType; actor_id: string; title?: string }) {
+    return json<QuestionThread>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/clone`), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async promoteThread(threadId: string, body: { actor_type: 'human'; actor_id: string; tasks: Array<{ title: string; description?: string; priority?: string }> }) {
+    return json<{ thread: QuestionThread; created_task_ids: number[] }>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/promote`), {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async putPromotionPacket(threadId: string, body: Record<string, unknown>) {
+    return json<PromotionPacket>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/promotion-packet`), {
+        method: 'PUT',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async validatePromotionPacket(threadId: string) {
+    return json<{ is_complete: boolean; missing_fields: string[] }>(
+      await fetch(withBase(`/api/threads/${encodeURIComponent(threadId)}/promotion-packet/validate`), {
+        method: 'POST',
+        headers: authHeaders(),
+      }),
+    );
+  },
+
   async listClaudeTasks() {
     return json<ClaudeTasksResponse>(await fetch(withBase('/api/claude/tasks'), { headers: authHeaders() }));
   },
