@@ -216,6 +216,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingPacket, setEditingPacket] = useState(false);
+  const [packetValidation, setPacketValidation] = useState<{ is_complete: boolean; missing_fields: string[] } | null>(null);
 
   const reload = useCallback(() => {
     let cancelled = false;
@@ -304,6 +305,15 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   }, [threadId, humanId, navigate]);
 
   const doPromote = useCallback(async () => {
+    // Basic UX for now: validate packet before promoting, then ask for first task.
+    setActionError(null);
+    const validation = await api.validatePromotionPacket(threadId).catch(() => null);
+    if (validation && !validation.is_complete) {
+      setPacketValidation(validation);
+      setActionError(`Promotion packet incomplete: missing ${validation.missing_fields.join(', ')}`);
+      return;
+    }
+
     const taskTitle = window.prompt('First task title (required):');
     if (!taskTitle?.trim()) return;
 
@@ -332,8 +342,25 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       actor_id: humanId,
     });
     setPacket(saved);
+    setPacketValidation(null);
     setEditingPacket(false);
   }, [threadId, humanId]);
+
+  const validatePacket = useCallback(async () => {
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      const validation = await api.validatePromotionPacket(threadId);
+      setPacketValidation(validation);
+      if (!validation.is_complete) {
+        setActionError(`Promotion packet incomplete: missing ${validation.missing_fields.join(', ')}`);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setActionBusy(false);
+    }
+  }, [threadId]);
 
   /* ── render ────────────────────────────────────────── */
 
@@ -390,9 +417,14 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
           ))}
 
         {thread.status === 'pending_approval' && (
-          <Btn onClick={doPromote} disabled={actionBusy} variant="primary">
-            Promote to Task
-          </Btn>
+          <>
+            <Btn onClick={validatePacket} disabled={actionBusy}>
+              Validate packet
+            </Btn>
+            <Btn onClick={doPromote} disabled={actionBusy} variant="primary">
+              Promote to Task
+            </Btn>
+          </>
         )}
 
         {thread.status === 'archived' && (
@@ -423,9 +455,14 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
         title="Promotion packet"
         actions={
           !editingPacket && (
-            <Btn onClick={() => setEditingPacket(true)} size="sm">
-              Edit
-            </Btn>
+            <div className="flex items-center gap-2">
+              <Btn onClick={validatePacket} size="sm" disabled={actionBusy}>
+                Validate
+              </Btn>
+              <Btn onClick={() => setEditingPacket(true)} size="sm" disabled={actionBusy}>
+                Edit
+              </Btn>
+            </div>
           )
         }
       >
@@ -437,6 +474,11 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
               <span className="font-medium text-[rgb(var(--cb-text))]">Complete:</span>{' '}
               {packet.is_complete ? '✅ Yes' : '❌ No'}
             </div>
+            {packetValidation && !packetValidation.is_complete && (
+              <div className="rounded border border-yellow-500/20 bg-yellow-500/5 p-2 text-xs text-yellow-200">
+                Missing: {packetValidation.missing_fields.join(', ')}
+              </div>
+            )}
             {packet.problem && <div><span className="font-medium">Problem:</span> {packet.problem}</div>}
             {packet.desired_outcome && <div><span className="font-medium">Outcome:</span> {packet.desired_outcome}</div>}
             {packet.scope_in && <div><span className="font-medium">Scope in:</span> {packet.scope_in}</div>}
