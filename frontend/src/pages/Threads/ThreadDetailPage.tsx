@@ -68,6 +68,7 @@ function PacketEditor({
     scope_in: packet.scope_in ?? '',
     scope_out: packet.scope_out ?? '',
     constraints: packet.constraints ?? '',
+    decision_owner_id: packet.decision_owner_id ?? '',
     first_executable_slice: packet.first_executable_slice ?? '',
     acceptance_criteria: (packet.acceptance_criteria ?? []).join('\n'),
   });
@@ -143,6 +144,17 @@ function PacketEditor({
           rows={2}
           value={formData.constraints}
           onChange={(e) => handleChange('constraints', e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Decision Owner</label>
+        <input
+          type="text"
+          className="mt-1 block w-full rounded border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-xs text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+          value={formData.decision_owner_id}
+          onChange={(e) => handleChange('decision_owner_id', e.target.value)}
+          placeholder="e.g. armin"
         />
       </div>
 
@@ -484,6 +496,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
             {packet.scope_in && <div><span className="font-medium">Scope in:</span> {packet.scope_in}</div>}
             {packet.scope_out && <div><span className="font-medium">Scope out:</span> {packet.scope_out}</div>}
             {packet.constraints && <div><span className="font-medium">Constraints:</span> {packet.constraints}</div>}
+            {packet.decision_owner_id && <div><span className="font-medium">Decision owner:</span> {packet.decision_owner_id}</div>}
             {packet.first_executable_slice && <div><span className="font-medium">First slice:</span> {packet.first_executable_slice}</div>}
             {packet.acceptance_criteria.length > 0 && (
               <div>
