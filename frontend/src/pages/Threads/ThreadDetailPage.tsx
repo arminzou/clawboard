@@ -170,9 +170,13 @@ function PacketEditor({
         <Btn onClick={onCancel} disabled={busy}>
           Cancel
         </Btn>
-        <Btn onClick={() => {}} disabled={busy} variant="primary">
+        <button
+          type="submit"
+          className="rounded-md bg-[rgb(var(--cb-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-40"
+          disabled={busy}
+        >
           {busy ? 'Saving…' : 'Save Packet'}
-        </Btn>
+        </button>
       </div>
     </form>
   );

@@ -2,12 +2,19 @@ import type { Database } from 'better-sqlite3';
 import { Router } from 'express';
 import { ThreadRepository } from '../../../repositories/threadRepository';
 import { ThreadService } from '../../../services/threadService';
+import { TaskRepository } from '../../../repositories/taskRepository';
+import { TaskService } from '../../../services/taskService';
+import { ProjectRepository } from '../../../repositories/projectRepository';
+import { AnchorService } from '../../../services/anchorService';
 
 import { BroadcastFn } from './index';
 
 export function createThreadsRouter({ db, broadcast }: { db: Database; broadcast: BroadcastFn }) {
   const router = Router();
   const service = new ThreadService(new ThreadRepository(db));
+
+  const taskService = new TaskService(new TaskRepository(db));
+  const anchorService = new AnchorService(new ProjectRepository(db));
 
   router.post('/', (req, res) => {
     const thread = service.create(req.body ?? {});
@@ -84,7 +91,17 @@ export function createThreadsRouter({ db, broadcast }: { db: Database; broadcast
   router.post('/:threadId/promote', (req, res) => {
     const result = service.promote(req.params.threadId, req.body ?? {});
     broadcast({ type: 'thread_updated', data: result.thread });
-    // broadcast new tasks? maybe later
+
+    // Keep Kanban/task views in sync when promotion spawns tasks.
+    for (const taskId of result.created_task_ids ?? []) {
+      try {
+        const task = anchorService.enrich(taskService.getById(taskId));
+        broadcast({ type: 'task_created', data: task });
+      } catch {
+        // Ignore (thread promotion succeeded; task fetch is best-effort)
+      }
+    }
+
     res.json(result);
   });
 
