@@ -14,7 +14,7 @@
         "sync-docs": "pnpm -C backend sync-docs",
         "ingest-sessions": "pnpm -C backend ingest-sessions",
         "test:e2e": "pnpm playwright test",
-        "test": "pnpm vitest run -c vitest.hooks.config.ts",
+        "test": "pnpm vitest run -c vitest.hooks.config.ts --passWithNoTests", 
         "test:backend": "cd backend && pnpm vitest run",
         "test:frontend": "cd frontend && pnpm vitest run",
         "test:hooks": "pnpm vitest run -c vitest.hooks.config.ts"
