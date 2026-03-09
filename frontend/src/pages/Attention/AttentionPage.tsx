@@ -191,15 +191,13 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     };
   }, [humanId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => loadData(), [loadData]);
 
   useEffect(() => {
     if (!wsSignal) return;
     const t = String(wsSignal.type || '');
     if (t === 'thread_created' || t === 'thread_updated' || t === 'thread_event_created') {
-       loadData();
+      return loadData();
     }
   }, [wsSignal, loadData]);
 
