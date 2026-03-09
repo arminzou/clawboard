@@ -75,8 +75,9 @@ test('thread-first: create -> packet -> approve -> promote spawns task', async (
   });
 
   await page.getByRole('button', { name: 'Promote to Task' }).click();
-  await expect(page.getByText('Promoted')).toBeVisible();
-  await expect(page.getByText('promoted_to_task')).toBeVisible();
+  // "Promoted" appears in multiple places (status pill + event + message), so be explicit.
+  await expect(page.getByText('Promoted', { exact: true })).toBeVisible();
+  await expect(page.getByText('promoted_to_task', { exact: true })).toBeVisible();
 
   // Confirm spawned task is visible on Kanban.
   await page.goto('/');
