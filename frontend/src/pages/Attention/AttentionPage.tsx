@@ -119,7 +119,13 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = title.trim().length > 0 && problem.trim().length > 0 && !busy;
+  const normalizedTitle = title.trim();
+  const titleHasLetter = /[a-zA-Z]/.test(normalizedTitle);
+  const titleTooShort = normalizedTitle.length < 6;
+  const titleLooksAuto = /^(e2e|test)\s*(thread)?\b/i.test(normalizedTitle);
+  const titleQualityOk = normalizedTitle.length > 0 && titleHasLetter && !titleTooShort && !titleLooksAuto;
+
+  const canSubmit = titleQualityOk && problem.trim().length > 0 && !busy;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,6 +199,21 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
                 required
                 autoFocus
               />
+              {!titleQualityOk && normalizedTitle.length > 0 ? (
+                <div className="mt-2 text-xs text-amber-300">
+                  {titleLooksAuto
+                    ? 'Use a human-readable title (avoid “E2E Thread …” / “Test …”).'
+                    : titleTooShort
+                    ? 'Add a bit more detail (at least 6 characters).'
+                    : !titleHasLetter
+                    ? 'Title should contain words (letters), not just numbers/symbols.'
+                    : 'Please enter a meaningful title.'}
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-[rgb(var(--cb-text-muted))]">
+                  Make it scannable — e.g. “OAuth refresh bug on mobile”, “Thread-first v1 rollout plan”.
+                </div>
+              )}
             </div>
 
             <div>
@@ -327,6 +348,9 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     [processedBuckets],
   );
 
+  const isFirstUseEmpty = rawTotal === 0 && !query.trim();
+  const isFilteredEmpty = !isFirstUseEmpty && filteredTotal === 0;
+
   if (loading && !Object.values(buckets).some(l => l.length > 0)) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Loading attention…</div>;
 
   if (error)
@@ -354,43 +378,77 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
         </button>
       </div>
 
-      <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_170px]">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search threads by title or context..."
-          className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] placeholder:text-[rgb(var(--cb-text-muted))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-        />
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as ThreadSort)}
-          className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-        >
-          <option value="updated_desc">Sort: Updated (newest)</option>
-          <option value="updated_asc">Sort: Updated (oldest)</option>
-          <option value="priority_desc">Sort: Priority (high first)</option>
-        </select>
-      </div>
+      {rawTotal > 0 ? (
+        <>
+          <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_170px]">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search threads by title or context..."
+              className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] placeholder:text-[rgb(var(--cb-text-muted))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as ThreadSort)}
+              className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+            >
+              <option value="updated_desc">Sort: Updated (newest)</option>
+              <option value="updated_asc">Sort: Updated (oldest)</option>
+              <option value="priority_desc">Sort: Priority (high first)</option>
+            </select>
+          </div>
 
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
-        {(Object.keys(BUCKET_META) as BucketKey[]).map((key) => (
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
+            {(Object.keys(BUCKET_META) as BucketKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveBucket(key)}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  activeBucket === key
+                    ? 'border-[rgb(var(--cb-accent))] bg-[rgb(var(--cb-accent))] text-white'
+                    : 'border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] text-[rgb(var(--cb-text-muted))]'
+                }`}
+              >
+                {BUCKET_META[key].shortLabel} ({processedBuckets[key].length})
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {isFirstUseEmpty ? (
+        <div className="rounded-lg border border-dashed border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-4 py-10 text-center">
+          <div className="text-base font-semibold text-[rgb(var(--cb-text))]">No threads yet.</div>
+          <div className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
+            Start a thread and collaborate with your agents — they’ll do the work and you’ll review.
+          </div>
+
+          <div className="mx-auto mt-6 grid max-w-md gap-2 text-left text-xs text-[rgb(var(--cb-text-muted))]">
+            <div className="flex gap-2">
+              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--cb-hover))] text-[11px] font-semibold text-[rgb(var(--cb-text))]">1</span>
+              <span><strong className="text-[rgb(var(--cb-text))]">Create</strong> a thread with context</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--cb-hover))] text-[11px] font-semibold text-[rgb(var(--cb-text))]">2</span>
+              <span><strong className="text-[rgb(var(--cb-text))]">Agents work</strong> and log updates</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--cb-hover))] text-[11px] font-semibold text-[rgb(var(--cb-text))]">3</span>
+              <span><strong className="text-[rgb(var(--cb-text))]">You approve</strong> and promote to tasks</span>
+            </div>
+          </div>
+
           <button
-            key={key}
             type="button"
-            onClick={() => setActiveBucket(key)}
-            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${
-              activeBucket === key
-                ? 'border-[rgb(var(--cb-accent))] bg-[rgb(var(--cb-accent))] text-white'
-                : 'border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] text-[rgb(var(--cb-text-muted))]'
-            }`}
+            onClick={() => setIsCreating(true)}
+            className="mt-6 rounded-md bg-[rgb(var(--cb-accent))] px-4 py-2 text-xs font-medium text-white hover:opacity-90"
           >
-            {BUCKET_META[key].shortLabel} ({processedBuckets[key].length})
+            Create your first thread
           </button>
-        ))}
-      </div>
-
-      {filteredTotal === 0 ? (
+        </div>
+      ) : isFilteredEmpty ? (
         <div className="rounded-lg border border-dashed border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-4 py-8 text-center">
           <div className="text-sm font-medium text-[rgb(var(--cb-text))]">No threads match your current view.</div>
           <div className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
