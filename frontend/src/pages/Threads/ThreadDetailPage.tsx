@@ -256,8 +256,26 @@ function humanizeEventType(eventType: string) {
   return eventType.replaceAll('_', ' ');
 }
 
+function systemEventLabel(ev: ThreadEvent) {
+  switch (ev.event_type) {
+    case 'archived':
+      return 'Thread archived';
+    case 'thread_cloned':
+      return 'Thread cloned';
+    case 'promoted_to_task':
+      return 'Promoted to task';
+    default:
+      return humanizeEventType(ev.event_type);
+  }
+}
+
 function isSystemEvent(ev: ThreadEvent) {
-  return ev.actor_type === 'system' || ev.event_type === 'archived' || ev.event_type === 'thread_cloned' || ev.event_type === 'promoted_to_task';
+  return (
+    ev.actor_type === 'system' ||
+    ev.event_type === 'archived' ||
+    ev.event_type === 'thread_cloned' ||
+    ev.event_type === 'promoted_to_task'
+  );
 }
 
 /* ── page ────────────────────────────────────────────── */
@@ -635,7 +653,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
                 <div key={ev.id} className="flex items-center gap-2 text-[11px] text-[rgb(var(--cb-text-muted))]">
                   <div className="h-px flex-1 bg-[rgb(var(--cb-border))]" />
                   <span className="whitespace-nowrap rounded-full border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-0.5">
-                    {humanizeEventType(ev.event_type)}
+                    {systemEventLabel(ev)}
                   </span>
                   <span className="whitespace-nowrap" title={exactTime}>{relativeTime}</span>
                   <div className="h-px flex-1 bg-[rgb(var(--cb-border))]" />
