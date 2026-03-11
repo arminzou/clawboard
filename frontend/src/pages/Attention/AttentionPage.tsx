@@ -51,6 +51,8 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canSubmit = title.trim().length > 0 && problem.trim().length > 0 && !busy;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !problem.trim()) return;
@@ -76,27 +78,36 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-      <div className="h-full w-full bg-[rgb(var(--cb-card))] sm:mx-auto sm:mt-10 sm:h-auto sm:max-w-2xl sm:rounded-xl sm:border sm:border-[rgb(var(--cb-border))] sm:shadow-xl">
-        <div className="flex items-start justify-between border-b border-[rgb(var(--cb-border))] px-4 py-4 sm:px-5">
-          <div>
-            <h2 className="text-lg font-semibold text-[rgb(var(--cb-text))]">Start a new thread</h2>
-            <p className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
-              Describe what you need help with. Agents will use this as the source of truth.
-            </p>
-          </div>
+    <div className="fixed inset-0 z-[200] bg-[rgb(var(--cb-bg))] sm:flex sm:items-center sm:justify-center sm:bg-black/50 sm:px-3 sm:py-6 sm:backdrop-blur-[1px]">
+      <div className="flex h-full w-full flex-col bg-[rgb(var(--cb-bg))] sm:h-[92vh] sm:max-h-[760px] sm:max-w-2xl sm:overflow-hidden sm:rounded-2xl sm:border sm:border-[rgb(var(--cb-border))] sm:bg-[rgb(var(--cb-card))] sm:shadow-2xl">
+        <div className="grid grid-cols-[44px_1fr_auto] items-center gap-3 border-b border-[rgb(var(--cb-border))] px-4 py-3 sm:px-5">
           <button
+            type="button"
             onClick={onClose}
-            className="mt-0.5 rounded-md p-1 text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))] hover:text-[rgb(var(--cb-text))]"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[rgb(var(--cb-border))] text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))] hover:text-[rgb(var(--cb-text))]"
             disabled={busy}
             aria-label="Close thread creation"
           >
             <X size={20} />
           </button>
+
+          <div className="min-w-0 text-center">
+            <h2 className="truncate text-base font-semibold text-[rgb(var(--cb-text))] sm:text-lg">Create thread</h2>
+            <p className="truncate text-[11px] text-[rgb(var(--cb-text-muted))]">Start a conversation with your agents</p>
+          </div>
+
+          <button
+            type="submit"
+            form="create-thread-form"
+            className="rounded-full bg-[rgb(var(--cb-accent))] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
+            disabled={!canSubmit}
+          >
+            {busy ? 'Creating…' : 'Submit'}
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex h-[calc(100%-74px)] min-h-0 flex-col sm:h-auto">
-          <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+        <form id="create-thread-form" onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="space-y-5 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
             {error && (
               <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
                 {error}
@@ -104,67 +115,45 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
             )}
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">
-                Thread title
-              </label>
+              <label className="block text-[13px] font-medium text-[rgb(var(--cb-text-muted))]">Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-                placeholder="e.g. Refactor auth module OAuth flow"
+                className="mt-2 block w-full border-0 border-b border-[rgb(var(--cb-border))] bg-transparent px-0 py-2 text-2xl font-medium text-[rgb(var(--cb-text))] placeholder:text-[rgb(var(--cb-text-muted))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+                placeholder="Start with a clear one-line title"
                 required
                 autoFocus
               />
-              <p className="mt-1 text-[11px] text-[rgb(var(--cb-text-muted))]">
-                Keep this human-readable so it is easy to scan in Attention.
-              </p>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">
-                What do you need help with?
-              </label>
+              <label className="block text-[13px] font-medium text-[rgb(var(--cb-text-muted))]">What do you need help with?</label>
               <textarea
                 value={problem}
                 onChange={(e) => setProblem(e.target.value)}
-                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-                placeholder="Describe the context and desired outcome. Example: I want to refactor auth to support OAuth. Current flow is in /src/auth and breaks on token refresh for mobile users."
-                rows={7}
+                className="mt-3 block min-h-[46vh] w-full resize-none border-0 bg-transparent px-0 py-0 text-base leading-7 text-[rgb(var(--cb-text))] placeholder:text-[rgb(var(--cb-text-muted))] focus:outline-none"
+                placeholder="Start a conversation..."
+                rows={12}
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Priority</label>
-              <select
-                value={priority ?? 'medium'}
-                onChange={(e) => setPriority(e.target.value as ThreadPriority)}
-                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-4 py-3 sm:px-5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md px-4 py-2 text-sm font-medium text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))]"
-              disabled={busy}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-md bg-[rgb(var(--cb-accent))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              disabled={busy}
-            >
-              {busy ? 'Creating…' : 'Create thread'}
-            </button>
+            <details className="pt-2">
+              <summary className="cursor-pointer text-xs font-medium text-[rgb(var(--cb-text-muted))]">Optional details</summary>
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</label>
+                <select
+                  value={priority ?? 'medium'}
+                  onChange={(e) => setPriority(e.target.value as ThreadPriority)}
+                  className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </details>
           </div>
         </form>
       </div>

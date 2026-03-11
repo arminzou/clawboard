@@ -425,7 +425,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const nonDestructiveTransitions = transitions.filter((to) => to !== 'archived' && to !== 'promoted');
 
   // Pick a single "advance" transition as the primary action (when applicable).
-  const ADVANCE_PRIORITY: ThreadStatus[] = ['ready_to_plan', 'pending_approval'];
+  const ADVANCE_PRIORITY: Array<Exclude<ThreadStatus, 'promoted' | 'archived'>> = ['ready_to_plan', 'pending_approval'];
   const primaryTransition = ADVANCE_PRIORITY.find((s) => nonDestructiveTransitions.includes(s)) ?? nonDestructiveTransitions[0];
   const secondaryTransitions = nonDestructiveTransitions.filter((t) => t !== primaryTransition);
 
