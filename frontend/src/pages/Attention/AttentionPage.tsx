@@ -59,6 +59,20 @@ function formatRelative(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
+function formatDeadlineHint(iso: string | null) {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return null;
+  const deltaMs = t - Date.now();
+  const mins = Math.round(deltaMs / 60_000);
+  if (mins <= 0) return 'deadline passed';
+  if (mins < 60) return `deadline in ${mins}m`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `deadline in ${hrs}h`;
+  const days = Math.round(hrs / 24);
+  return `deadline in ${days}d`;
+}
+
 function Bucket({ bucketKey, threads }: { bucketKey: BucketKey; threads: QuestionThread[] }) {
   const meta = BUCKET_META[bucketKey];
 
@@ -77,6 +91,10 @@ function Bucket({ bucketKey, threads }: { bucketKey: BucketKey; threads: Questio
         ) : (
           threads.map((t) => {
             const stale = Date.now() - new Date(t.updated_at).getTime() > 24 * 60 * 60 * 1000;
+            const deadlineHint = formatDeadlineHint(t.decision_deadline);
+            const deadlineUrgent = t.decision_deadline
+              ? new Date(t.decision_deadline).getTime() - Date.now() < 24 * 60 * 60 * 1000
+              : false;
             return (
               <Link
                 key={t.id}
@@ -100,6 +118,25 @@ function Bucket({ bucketKey, threads }: { bucketKey: BucketKey; threads: Questio
                   >
                     {t.priority}
                   </span>
+
+                  {t.open_disagreements_count > 0 ? (
+                    <span
+                      className="rounded bg-rose-500/15 px-1.5 py-0.5 text-rose-300"
+                      title={`${t.open_disagreements_count} open disagreement${t.open_disagreements_count === 1 ? '' : 's'}`}
+                    >
+                      {t.open_disagreements_count} disagreement{t.open_disagreements_count === 1 ? '' : 's'}
+                    </span>
+                  ) : null}
+
+                  {deadlineHint ? (
+                    <span
+                      className={`rounded px-1.5 py-0.5 ${deadlineUrgent ? 'bg-amber-500/15 text-amber-300' : 'bg-[rgb(var(--cb-hover))] text-[rgb(var(--cb-text-muted))]'}`}
+                      title={t.decision_deadline ?? undefined}
+                    >
+                      {deadlineHint}
+                    </span>
+                  ) : null}
+
                   <span>{formatRelative(t.updated_at)}</span>
                   {stale ? <span className="text-amber-300">stale</span> : null}
                 </div>
