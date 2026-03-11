@@ -432,7 +432,7 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       <div className="p-6">
         <div className="rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>
         <div className="mt-3 text-xs text-[rgb(var(--cb-text-muted))]">
-          (Ensure backend flag PAWVY_FEATURE_THREAD_FIRST_V1 is enabled.)
+          (Thread-first API unavailable — check backend health/logs.)
         </div>
       </div>
     );

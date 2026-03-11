@@ -414,12 +414,6 @@ export function resetConfigCacheForTests() {
   _scratchTtlDays = undefined;
 }
 
-function parseBooleanEnv(raw: string | undefined): boolean {
-  if (!raw) return false;
-  const normalized = raw.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-}
-
 export const config = {
   get dbPath(): string {
     return resolveDbPath();
@@ -433,10 +427,6 @@ export const config = {
 
   get apiKey(): string {
     return resolveApiKey();
-  },
-
-  get threadFirstV1Enabled(): boolean {
-    return parseBooleanEnv(process.env.PAWVY_FEATURE_THREAD_FIRST_V1 ?? process.env.PAWVY_THREAD_FIRST_V1);
   },
 
   get pawvyDir(): string {

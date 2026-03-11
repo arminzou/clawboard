@@ -11,7 +11,6 @@ import { InboxPage } from './pages/Inbox/InboxPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { AttentionPage } from './pages/Attention/AttentionPage';
 import { ThreadDetailPage } from './pages/Threads/ThreadDetailPage';
-import { features } from './lib/features';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTheme } from './hooks/useTheme';
@@ -125,7 +124,7 @@ export default function App() {
               onTab={setTab}
               theme={resolvedTheme}
               onToggleTheme={toggleTheme}
-              showAttention={features.threadFirstV1}
+              showAttention={true}
             />
           </div>
 
@@ -135,14 +134,12 @@ export default function App() {
             onTab={setTab}
             theme={resolvedTheme}
             onToggleTheme={toggleTheme}
-            showAttention={features.threadFirstV1}
+            showAttention={true}
           />
 
           <div className="min-w-0 flex-1">
             <Routes>
-              {features.threadFirstV1 ? (
-                <>
-                  <Route
+                                <Route
                     path="/attention"
                     element={
                       <AppShell
@@ -170,9 +167,6 @@ export default function App() {
                       </AppShell>
                     }
                   />
-                </>
-              ) : null}
-
               <Route
                 path="/"
                 element={

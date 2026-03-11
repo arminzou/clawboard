@@ -7,7 +7,6 @@ describe('Threads API', () => {
 
   beforeEach(() => {
     process.env.PAWVY_API_KEY = '';
-    process.env.PAWVY_FEATURE_THREAD_FIRST_V1 = '1';
   });
 
   afterEach(() => {

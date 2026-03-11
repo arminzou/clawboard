@@ -19,9 +19,6 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       ...process.env,
-      // Ensure thread-first routes are enabled for both backend + frontend.
-      PAWVY_FEATURE_THREAD_FIRST_V1: process.env.PAWVY_FEATURE_THREAD_FIRST_V1 || '1',
-      VITE_FEATURE_THREAD_FIRST_V1: process.env.VITE_FEATURE_THREAD_FIRST_V1 || '1',
       VITE_HUMAN_ID: process.env.VITE_HUMAN_ID || 'armin',
     },
   },
