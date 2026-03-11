@@ -2,6 +2,7 @@ import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } 
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { KanbanPage } from './pages/Kanban/KanbanPage';
 import { IconRail, type AppTab } from './components/layout/IconRail';
+import { MobileNavDrawer } from './components/layout/MobileNavDrawer';
 import { AppShell } from './components/layout/AppShell';
 import { TopbarLite } from './components/layout/TopbarLite';
 import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
@@ -117,7 +118,25 @@ export default function App() {
         />
 
         <div className="flex h-full">
-          <IconRail tab={tab} onTab={setTab} theme={resolvedTheme} onToggleTheme={toggleTheme} showAttention={features.threadFirstV1} />
+          {/* Desktop nav rail */}
+          <div className="hidden md:flex">
+            <IconRail
+              tab={tab}
+              onTab={setTab}
+              theme={resolvedTheme}
+              onToggleTheme={toggleTheme}
+              showAttention={features.threadFirstV1}
+            />
+          </div>
+
+          {/* Mobile nav (hamburger drawer) */}
+          <MobileNavDrawer
+            tab={tab}
+            onTab={setTab}
+            theme={resolvedTheme}
+            onToggleTheme={toggleTheme}
+            showAttention={features.threadFirstV1}
+          />
 
           <div className="min-w-0 flex-1">
             <Routes>

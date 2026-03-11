@@ -31,10 +31,10 @@ function Btn({
   variant?: 'default' | 'primary' | 'danger';
   size?: 'sm' | 'md';
 }) {
-  const base = 'rounded-md font-medium transition disabled:opacity-40';
+  const base = 'min-h-[44px] rounded-md font-medium transition disabled:opacity-40';
   const sizes = {
-    sm: 'px-2 py-1 text-[10px]',
-    md: 'px-3 py-1.5 text-xs',
+    sm: 'px-3 py-2 text-xs',
+    md: 'px-4 py-2 text-sm',
   };
   const variants: Record<string, string> = {
     default: 'border border-[rgb(var(--cb-border))] text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))]',
@@ -51,6 +51,19 @@ function Btn({
       {children}
     </button>
   );
+}
+
+function formatEventTime(iso: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return new Date(iso).toLocaleString();
+  }
 }
 
 function PacketEditor({
@@ -392,15 +405,15 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const transitions = ALLOWED_TRANSITIONS[thread.status] ?? [];
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4">
       {/* Header */}
       <div>
         <Link to="/attention" className="text-xs text-[rgb(var(--cb-text-muted))] underline">
           ← Attention
         </Link>
         <h1 className="mt-1 text-lg font-semibold text-[rgb(var(--cb-text))]">{title}</h1>
-        <div className="mt-1 flex items-center gap-2 text-xs text-[rgb(var(--cb-text-muted))]">
-          <span className="rounded-full border border-[rgb(var(--cb-border))] px-2 py-0.5 font-medium">
+        <div className="mt-2 flex flex-col gap-1 text-xs text-[rgb(var(--cb-text-muted))] sm:flex-row sm:items-center sm:gap-2">
+          <span className="w-fit whitespace-nowrap rounded-full border border-[rgb(var(--cb-border))] px-2 py-0.5 font-medium">
             {STATUS_LABELS[thread.status]}
           </span>
           <span>priority: {thread.priority}</span>
@@ -520,10 +533,12 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
           {events.length === 0 && <div className="text-xs text-[rgb(var(--cb-text-muted))]">No events.</div>}
           {events.map((ev) => (
             <div key={ev.id} className="rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] p-3">
-              <div className="flex items-baseline gap-2 text-xs text-[rgb(var(--cb-text-muted))]">
-                <span className="rounded bg-[rgb(var(--cb-hover))] px-1.5 py-0.5 font-mono">{ev.event_type}</span>
-                <span>{ev.actor_type}:{ev.actor_id}</span>
-                <span className="ml-auto">{new Date(ev.created_at).toLocaleString()}</span>
+              <div className="flex flex-col gap-1 text-xs text-[rgb(var(--cb-text-muted))] sm:flex-row sm:items-baseline sm:gap-2">
+                <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+                  <span className="rounded bg-[rgb(var(--cb-hover))] px-1.5 py-0.5 font-mono">{ev.event_type}</span>
+                  <span className="truncate">{ev.actor_type}:{ev.actor_id}</span>
+                </div>
+                <span className="sm:ml-auto">{formatEventTime(ev.created_at)}</span>
               </div>
               {ev.body_md && (
                 <div className="mt-1.5 whitespace-pre-wrap text-sm text-[rgb(var(--cb-text))]">{ev.body_md}</div>
