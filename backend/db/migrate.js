@@ -498,6 +498,109 @@ function migrate(db) {
 
     db.pragma('user_version = 11');
   }
+
+  // 11 -> 12: add v1 thread-first collaboration foundation schema
+  if (v < 12) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS question_threads (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        problem_statement TEXT NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('open', 'clarifying', 'ready_to_plan', 'pending_approval', 'promoted', 'archived')),
+        priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+        owner_human_id TEXT NOT NULL,
+        created_by_type TEXT NOT NULL CHECK(created_by_type IN ('human', 'agent')),
+        created_by_id TEXT NOT NULL,
+        current_state_summary TEXT,
+        consensus_state TEXT NOT NULL DEFAULT 'aligned' CHECK(consensus_state IN ('aligned', 'mixed', 'blocked')),
+        open_disagreements_count INTEGER NOT NULL DEFAULT 0 CHECK(open_disagreements_count >= 0),
+        decision_deadline DATETIME,
+        last_human_ping_at DATETIME,
+        cloned_from_thread_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (cloned_from_thread_id) REFERENCES question_threads(id)
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS thread_events (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        event_type TEXT NOT NULL CHECK(event_type IN (
+          'question_opened',
+          'clarification_requested',
+          'clarification_provided',
+          'work_log',
+          'proposal_posted',
+          'objection_posted',
+          'decision_requested',
+          'decision_recorded',
+          'promoted_to_task',
+          'thread_cloned',
+          'archived'
+        )),
+        actor_type TEXT NOT NULL CHECK(actor_type IN ('human', 'agent', 'system')),
+        actor_id TEXT NOT NULL,
+        body_md TEXT,
+        stance TEXT CHECK(stance IN ('agree', 'object', 'needs_info') OR stance IS NULL),
+        mention_human INTEGER NOT NULL DEFAULT 0 CHECK(mention_human IN (0, 1)),
+        mention_payload TEXT,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (thread_id) REFERENCES question_threads(id)
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS promotion_packets (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL UNIQUE,
+        problem TEXT,
+        desired_outcome TEXT,
+        scope_in TEXT,
+        scope_out TEXT,
+        constraints TEXT,
+        decision_owner_id TEXT,
+        acceptance_criteria TEXT,
+        first_executable_slice TEXT,
+        dependencies TEXT,
+        risks TEXT,
+        context_links TEXT,
+        is_complete INTEGER NOT NULL DEFAULT 0 CHECK(is_complete IN (0, 1)),
+        validated_at DATETIME,
+        updated_by_type TEXT NOT NULL CHECK(updated_by_type IN ('human', 'agent', 'system')),
+        updated_by_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (thread_id) REFERENCES question_threads(id)
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS thread_task_links (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL,
+        task_id INTEGER NOT NULL,
+        link_type TEXT NOT NULL CHECK(link_type IN ('spawned_from_thread', 'context_link')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (thread_id, task_id),
+        FOREIGN KEY (thread_id) REFERENCES question_threads(id),
+        FOREIGN KEY (task_id) REFERENCES tasks(id)
+      )
+    `);
+
+    db.exec('CREATE INDEX IF NOT EXISTS idx_question_threads_workspace_status_owner ON question_threads(workspace_id, status, owner_human_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_question_threads_workspace_updated_at ON question_threads(workspace_id, updated_at DESC)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_thread_events_thread_id ON thread_events(thread_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_thread_events_event_type ON thread_events(event_type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_promotion_packets_thread_id ON promotion_packets(thread_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_thread_task_links_thread_id ON thread_task_links(thread_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_thread_task_links_task_id ON thread_task_links(task_id)');
+
+    db.pragma('user_version = 12');
+  }
 }
 
 module.exports = { migrate };

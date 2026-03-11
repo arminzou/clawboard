@@ -3,6 +3,11 @@ import { test, expect, request } from '@playwright/test';
 test('drag task between columns updates status', async ({ page }) => {
   const api = await request.newContext({ baseURL: 'http://127.0.0.1:3001' });
   
+  await expect.poll(async () => {
+    const resp = await api.get('/api/health').catch(() => null);
+    return Boolean(resp && resp.ok());
+  }).toBe(true);
+
   // Create task (auth handled by config's extraHTTPHeaders)
   const create = await api.post('/api/tasks', {
     data: {

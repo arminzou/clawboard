@@ -2,12 +2,16 @@ import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } 
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { KanbanPage } from './pages/Kanban/KanbanPage';
 import { IconRail, type AppTab } from './components/layout/IconRail';
+import { MobileNavDrawer } from './components/layout/MobileNavDrawer';
 import { AppShell } from './components/layout/AppShell';
 import { TopbarLite } from './components/layout/TopbarLite';
 import { ActivityTimeline } from './pages/Activity/ActivityTimeline';
 import { DocsView } from './pages/Docs/DocsView';
 import { InboxPage } from './pages/Inbox/InboxPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
+import { AttentionPage } from './pages/Attention/AttentionPage';
+import { ThreadDetailPage } from './pages/Threads/ThreadDetailPage';
+import { features } from './lib/features';
 import { ToastContainer } from './components/ui/Toast';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useTheme } from './hooks/useTheme';
@@ -25,6 +29,8 @@ export default function App() {
 
   const tab = useMemo(() => {
     const p = location.pathname;
+    if (p.startsWith('/attention')) return 'attention';
+    if (p.startsWith('/threads/')) return 'attention';
     if (p.startsWith('/inbox')) return 'inbox';
     if (p.startsWith('/activity')) return 'activity';
     if (p.startsWith('/docs')) return 'docs';
@@ -92,7 +98,8 @@ export default function App() {
   }, []);
 
   const setTab = useCallback((t: Tab) => {
-    if (t === 'inbox') navigate('/inbox');
+    if (t === 'attention') navigate('/attention');
+    else if (t === 'inbox') navigate('/inbox');
     else if (t === 'activity') navigate('/activity');
     else if (t === 'docs') navigate('/docs');
     else if (t === 'settings') navigate('/settings');
@@ -111,10 +118,61 @@ export default function App() {
         />
 
         <div className="flex h-full">
-          <IconRail tab={tab} onTab={setTab} theme={resolvedTheme} onToggleTheme={toggleTheme} />
+          {/* Desktop nav rail */}
+          <div className="hidden md:flex">
+            <IconRail
+              tab={tab}
+              onTab={setTab}
+              theme={resolvedTheme}
+              onToggleTheme={toggleTheme}
+              showAttention={features.threadFirstV1}
+            />
+          </div>
+
+          {/* Mobile nav (hamburger drawer) */}
+          <MobileNavDrawer
+            tab={tab}
+            onTab={setTab}
+            theme={resolvedTheme}
+            onToggleTheme={toggleTheme}
+            showAttention={features.threadFirstV1}
+          />
 
           <div className="min-w-0 flex-1">
             <Routes>
+              {features.threadFirstV1 ? (
+                <>
+                  <Route
+                    path="/attention"
+                    element={
+                      <AppShell
+                        topbar={<TopbarLite title="My Attention" subtitle="Thread-first collaboration" />}
+                        wsSignal={wsSignal}
+                        wsStatus={wsStatus}
+                        initialAgentIds={initialAgentIds}
+                        agentProfileSources={agentProfileSources}
+                      >
+                        <AttentionPage wsSignal={wsSignal} />
+                      </AppShell>
+                    }
+                  />
+                  <Route
+                    path="/threads/:threadId"
+                    element={
+                      <AppShell
+                        topbar={<TopbarLite title="Thread" subtitle="Details + timeline" />}
+                        wsSignal={wsSignal}
+                        wsStatus={wsStatus}
+                        initialAgentIds={initialAgentIds}
+                        agentProfileSources={agentProfileSources}
+                      >
+                        <ThreadDetailPage wsSignal={wsSignal} />
+                      </AppShell>
+                    }
+                  />
+                </>
+              ) : null}
+
               <Route
                 path="/"
                 element={
