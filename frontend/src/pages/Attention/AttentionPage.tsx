@@ -76,60 +76,80 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] shadow-xl">
-        <div className="flex items-center justify-between border-b border-[rgb(var(--cb-border))] p-4">
-          <h2 className="text-lg font-semibold text-[rgb(var(--cb-text))]">New Thread</h2>
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+      <div className="h-full w-full bg-[rgb(var(--cb-card))] sm:mx-auto sm:mt-10 sm:h-auto sm:max-w-2xl sm:rounded-xl sm:border sm:border-[rgb(var(--cb-border))] sm:shadow-xl">
+        <div className="flex items-start justify-between border-b border-[rgb(var(--cb-border))] px-4 py-4 sm:px-5">
+          <div>
+            <h2 className="text-lg font-semibold text-[rgb(var(--cb-text))]">Start a new thread</h2>
+            <p className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
+              Describe what you need help with. Agents will use this as the source of truth.
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="text-[rgb(var(--cb-text-muted))] hover:text-[rgb(var(--cb-text))]"
+            className="mt-0.5 rounded-md p-1 text-[rgb(var(--cb-text-muted))] hover:bg-[rgb(var(--cb-hover))] hover:text-[rgb(var(--cb-text))]"
             disabled={busy}
+            aria-label="Close thread creation"
           >
             <X size={20} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {error && (
-            <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-              {error}
+
+        <form onSubmit={handleSubmit} className="flex h-[calc(100%-74px)] min-h-0 flex-col sm:h-auto">
+          <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+            {error && (
+              <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">
+                Thread title
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+                placeholder="e.g. Refactor auth module OAuth flow"
+                required
+                autoFocus
+              />
+              <p className="mt-1 text-[11px] text-[rgb(var(--cb-text-muted))]">
+                Keep this human-readable so it is easy to scan in Attention.
+              </p>
             </div>
-          )}
-          <div>
-            <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-              placeholder="e.g. Database migration strategy"
-              required
-              autoFocus
-            />
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">
+                What do you need help with?
+              </label>
+              <textarea
+                value={problem}
+                onChange={(e) => setProblem(e.target.value)}
+                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+                placeholder="Describe the context and desired outcome. Example: I want to refactor auth to support OAuth. Current flow is in /src/auth and breaks on token refresh for mobile users."
+                rows={7}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Priority</label>
+              <select
+                value={priority ?? 'medium'}
+                onChange={(e) => setPriority(e.target.value as ThreadPriority)}
+                className="mt-1.5 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Problem Statement</label>
-            <textarea
-              value={problem}
-              onChange={(e) => setProblem(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-              placeholder="Describe the context and what needs to be solved..."
-              rows={4}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-[rgb(var(--cb-text-muted))]">Priority</label>
-            <select
-              value={priority ?? 'medium'}
-              onChange={(e) => setPriority(e.target.value as ThreadPriority)}
-              className="mt-1 block w-full rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-4 py-3 sm:px-5">
             <button
               type="button"
               onClick={onClose}
@@ -143,7 +163,7 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
               className="rounded-md bg-[rgb(var(--cb-accent))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               disabled={busy}
             >
-              {busy ? 'Creating…' : 'Create Thread'}
+              {busy ? 'Creating…' : 'Create thread'}
             </button>
           </div>
         </form>

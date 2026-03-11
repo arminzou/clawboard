@@ -225,6 +225,15 @@ const STATUS_LABELS: Record<ThreadStatus, string> = {
   archived: 'Archived',
 };
 
+const TRANSITION_ACTION_LABELS: Record<ThreadStatus, string> = {
+  open: 'Move to Open',
+  clarifying: 'Send back to Clarifying',
+  ready_to_plan: 'Advance to Ready to Plan',
+  pending_approval: 'Advance to Pending Approval',
+  promoted: 'Mark as Promoted',
+  archived: 'Archive thread',
+};
+
 /* ── page ────────────────────────────────────────────── */
 
 export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
@@ -241,6 +250,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingPacket, setEditingPacket] = useState(false);
+  const [packetExpanded, setPacketExpanded] = useState(false);
   const [packetValidation, setPacketValidation] = useState<{ is_complete: boolean; missing_fields: string[] } | null>(null);
 
   const reload = useCallback(() => {
@@ -272,6 +282,8 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
 
   useEffect(() => {
     setLoading(true);
+    setEditingPacket(false);
+    setPacketExpanded(false);
     return reload();
   }, [reload]);
 
@@ -293,6 +305,11 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
 
   const doTransition = useCallback(
     async (to: ThreadStatus) => {
+      if (to === 'archived') {
+        const confirmed = window.confirm('Archive this thread? Archived threads are terminal and must be resumed via clone.');
+        if (!confirmed) return;
+      }
+
       setActionBusy(true);
       setActionError(null);
       try {
@@ -369,6 +386,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     setPacket(saved);
     setPacketValidation(null);
     setEditingPacket(false);
+    setPacketExpanded(false);
   }, [threadId, humanId]);
 
   const validatePacket = useCallback(async () => {
@@ -403,6 +421,16 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   if (!thread) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Thread not found.</div>;
 
   const transitions = ALLOWED_TRANSITIONS[thread.status] ?? [];
+  const hasArchive = transitions.includes('archived');
+  const nonDestructiveTransitions = transitions.filter((to) => to !== 'archived' && to !== 'promoted');
+
+  // Pick a single "advance" transition as the primary action (when applicable).
+  const ADVANCE_PRIORITY: ThreadStatus[] = ['ready_to_plan', 'pending_approval'];
+  const primaryTransition = ADVANCE_PRIORITY.find((s) => nonDestructiveTransitions.includes(s)) ?? nonDestructiveTransitions[0];
+  const secondaryTransitions = nonDestructiveTransitions.filter((t) => t !== primaryTransition);
+
+  const packetMissing = packetValidation && !packetValidation.is_complete ? packetValidation.missing_fields : [];
+  const packetStatusLabel = packet?.is_complete ? 'Ready to promote ✅' : 'Not ready ❌';
 
   return (
     <div className="space-y-4">
@@ -427,35 +455,54 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       </div>
 
       {/* Actions bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {transitions
-          .filter((t) => t !== 'promoted')
-          .map((to) => (
+      <div className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {primaryTransition ? (
+            <Btn
+              onClick={() => doTransition(primaryTransition)}
+              disabled={actionBusy}
+              variant="primary"
+            >
+              {TRANSITION_ACTION_LABELS[primaryTransition] ?? `Move to ${STATUS_LABELS[primaryTransition]}`}
+            </Btn>
+          ) : null}
+
+          {secondaryTransitions.map((to) => (
             <Btn
               key={to}
               onClick={() => doTransition(to)}
               disabled={actionBusy}
-              variant={to === 'archived' ? 'danger' : 'default'}
+              variant="default"
             >
-              → {STATUS_LABELS[to]}
+              {TRANSITION_ACTION_LABELS[to] ?? `Move to ${STATUS_LABELS[to]}`}
             </Btn>
           ))}
 
-        {thread.status === 'pending_approval' && (
-          <>
-            <Btn onClick={validatePacket} disabled={actionBusy}>
-              Validate packet
-            </Btn>
-            <Btn onClick={doPromote} disabled={actionBusy} variant="primary">
-              Promote to Task
-            </Btn>
-          </>
-        )}
+          {thread.status === 'pending_approval' && (
+            <>
+              <Btn onClick={validatePacket} disabled={actionBusy}>
+                Validate packet
+              </Btn>
+              <Btn onClick={doPromote} disabled={actionBusy} variant="primary">
+                Promote to task
+              </Btn>
+            </>
+          )}
 
-        {thread.status === 'archived' && (
-          <Btn onClick={doClone} disabled={actionBusy} variant="primary">
-            Clone (resume)
-          </Btn>
+          {thread.status === 'archived' && (
+            <Btn onClick={doClone} disabled={actionBusy} variant="primary">
+              Clone to resume
+            </Btn>
+          )}
+        </div>
+
+        {hasArchive && thread.status !== 'archived' && (
+          <div className="mt-3 border-t border-[rgb(var(--cb-border))] pt-3">
+            <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Destructive action</div>
+            <Btn onClick={() => doTransition('archived')} disabled={actionBusy} variant="danger" size="sm">
+              Archive thread
+            </Btn>
+          </div>
         )}
       </div>
 
@@ -481,44 +528,61 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
         actions={
           !editingPacket && (
             <div className="flex items-center gap-2">
+              {packet ? (
+                <Btn onClick={() => setPacketExpanded((prev) => !prev)} size="sm" disabled={actionBusy}>
+                  {packetExpanded ? 'Collapse' : 'Expand'}
+                </Btn>
+              ) : null}
               <Btn onClick={validatePacket} size="sm" disabled={actionBusy}>
                 Validate
               </Btn>
-              <Btn onClick={() => setEditingPacket(true)} size="sm" disabled={actionBusy}>
-                Edit
+              <Btn
+                onClick={() => {
+                  setPacketExpanded(true);
+                  setEditingPacket(true);
+                }}
+                size="sm"
+                disabled={actionBusy}
+              >
+                {packet ? 'Edit' : 'Create packet'}
               </Btn>
             </div>
           )
         }
       >
         {editingPacket ? (
-          <PacketEditor packet={packet ?? {}} onSave={savePacket} onCancel={() => setEditingPacket(false)} />
+          <PacketEditor packet={packet ?? {}} onSave={savePacket} onCancel={() => { setEditingPacket(false); setPacketExpanded(Boolean(packet)); }} />
         ) : packet ? (
-          <div className="space-y-1 text-xs text-[rgb(var(--cb-text-muted))]">
-            <div>
-              <span className="font-medium text-[rgb(var(--cb-text))]">Complete:</span>{' '}
-              {packet.is_complete ? '✅ Yes' : '❌ No'}
-            </div>
-            {packetValidation && !packetValidation.is_complete && (
-              <div className="rounded border border-yellow-500/20 bg-yellow-500/5 p-2 text-xs text-yellow-200">
-                Missing: {packetValidation.missing_fields.join(', ')}
+          <div className="space-y-3 text-xs text-[rgb(var(--cb-text-muted))]">
+            <div className="rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2">
+              <div className="text-[11px] uppercase tracking-wide text-[rgb(var(--cb-text-muted))]">Packet status</div>
+              <div className={`mt-1 text-sm font-semibold ${packet.is_complete ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {packetStatusLabel}
               </div>
-            )}
-            {packet.problem && <div><span className="font-medium">Problem:</span> {packet.problem}</div>}
-            {packet.desired_outcome && <div><span className="font-medium">Outcome:</span> {packet.desired_outcome}</div>}
-            {packet.scope_in && <div><span className="font-medium">Scope in:</span> {packet.scope_in}</div>}
-            {packet.scope_out && <div><span className="font-medium">Scope out:</span> {packet.scope_out}</div>}
-            {packet.constraints && <div><span className="font-medium">Constraints:</span> {packet.constraints}</div>}
-            {packet.decision_owner_id && <div><span className="font-medium">Decision owner:</span> {packet.decision_owner_id}</div>}
-            {packet.first_executable_slice && <div><span className="font-medium">First slice:</span> {packet.first_executable_slice}</div>}
-            {packet.acceptance_criteria.length > 0 && (
-              <div>
-                <span className="font-medium">Acceptance criteria:</span>
-                <ul className="ml-4 mt-1 list-disc">
-                  {packet.acceptance_criteria.map((c, i) => (
-                    <li key={i}>{c}</li>
-                  ))}
-                </ul>
+              {packetMissing.length > 0 && (
+                <div className="mt-1 text-[11px] text-yellow-200">Missing: {packetMissing.join(', ')}</div>
+              )}
+            </div>
+
+            {packetExpanded && (
+              <div className="space-y-1">
+                {packet.problem && <div><span className="font-medium text-[rgb(var(--cb-text))]">Problem:</span> {packet.problem}</div>}
+                {packet.desired_outcome && <div><span className="font-medium text-[rgb(var(--cb-text))]">Outcome:</span> {packet.desired_outcome}</div>}
+                {packet.scope_in && <div><span className="font-medium text-[rgb(var(--cb-text))]">Scope in:</span> {packet.scope_in}</div>}
+                {packet.scope_out && <div><span className="font-medium text-[rgb(var(--cb-text))]">Scope out:</span> {packet.scope_out}</div>}
+                {packet.constraints && <div><span className="font-medium text-[rgb(var(--cb-text))]">Constraints:</span> {packet.constraints}</div>}
+                {packet.decision_owner_id && <div><span className="font-medium text-[rgb(var(--cb-text))]">Decision owner:</span> {packet.decision_owner_id}</div>}
+                {packet.first_executable_slice && <div><span className="font-medium text-[rgb(var(--cb-text))]">First slice:</span> {packet.first_executable_slice}</div>}
+                {packet.acceptance_criteria.length > 0 && (
+                  <div>
+                    <span className="font-medium text-[rgb(var(--cb-text))]">Acceptance criteria:</span>
+                    <ul className="ml-4 mt-1 list-disc">
+                      {packet.acceptance_criteria.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
