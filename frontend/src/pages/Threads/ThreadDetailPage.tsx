@@ -345,6 +345,10 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
   }, [wsSignal, reload, threadId]);
 
   const title = useMemo(() => thread?.title ?? `Thread ${threadId}`, [thread, threadId]);
+  const orderedEvents = useMemo(
+    () => [...events].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+    [events],
+  );
 
   /* ── action helpers ─────────────────────────────────── */
 
@@ -476,10 +480,6 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
 
   const packetMissing = packetValidation && !packetValidation.is_complete ? packetValidation.missing_fields : [];
   const packetStatusLabel = packet?.is_complete ? 'Ready to promote ✅' : 'Not ready ❌';
-  const orderedEvents = useMemo(
-    () => [...events].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-    [events],
-  );
 
   return (
     <div className="space-y-4">
