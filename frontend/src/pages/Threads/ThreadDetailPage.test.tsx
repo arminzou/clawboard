@@ -108,4 +108,35 @@ describe('ThreadDetailPage', () => {
       expect((firstPos & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).toBe(true);
     });
   });
+
+  it('does not crash when mention payload options are missing', async () => {
+    vi.mocked(api.getThread).mockResolvedValue(baseThread);
+    vi.mocked(api.getPromotionPacket).mockRejectedValue(new Error('no packet'));
+    vi.mocked(api.listThreadEvents).mockResolvedValue([
+      {
+        id: 'evt-mention',
+        thread_id: 'thread-1',
+        event_type: 'decision_requested',
+        actor_type: 'agent',
+        actor_id: 'tee',
+        body_md: 'Need your decision',
+        stance: null,
+        mention_human: true,
+        mention_payload: {
+          what_changed: 'Scope changed',
+          what_you_need_from_human: 'Pick direction',
+          options: undefined,
+          recommended_option: 'Option A',
+        } as any,
+        metadata: null,
+        created_at: '2026-03-11T10:01:00.000Z',
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('Fix rendering crash in thread detail')).toBeTruthy();
+    expect(screen.getByText(/human ping/i)).toBeTruthy();
+    expect(screen.getByText(/scope changed/i)).toBeTruthy();
+  });
 });

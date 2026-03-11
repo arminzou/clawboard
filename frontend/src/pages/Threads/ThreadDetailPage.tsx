@@ -648,6 +648,7 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
             const systemEvent = isSystemEvent(ev);
             const relativeTime = formatEventTimeRelative(ev.created_at);
             const exactTime = formatEventTimeExact(ev.created_at);
+            const mentionOptions = Array.isArray(ev.mention_payload?.options) ? ev.mention_payload.options : [];
 
             if (systemEvent) {
               return (
@@ -687,16 +688,50 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
                   ) : null}
 
                   {ev.mention_human && ev.mention_payload ? (
-                    <div className="mt-2 rounded border border-yellow-500/20 bg-yellow-500/5 p-2 text-xs">
-                      <div className="font-medium text-yellow-300">Human ping</div>
-                      <div className="mt-1 text-[rgb(var(--cb-text-muted))]">
-                        <div><strong>Changed:</strong> {ev.mention_payload.what_changed}</div>
-                        <div><strong>Need:</strong> {ev.mention_payload.what_you_need_from_human}</div>
-                        {ev.mention_payload.options.length > 0 ? (
-                          <div><strong>Options:</strong> {ev.mention_payload.options.join(' | ')}</div>
+                    <div className="mt-3 overflow-hidden rounded-lg border border-yellow-500/20 bg-yellow-500/5">
+                      <div className="flex items-center justify-between gap-2 border-b border-yellow-500/15 px-3 py-2 text-xs">
+                        <div className="inline-flex items-center gap-2">
+                          <span className="inline-flex h-5 items-center rounded-full bg-yellow-500/15 px-2 text-[11px] font-semibold text-yellow-200">
+                            Needs you
+                          </span>
+                          <span className="font-medium text-[rgb(var(--cb-text))]">Human ping</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 px-3 py-2 text-xs">
+                        <div>
+                          <div className="text-[11px] font-semibold text-[rgb(var(--cb-text-muted))]">Changed</div>
+                          <div className="mt-0.5 text-[rgb(var(--cb-text))]">{ev.mention_payload.what_changed}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-[11px] font-semibold text-[rgb(var(--cb-text-muted))]">Need</div>
+                          <div className="mt-0.5 text-[rgb(var(--cb-text))]">{ev.mention_payload.what_you_need_from_human}</div>
+                        </div>
+
+                        {mentionOptions.length > 0 ? (
+                          <div>
+                            <div className="text-[11px] font-semibold text-[rgb(var(--cb-text-muted))]">Options</div>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {mentionOptions.map((opt, i) => (
+                                <span
+                                  key={`${ev.id}-opt-${i}`}
+                                  className="rounded-full border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-0.5 text-[11px] text-[rgb(var(--cb-text))]"
+                                >
+                                  {opt}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         ) : null}
+
                         {ev.mention_payload.recommended_option ? (
-                          <div><strong>Recommended:</strong> {ev.mention_payload.recommended_option}</div>
+                          <div>
+                            <div className="text-[11px] font-semibold text-[rgb(var(--cb-text-muted))]">Recommended</div>
+                            <div className="mt-0.5 inline-flex rounded border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-[11px] font-medium text-[rgb(var(--cb-text))]">
+                              {ev.mention_payload.recommended_option}
+                            </div>
+                          </div>
                         ) : null}
                       </div>
                     </div>
