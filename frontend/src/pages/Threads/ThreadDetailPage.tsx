@@ -53,7 +53,7 @@ function Btn({
   );
 }
 
-function formatEventTime(iso: string) {
+function formatEventTimeExact(iso: string) {
   try {
     return new Intl.DateTimeFormat(undefined, {
       month: 'short',
@@ -64,6 +64,24 @@ function formatEventTime(iso: string) {
   } catch {
     return new Date(iso).toLocaleString();
   }
+}
+
+function formatEventTimeRelative(iso: string) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return formatEventTimeExact(iso);
+  const deltaMs = Date.now() - t;
+  const future = deltaMs < 0;
+  const abs = Math.abs(deltaMs);
+  const sec = Math.floor(abs / 1000);
+  if (sec < 10) return 'just now';
+  if (sec < 60) return future ? `in ${sec}s` : `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return future ? `in ${min}m` : `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return future ? `in ${hr}h` : `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return future ? `in ${day}d` : `${day}d ago`;
+  return formatEventTimeExact(iso);
 }
 
 function PacketEditor({
@@ -233,6 +251,14 @@ const TRANSITION_ACTION_LABELS: Record<ThreadStatus, string> = {
   promoted: 'Mark as Promoted',
   archived: 'Archive thread',
 };
+
+function humanizeEventType(eventType: string) {
+  return eventType.replaceAll('_', ' ');
+}
+
+function isSystemEvent(ev: ThreadEvent) {
+  return ev.actor_type === 'system' || ev.event_type === 'archived' || ev.event_type === 'thread_cloned' || ev.event_type === 'promoted_to_task';
+}
 
 /* ── page ────────────────────────────────────────────── */
 
@@ -431,6 +457,10 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
 
   const packetMissing = packetValidation && !packetValidation.is_complete ? packetValidation.missing_fields : [];
   const packetStatusLabel = packet?.is_complete ? 'Ready to promote ✅' : 'Not ready ❌';
+  const orderedEvents = useMemo(
+    () => [...events].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+    [events],
+  );
 
   return (
     <div className="space-y-4">
@@ -592,41 +622,72 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
       </Section>
 
       {/* Event timeline */}
-      <Section title={`Events (${events.length})`}>
+      <Section title={`Events (${orderedEvents.length})`}>
         <div className="space-y-3">
-          {events.length === 0 && <div className="text-xs text-[rgb(var(--cb-text-muted))]">No events.</div>}
-          {events.map((ev) => (
-            <div key={ev.id} className="rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] p-3">
-              <div className="flex flex-col gap-1 text-xs text-[rgb(var(--cb-text-muted))] sm:flex-row sm:items-baseline sm:gap-2">
-                <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-                  <span className="rounded bg-[rgb(var(--cb-hover))] px-1.5 py-0.5 font-mono">{ev.event_type}</span>
-                  <span className="truncate">{ev.actor_type}:{ev.actor_id}</span>
+          {orderedEvents.length === 0 && <div className="text-xs text-[rgb(var(--cb-text-muted))]">No events yet.</div>}
+          {orderedEvents.map((ev, idx) => {
+            const systemEvent = isSystemEvent(ev);
+            const relativeTime = formatEventTimeRelative(ev.created_at);
+            const exactTime = formatEventTimeExact(ev.created_at);
+
+            if (systemEvent) {
+              return (
+                <div key={ev.id} className="flex items-center gap-2 text-[11px] text-[rgb(var(--cb-text-muted))]">
+                  <div className="h-px flex-1 bg-[rgb(var(--cb-border))]" />
+                  <span className="whitespace-nowrap rounded-full border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-0.5">
+                    {humanizeEventType(ev.event_type)}
+                  </span>
+                  <span className="whitespace-nowrap" title={exactTime}>{relativeTime}</span>
+                  <div className="h-px flex-1 bg-[rgb(var(--cb-border))]" />
                 </div>
-                <span className="sm:ml-auto">{formatEventTime(ev.created_at)}</span>
-              </div>
-              {ev.body_md && (
-                <div className="mt-1.5 whitespace-pre-wrap text-sm text-[rgb(var(--cb-text))]">{ev.body_md}</div>
-              )}
-              {ev.mention_human && ev.mention_payload && (
-                <div className="mt-2 rounded border border-yellow-500/20 bg-yellow-500/5 p-2 text-xs">
-                  <div className="font-medium text-yellow-300">Human ping</div>
-                  <div className="mt-1 text-[rgb(var(--cb-text-muted))]">
-                    <div><strong>Changed:</strong> {ev.mention_payload.what_changed}</div>
-                    <div><strong>Need:</strong> {ev.mention_payload.what_you_need_from_human}</div>
-                    {ev.mention_payload.options.length > 0 && (
-                      <div><strong>Options:</strong> {ev.mention_payload.options.join(' | ')}</div>
-                    )}
-                    {ev.mention_payload.recommended_option && (
-                      <div><strong>Recommended:</strong> {ev.mention_payload.recommended_option}</div>
-                    )}
+              );
+            }
+
+            const actorInitial = (ev.actor_id || '?').trim().charAt(0).toUpperCase();
+            return (
+              <div key={ev.id} className="relative pl-11">
+                {idx < orderedEvents.length - 1 ? (
+                  <div className="absolute left-4 top-8 h-[calc(100%-1.75rem)] w-px bg-[rgb(var(--cb-border))]" />
+                ) : null}
+
+                <div className="absolute left-0 top-0 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] text-xs font-semibold text-[rgb(var(--cb-text))]">
+                  {actorInitial}
+                </div>
+
+                <div className="rounded-lg border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] p-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[rgb(var(--cb-text-muted))]">
+                    <span className="font-medium text-[rgb(var(--cb-text))]">{ev.actor_id}</span>
+                    <span className="rounded bg-[rgb(var(--cb-hover))] px-1.5 py-0.5">{humanizeEventType(ev.event_type)}</span>
+                    <span className="ml-auto whitespace-nowrap" title={exactTime}>{relativeTime}</span>
                   </div>
+
+                  {ev.body_md ? (
+                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[rgb(var(--cb-text))]">{ev.body_md}</div>
+                  ) : null}
+
+                  {ev.mention_human && ev.mention_payload ? (
+                    <div className="mt-2 rounded border border-yellow-500/20 bg-yellow-500/5 p-2 text-xs">
+                      <div className="font-medium text-yellow-300">Human ping</div>
+                      <div className="mt-1 text-[rgb(var(--cb-text-muted))]">
+                        <div><strong>Changed:</strong> {ev.mention_payload.what_changed}</div>
+                        <div><strong>Need:</strong> {ev.mention_payload.what_you_need_from_human}</div>
+                        {ev.mention_payload.options.length > 0 ? (
+                          <div><strong>Options:</strong> {ev.mention_payload.options.join(' | ')}</div>
+                        ) : null}
+                        {ev.mention_payload.recommended_option ? (
+                          <div><strong>Recommended:</strong> {ev.mention_payload.recommended_option}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {ev.stance ? (
+                    <div className="mt-2 text-xs text-[rgb(var(--cb-text-muted))]">stance: {ev.stance}</div>
+                  ) : null}
                 </div>
-              )}
-              {ev.stance && (
-                <div className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">stance: {ev.stance}</div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </Section>
     </div>

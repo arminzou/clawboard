@@ -18,14 +18,14 @@ export function AgentMobileDock() {
   });
   const { agentIds, presenceByAgent, wsStatus } = useAgentPresence();
 
-  const summary = useMemo(() => {
-    if (!agentIds.length) return 'No agents';
+  const { summary, hasSignal } = useMemo(() => {
+    if (!agentIds.length) return { summary: 'No agents', hasSignal: false };
     const thinking = agentIds.filter((id) => (presenceByAgent[id]?.status ?? 'offline') === 'thinking').length;
     const online = agentIds.filter((id) => (presenceByAgent[id]?.status ?? 'offline') !== 'offline').length;
-    if (thinking > 0) return `${thinking} thinking`;
-    if (online > 0) return `${online} online`;
-    if (wsStatus !== 'connected') return 'Connecting';
-    return 'All offline';
+    if (thinking > 0) return { summary: `${thinking} thinking`, hasSignal: true };
+    if (online > 0) return { summary: `${online} online`, hasSignal: true };
+    if (wsStatus !== 'connected') return { summary: 'Connecting', hasSignal: true };
+    return { summary: 'All offline', hasSignal: false };
   }, [agentIds, presenceByAgent, wsStatus]);
 
   useEffect(() => {
@@ -44,6 +44,11 @@ export function AgentMobileDock() {
       document.body.style.overflow = prevOverflow;
     };
   }, [open]);
+
+  // Keep the dock contextual: hide when all agents are offline and there is no active signal.
+  if (!open && !hasSignal) {
+    return null;
+  }
 
   return (
     <>
