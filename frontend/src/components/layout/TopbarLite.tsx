@@ -11,7 +11,7 @@ export function TopbarLite({
 }) {
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 pl-16 pr-4 py-3 md:px-4">
         <div>
           <div className="text-base font-semibold text-slate-900">{title}</div>
           {subtitle ? <div className="text-xs text-slate-500">{subtitle}</div> : null}

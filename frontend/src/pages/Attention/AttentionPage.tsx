@@ -7,37 +7,105 @@ import type { WsMessage } from '../../hooks/useWebSocket';
 
 type BucketKey = 'needs_decision' | 'needs_clarification' | 'needs_approval' | 'blocked_on_human';
 
-const BUCKET_META: Record<BucketKey, { label: string; accent: string }> = {
-  needs_decision: { label: 'Needs Decision', accent: 'border-amber-500/30' },
-  needs_clarification: { label: 'Needs Clarification', accent: 'border-blue-500/30' },
-  needs_approval: { label: 'Needs Approval', accent: 'border-green-500/30' },
-  blocked_on_human: { label: 'Blocked on You', accent: 'border-red-500/30' },
+type ThreadSort = 'updated_desc' | 'updated_asc' | 'priority_desc';
+
+const PRIORITY_RANK: Record<ThreadPriority, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
 };
+
+const BUCKET_META: Record<
+  BucketKey,
+  { label: string; shortLabel: string; accent: string; emptyCopy: string }
+> = {
+  needs_decision: {
+    label: 'Needs Decision',
+    shortLabel: 'Decision',
+    accent: 'border-amber-500/30',
+    emptyCopy: 'No decisions waiting — nice and clear here.',
+  },
+  needs_clarification: {
+    label: 'Needs Clarification',
+    shortLabel: 'Clarify',
+    accent: 'border-blue-500/30',
+    emptyCopy: 'No clarification requests right now.',
+  },
+  needs_approval: {
+    label: 'Needs Approval',
+    shortLabel: 'Approval',
+    accent: 'border-green-500/30',
+    emptyCopy: 'No approvals waiting 🎉',
+  },
+  blocked_on_human: {
+    label: 'Blocked on You',
+    shortLabel: 'Blocked',
+    accent: 'border-rose-500/30',
+    emptyCopy: 'Nothing is currently blocked on you.',
+  },
+};
+
+function formatRelative(iso: string) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return 'unknown';
+  const delta = Math.max(0, Date.now() - t);
+  const m = Math.floor(delta / 60_000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
 
 function Bucket({ bucketKey, threads }: { bucketKey: BucketKey; threads: QuestionThread[] }) {
   const meta = BUCKET_META[bucketKey];
+
   return (
     <section className={`w-full rounded-lg border ${meta.accent} bg-[rgb(var(--cb-card))] p-4`}>
       <div className="flex items-baseline justify-between">
         <span className="text-sm font-semibold text-[rgb(var(--cb-text))]">{meta.label}</span>
         <span className="text-xs text-[rgb(var(--cb-text-muted))]">{threads.length}</span>
       </div>
+
       <div className="mt-3 space-y-2">
         {threads.length === 0 ? (
-          <div className="text-xs text-[rgb(var(--cb-text-muted))]">Nothing here.</div>
+          <div className="rounded-md border border-dashed border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-xs text-[rgb(var(--cb-text-muted))]">
+            {meta.emptyCopy}
+          </div>
         ) : (
-          threads.map((t) => (
-            <Link
-              key={t.id}
-              to={`/threads/${encodeURIComponent(t.id)}`}
-              className="block rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-hover))]"
-            >
-              <div className="font-medium">{t.title}</div>
-              <div className="mt-0.5 text-xs text-[rgb(var(--cb-text-muted))]">
-                {t.status} • priority: {t.priority} • {new Date(t.updated_at).toLocaleDateString()}
-              </div>
-            </Link>
-          ))
+          threads.map((t) => {
+            const stale = Date.now() - new Date(t.updated_at).getTime() > 24 * 60 * 60 * 1000;
+            return (
+              <Link
+                key={t.id}
+                to={`/threads/${encodeURIComponent(t.id)}`}
+                className={`block rounded-md border bg-[rgb(var(--cb-bg))] px-3 py-2 text-sm text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-hover))] ${
+                  stale ? 'border-amber-500/30' : 'border-[rgb(var(--cb-border))]'
+                }`}
+              >
+                <div className="truncate font-semibold">{t.title}</div>
+                <div className="mt-0.5 truncate text-xs text-[rgb(var(--cb-text-muted))]">{t.problem_statement}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[rgb(var(--cb-text-muted))]">
+                  <span className="rounded border border-[rgb(var(--cb-border))] px-1.5 py-0.5">{t.status}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 ${
+                      t.priority === 'high'
+                        ? 'bg-rose-500/15 text-rose-300'
+                        : t.priority === 'medium'
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'bg-slate-500/15 text-slate-300'
+                    }`}
+                  >
+                    {t.priority}
+                  </span>
+                  <span>{formatRelative(t.updated_at)}</span>
+                  {stale ? <span className="text-amber-300">stale</span> : null}
+                </div>
+              </Link>
+            );
+          })
         )}
       </div>
     </section>
@@ -173,6 +241,9 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     blocked_on_human: [],
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<ThreadSort>('updated_desc');
+  const [activeBucket, setActiveBucket] = useState<BucketKey>('needs_decision');
 
   const loadData = useCallback(() => {
     let cancelled = false;
@@ -210,9 +281,50 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     }
   }, [wsSignal, loadData]);
 
-  const total = useMemo(
+  const rawTotal = useMemo(
     () => Object.values(buckets).reduce((acc, list) => acc + list.length, 0),
     [buckets],
+  );
+
+  const processedBuckets = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    const sortThreads = (list: QuestionThread[]) => {
+      const items = [...list];
+      items.sort((a, b) => {
+        if (sortBy === 'updated_asc') {
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        }
+        if (sortBy === 'priority_desc') {
+          const pr = PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority];
+          if (pr !== 0) return pr;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        }
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
+      return items;
+    };
+
+    const filterThreads = (list: QuestionThread[]) => {
+      if (!q) return list;
+      return list.filter((t) => {
+        const title = t.title.toLowerCase();
+        const body = t.problem_statement.toLowerCase();
+        return title.includes(q) || body.includes(q);
+      });
+    };
+
+    return {
+      needs_decision: sortThreads(filterThreads(buckets.needs_decision)),
+      needs_clarification: sortThreads(filterThreads(buckets.needs_clarification)),
+      needs_approval: sortThreads(filterThreads(buckets.needs_approval)),
+      blocked_on_human: sortThreads(filterThreads(buckets.blocked_on_human)),
+    } as Record<BucketKey, QuestionThread[]>;
+  }, [buckets, query, sortBy]);
+
+  const filteredTotal = useMemo(
+    () => Object.values(processedBuckets).reduce((acc, list) => acc + list.length, 0),
+    [processedBuckets],
   );
 
   if (loading && !Object.values(buckets).some(l => l.length > 0)) return <div className="p-6 text-sm text-[rgb(var(--cb-text-muted))]">Loading attention…</div>;
@@ -229,9 +341,10 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
 
   return (
     <div className="w-full">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-[rgb(var(--cb-text-muted))]">
-          Human: {humanId} • {total} item{total !== 1 ? 's' : ''} needing attention
+          Human: {humanId} • {filteredTotal}
+          {query.trim() ? ` of ${rawTotal}` : ''} item{filteredTotal !== 1 ? 's' : ''} needing attention
         </div>
         <button
           onClick={() => setIsCreating(true)}
@@ -240,12 +353,69 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
           New Thread
         </button>
       </div>
-      
-      <div className="grid gap-4 md:grid-cols-2">
+
+      <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_170px]">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search threads by title or context..."
+          className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] placeholder:text-[rgb(var(--cb-text-muted))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as ThreadSort)}
+          className="h-10 rounded-md border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-3 text-sm text-[rgb(var(--cb-text))] focus:border-[rgb(var(--cb-accent))] focus:outline-none"
+        >
+          <option value="updated_desc">Sort: Updated (newest)</option>
+          <option value="updated_asc">Sort: Updated (oldest)</option>
+          <option value="priority_desc">Sort: Priority (high first)</option>
+        </select>
+      </div>
+
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
         {(Object.keys(BUCKET_META) as BucketKey[]).map((key) => (
-          <Bucket key={key} bucketKey={key} threads={buckets[key]} />
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveBucket(key)}
+            className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${
+              activeBucket === key
+                ? 'border-[rgb(var(--cb-accent))] bg-[rgb(var(--cb-accent))] text-white'
+                : 'border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] text-[rgb(var(--cb-text-muted))]'
+            }`}
+          >
+            {BUCKET_META[key].shortLabel} ({processedBuckets[key].length})
+          </button>
         ))}
       </div>
+
+      {filteredTotal === 0 ? (
+        <div className="rounded-lg border border-dashed border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-card))] px-4 py-8 text-center">
+          <div className="text-sm font-medium text-[rgb(var(--cb-text))]">No threads match your current view.</div>
+          <div className="mt-1 text-xs text-[rgb(var(--cb-text-muted))]">
+            Try clearing search or start a new thread to collaborate with your agents.
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCreating(true)}
+            className="mt-4 rounded-md bg-[rgb(var(--cb-accent))] px-3 py-2 text-xs font-medium text-white hover:opacity-90"
+          >
+            Start a thread
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="md:hidden">
+            <Bucket bucketKey={activeBucket} threads={processedBuckets[activeBucket]} />
+          </div>
+          <div className="hidden gap-4 md:grid md:grid-cols-2">
+            {(Object.keys(BUCKET_META) as BucketKey[]).map((key) => (
+              <Bucket key={key} bucketKey={key} threads={processedBuckets[key]} />
+            ))}
+          </div>
+        </>
+      )}
 
       {isCreating && (
         <CreateThreadModal

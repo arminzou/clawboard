@@ -107,7 +107,7 @@ export function Topbar({
 
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="flex flex-col gap-3 px-4 py-3">
+      <div className="flex flex-col gap-3 pl-16 pr-4 py-3 md:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div>
