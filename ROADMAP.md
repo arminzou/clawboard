@@ -55,6 +55,20 @@ v1.0 replaces task-first intake with a **thread-first collaboration model**:
    - My Attention List as default human view
    - clone + promote UX flows
 
+### Progress Snapshot (2026-03-10)
+
+- ✅ Backend + API foundation implemented and locally validated (including promote/clone invariants)
+- ✅ Thread-first core UX shipped in v1 branch:
+  - GitHub-style standalone thread composer
+  - Promotion packet summary/collapse behavior
+  - Clear transition hierarchy with archive safety confirmation
+  - Attention page scannability pass (denser cards, search/sort, mobile bucket tabs, better empty states)
+  - Conversation-style events timeline + relative timestamps
+- ✅ Mobile overlap issue fixed (top-left nav collision spacing)
+- 🔄 Remaining before full v1.0 release sign-off:
+  - continue UX polish follow-ups from internal analysis (title quality/onboarding refinements)
+  - finalize release rollout/merge/deploy checklist
+
 ---
 
 ## Backlog (Post v1.0)
