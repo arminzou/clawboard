@@ -119,6 +119,28 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const suggestedTitle = useMemo(() => {
+    const raw = problem.trim();
+    if (!raw) return '';
+
+    // Take the first sentence-ish chunk. (We don't want a whole paragraph.)
+    // - Prefer newline split (people often start with a one-liner then details)
+    // - Otherwise cut at sentence punctuation.
+    const firstLine = raw.split(/\r?\n/)[0] ?? '';
+    const sentenceChunk = firstLine.split(/[.!?]/)[0] ?? '';
+    let s = sentenceChunk.trim();
+
+    // Normalize whitespace and strip common lead-ins.
+    s = s.replace(/\s+/g, ' ');
+    s = s.replace(/^(help\s+me\s+)?(please\s+)?(i\s+need\s+to|i\s+want\s+to)\s+/i, '');
+
+    // Basic guardrails.
+    if (s.length < 8) return '';
+    s = s.replace(/[:\-\s]+$/g, '');
+    if (s.length > 72) s = `${s.slice(0, 69).trimEnd()}…`;
+    return s;
+  }, [problem]);
+
   const normalizedTitle = title.trim();
   const titleHasLetter = /[a-zA-Z]/.test(normalizedTitle);
   const titleTooShort = normalizedTitle.length < 6;
@@ -199,6 +221,21 @@ function CreateThreadModal({ onClose, onSuccess }: { onClose: () => void; onSucc
                 required
                 autoFocus
               />
+
+              {!normalizedTitle && suggestedTitle ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-[rgb(var(--cb-text-muted))]">Suggested:</span>
+                  <button
+                    type="button"
+                    onClick={() => setTitle(suggestedTitle)}
+                    className="max-w-full truncate rounded-full border border-[rgb(var(--cb-border))] bg-[rgb(var(--cb-bg))] px-2 py-1 text-[rgb(var(--cb-text))] hover:bg-[rgb(var(--cb-hover))]"
+                    title={suggestedTitle}
+                  >
+                    {suggestedTitle}
+                  </button>
+                  <span className="text-[11px] text-[rgb(var(--cb-text-muted))]">(click to use)</span>
+                </div>
+              ) : null}
               {!titleQualityOk && normalizedTitle.length > 0 ? (
                 <div className="mt-2 text-xs text-amber-300">
                   {titleLooksAuto
