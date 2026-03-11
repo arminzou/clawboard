@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type PromotionPacket, type QuestionThread, type ThreadEvent, type ThreadStatus } from '../../lib/api';
 import { defaults } from '../../lib/features';
 import type { WsMessage } from '../../hooks/useWebSocket';
+import { Markdown } from '../../components/common/Markdown';
 
 /* ── helpers ─────────────────────────────────────────── */
 
@@ -680,7 +681,9 @@ export function ThreadDetailPage({ wsSignal }: { wsSignal: WsMessage | null }) {
                   </div>
 
                   {ev.body_md ? (
-                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[rgb(var(--cb-text))]">{ev.body_md}</div>
+                    <div className="mt-2">
+                      <Markdown content={ev.body_md} />
+                    </div>
                   ) : null}
 
                   {ev.mention_human && ev.mention_payload ? (
