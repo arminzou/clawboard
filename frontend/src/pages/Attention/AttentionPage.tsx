@@ -17,7 +17,7 @@ const BUCKET_META: Record<BucketKey, { label: string; accent: string }> = {
 function Bucket({ bucketKey, threads }: { bucketKey: BucketKey; threads: QuestionThread[] }) {
   const meta = BUCKET_META[bucketKey];
   return (
-    <section className={`rounded-lg border ${meta.accent} bg-[rgb(var(--cb-card))] p-4`}>
+    <section className={`w-full rounded-lg border ${meta.accent} bg-[rgb(var(--cb-card))] p-4`}>
       <div className="flex items-baseline justify-between">
         <span className="text-sm font-semibold text-[rgb(var(--cb-text))]">{meta.label}</span>
         <span className="text-xs text-[rgb(var(--cb-text-muted))]">{threads.length}</span>
@@ -219,14 +219,14 @@ export function AttentionPage({ wsSignal }: { wsSignal: WsMessage | null }) {
     );
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="w-full">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-[rgb(var(--cb-text-muted))]">
           Human: {humanId} • {total} item{total !== 1 ? 's' : ''} needing attention
         </div>
         <button
           onClick={() => setIsCreating(true)}
-          className="rounded-md bg-[rgb(var(--cb-accent))] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          className="min-h-[44px] w-full rounded-md bg-[rgb(var(--cb-accent))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:min-h-0 sm:w-auto sm:px-3 sm:py-1.5 sm:text-xs"
         >
           New Thread
         </button>
